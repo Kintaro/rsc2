@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<!-- Configuration options for RSC 2.0 -->
+<options>
+	<!-- Stdout output options -->
+	<info-output>false</info-output>
+	<debug-output>true</debug-output>
+
+	<!-- Use binary format for file handling (to save disk space) -->
+	<use-binary-files>false</use-binary-files>
+
+	<!-- Use a fixed random seed -->
+	<random-seed>421337</random-seed>
+
+	<!-- Dataset and directory handling -->
+	<dataset>isolet</dataset>
+	<input-directory>/foo/bar/input</input-directory>
+	<temp-directory>/foo/bar/temp</temp-directory>
+	<cluster-directory>/foo/bar/clusters</cluster-directory>
+
+	<!-- Clustering options -->
+	<maximum-cluster-size>23</maximum-cluster-size>
+	<maximum-number-of-clusters>7</maximum-number-of-clusters>
+
+	<!-- Clustering result options -->
+	<cluster-style>soft+rsc</cluster-style>
+</options>
