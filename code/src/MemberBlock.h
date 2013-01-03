@@ -277,7 +277,7 @@ template<typename ScoreType>
 const bool MemberBlock<ScoreType>::load_members(std::vector<std::vector<int>>& member_index_llist,
 		std::vector<std::vector<ScoreType>>& member_score_llist,
 		const int offset, const int amount) const
-		{
+{
 	amount = std::min(amount, *this->number_of_items);
 
 	member_index_llist.resize(amount);
