@@ -81,7 +81,7 @@ void parse_options_and_start_daemon(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
-	boost::mpi::environment env(argc, argv);
+  boost::mpi::environment env(argc, argv);
   boost::mpi::communicator world;
   boost::mpi::group world_group = world.group();
 
