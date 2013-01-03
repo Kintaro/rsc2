@@ -47,6 +47,7 @@
 #include <boost/mpi/environment.hpp>
 #include <boost/mpi/communicator.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/serialization/optional.hpp>
 #include "FileUtil.h"
 #include "VecDataBlock.h"
 #include "DistanceData.h"
@@ -106,9 +107,9 @@ private:
 	void serialize(Archive &ar, const unsigned int version)
 	{
 		Daemon::debug("serializing member block [version %i]", version);
-		ar &*this->number_of_items;
-		ar &*this->global_offset;
-		ar &*this->sample_level;
+		ar &this->number_of_items;
+		ar &this->global_offset;
+		ar &this->sample_level;
 		ar &this->member_index_llist;
 		ar &this->member_score_llist;
 	}
@@ -557,28 +558,29 @@ const int MemberBlock<ScoreType>::merge_members(MemberBlock<ScoreType>* block, c
 template<typename ScoreType>
 const bool MemberBlock<ScoreType>::set_id(const boost::optional<std::string>& prefix, const boost::optional<int>& block)
 {
-	if (this->data_block == NULL)
-		return false;
-
-	std::string filename_prefix;
+	std::stringstream buffer;
 
 	if (prefix)
+	{
 		filename_prefix = this->data_block.get_filename_prefix();
+	}
 	else if (this->sample_level == -2)
 	{
-		if (!block) filename_prefix = *prefix + "_micro";
-		else filename_prefix = *prefix + "-b" + std::string(*block) + "_micro";
+		if (!block) buffer << *prefix << "_micro";
+		else buffer << *prefix << "-b" << *block << "_micro";
 	}
 	else if (this->sample_level == -1)
 	{
-		if (!block) filename_prefix = *prefix + "_mini";
-		else filename_prefix = *prefix + "-b" + std::string(*block) + "_mini";
+		if (!block) buffer << *prefix << "_mini";
+		else buffer << *prefix << "-b" << *block << "_mini";
 	}
 	else if (this->sample_level >= 0)
 	{
-		if (!block) filename_prefix = *prefix + "_s" + std::string(this->sample_level) + "_mini";
-		else filename_prefix = *prefix + "-b" + std::string(*block) + "_s" + std::string(this->sample_level) + "_mini";
+		if (!block) buffer << *prefix << "_s" << *this->sample_level << "_mini";
+		else buffer << *prefix << "-b" << *block << "_s" << *this->sample_level << "_mini";
 	}
+
+	this->filename_prefix = buffer.str();
 
 	return true;
 }

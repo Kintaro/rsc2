@@ -102,7 +102,7 @@ int main(int argc, char** argv)
 
 	if (world.rank() == 1)
 	{
-		std::fstream f("foo.mem", std::ios_base::in);
+		std::fstream f("../data/sample_data.mem", std::ios_base::in);
 		b.internal_load_members(f);
 		f.close();
 
@@ -112,9 +112,14 @@ int main(int argc, char** argv)
 	}
 	else if (world.rank() == 2)
 	{
-		std::fstream f2("bar.mem", std::ios_base::in);
+		std::fstream f2("../data/sample_data.mem", std::ios_base::in);
 		b2.internal_load_members(f2);
 		f2.close();
+
+		std::fstream f3("foo.mem", std::ios_base::out);
+		b2.set_id(boost::optional<std::string>("baz"), boost::optional<int>(23));
+		b2.internal_save_members(f3);
+		f3.close();
 
 		Daemon::comm().send(0, 0, b2);
 	}

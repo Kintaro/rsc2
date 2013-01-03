@@ -16,3 +16,8 @@ const size_t VecDataBlock::get_number_of_items() const
 	return this->number_of_items;
 }
 /*-----------------------------------------------------------------------------------------------*/
+const std::string VecDataBlock::get_filename_prefix() const
+{
+	return "foo";
+}
+/*-----------------------------------------------------------------------------------------------*/

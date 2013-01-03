@@ -51,7 +51,7 @@ private:
 	static bool is_binary;
 public:
 	template<typename T> static const T read_from_file(std::fstream& file);
-	template<typename T> static const void write_to_file(std::fstream& file, const T& value, const bool text_only = false);
+	template<typename T> static const void write_to_file(std::fstream& file, const T& value, bool text_only = false);
 	static const void space(std::fstream& file);
 	static const void newline(std::fstream& file);
 };
@@ -76,7 +76,7 @@ const T FileUtil::read_from_file(std::fstream& file)
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename T>
-const void FileUtil::write_to_file(std::fstream& file, const T& value, const bool text_only)
+const void FileUtil::write_to_file(std::fstream& file, const T& value, bool text_only)
 {
 	if (!read_option)
 	{
@@ -85,7 +85,7 @@ const void FileUtil::write_to_file(std::fstream& file, const T& value, const boo
 	}
 
 	if (is_binary && !text_only)
-		file.write((char*)&value, sizeof(T), value);
+		file.write((const char*)&value, sizeof(T));
 	else
 		file << value;
 }
