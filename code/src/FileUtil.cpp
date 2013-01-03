@@ -4,17 +4,17 @@
 bool FileUtil::read_option;
 bool FileUtil::is_binary;
 /*-----------------------------------------------------------------------------------------------*/
-void FileUtil::open_read(const std::string& path, std::fstream& file, bool binary)
+void FileUtil::open_read(const std::string& path, std::fstream& file, const boost::optional<bool>& binary)
 {
-	if (binary)
+	if (*binary)
 		file.open(path.c_str(), std::ios::in | std::ios::binary);
 	else
 		file.open(path.c_str(), std::ios::in);
 }
 /*-----------------------------------------------------------------------------------------------*/
-void FileUtil::open_write(const std::string& path, std::fstream& file, bool binary)
+void FileUtil::open_write(const std::string& path, std::fstream& file, const boost::optional<bool>& binary)
 {
-	if (binary)
+	if (*binary)
 		file.open(path.c_str(), std::ios::out | std::ios::binary);
 	else
 		file.open(path.c_str(), std::ios::out);

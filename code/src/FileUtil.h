@@ -50,8 +50,8 @@ private:
 	static bool read_option;
 	static bool is_binary;
 public:
-	static void open_read(const std::string& path, std::fstream& file, bool binary = false);
-	static void open_write(const std::string& path, std::fstream& file, bool binary = false);
+	static void open_read(const std::string& path, std::fstream& file, const boost::optional<bool>& binary = false);
+	static void open_write(const std::string& path, std::fstream& file, const boost::optional<bool>& binary = false);
 	template<typename T> static const T read_from_file(std::fstream& file);
 	template<typename T> static const void write_to_file(std::fstream& file, const T& value, bool text_only = false);
 	static const void space(std::fstream& file);
