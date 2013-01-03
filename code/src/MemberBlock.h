@@ -60,6 +60,7 @@ private:
 	boost::optional<int> global_offset;
 	boost::optional<int> sample_level;
 	int member_list_buffer_size;
+	boost::optional<std::string> filename_prefix;
 
 	VecDataBlock& data_block;
 	std::vector<std::vector<int>> member_index_llist;
@@ -97,6 +98,7 @@ private:
 	const int internal_build_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const double scale_factor, const size_t item_index);
 	const int internal_build_neighbourhood_compute_query(IndexStructure<DistanceData>& data_index, const int offset, const double scale_factor, const int item_index);
 	const int internal_build_neighbourhood_store(IndexStructure<DistanceData>& data_index, const int offset, const double scale_factor, const int item_index, int num_members);
+	const bool identify_save_file(std::fstream& file) const;
 private:
 	friend class boost::serialization::access;
 
@@ -236,6 +238,8 @@ const bool MemberBlock<ScoreType>::internal_save_members(std::fstream& file)
 {
 	Daemon::debug("saving member block");
 
+	this->identify_save_file(file);
+
 	FileUtil::write_to_file<int>(file, *this->number_of_items);
 	FileUtil::space(file);
 	FileUtil::write_to_file<int>(file, *this->sample_level);
@@ -264,6 +268,16 @@ const bool MemberBlock<ScoreType>::internal_save_members(std::fstream& file)
 	}
 
 	return this->number_of_items;
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename ScoreType>
+const bool MemberBlock<ScoreType>::identify_save_file(std::fstream& file) const
+{
+	if (!this->filename_prefix || !file.is_open())
+		return false;
+	std::string buffer = "%% " + *this->filename_prefix + ".mem\n";
+	FileUtil::write_to_file<std::string>(file, buffer, true);
+	return true;
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
@@ -374,7 +388,7 @@ const int MemberBlock<ScoreType>::internal_build_neighbourhood(IndexStructure<Di
 template<typename ScoreType>
 const int MemberBlock<ScoreType>::internal_build_neighbourhood_compute_query(IndexStructure<DistanceData>& data_index, const int offset, const double scale_factor, const int item_index)
 {
-	Daemon::debug("  > building memberlists for item index %i", item_index);
+	Daemon::debug("  > building member lists for item index %i", item_index);
 
 	int num_members;
 	int adjusted_item_index = item_index - this->global_offset;
