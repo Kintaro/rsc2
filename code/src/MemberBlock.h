@@ -66,8 +66,8 @@ private:
 	std::vector<std::vector<ScoreType>> member_score_llist;
 	std::vector<ScoreType> temporary_distance_buffer;
 public:
-	MemberBlock(VecDataBlock& block, const int member_list_buffer_size);
-	MemberBlock(const MemberBlock& block, const int member_list_size_limit, const boost::optional<int> sample_level = boost::none);
+	MemberBlock(VecDataBlock& block, const int member_list_buffer_size, const boost::optional<int>& sample_level = boost::none);
+	MemberBlock(const MemberBlock& block, const int member_list_size_limit, const boost::optional<int>& sample_level = boost::none);
 
 	const bool receive_members_data(const int source);
 	const bool send_members_data(const int source) const;
@@ -103,7 +103,7 @@ private:
 	template<class Archive>
 	void serialize(Archive &ar, const unsigned int version)
 	{
-		Daemon::debug("serializing memberblock [version %i]", version);
+		Daemon::debug("serializing member block [version %i]", version);
 		ar &*this->number_of_items;
 		ar &*this->global_offset;
 		ar &*this->sample_level;
@@ -114,17 +114,33 @@ private:
 
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-MemberBlock<ScoreType>::MemberBlock(VecDataBlock& block, const int member_list_buffer_size)
+MemberBlock<ScoreType>::MemberBlock(VecDataBlock& block, const int member_list_buffer_size, const boost::optional<int>& sample_level)
 : data_block(block)
   {
+	this->global_offset = boost::none;
+	this->number_of_items = boost::none;
+	this->sample_level = boost::none;
+	this->member_list_buffer_size = 0;
+
+	if (this->data_block.get_global_offset() < 0 || member_list_buffer_size <= 0)
+		return;
+
 	this->global_offset = block.get_global_offset();
 	this->number_of_items = block.get_number_of_items();
+	this->member_list_buffer_size = member_list_buffer_size;
+	this->sample_level = sample_level;
+	this->temporary_distance_buffer.resize(this->member_list_buffer_size);
   }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-MemberBlock<ScoreType>::MemberBlock(const MemberBlock& block, const int member_list_size_limit, const boost::optional<int> sample_level)
+MemberBlock<ScoreType>::MemberBlock(const MemberBlock& block, const int member_list_size_limit, const boost::optional<int>& sample_level)
 :data_block(block.data_block)
  {
+	this->global_offset = boost::none;
+	this->number_of_items = boost::none;
+	this->sample_level = boost::none;
+	this->member_list_buffer_size = 0;
+
 	this->global_offset = block.global_offset;
 	this->number_of_items = block.number_of_items;
 	this->member_list_buffer_size = block.member_list_buffer_size;
