@@ -45,6 +45,7 @@ template<typename T>
 class IndexStructure
 {
 public:
+	virtual ~IndexStructure() {};
 	virtual const int get_number_of_items() const = 0;
 	virtual const int get_number_of_levels() const = 0;
 	virtual const std::vector<int> get_sample_sizes() const = 0;

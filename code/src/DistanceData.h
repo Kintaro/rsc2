@@ -44,6 +44,7 @@
 class DistanceData
 {
 public:
+	virtual ~DistanceData() {};
 	virtual double distance_to(const DistanceData& to) = 0;
 };
 
