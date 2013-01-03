@@ -279,7 +279,7 @@ const bool MemberBlock<ScoreType>::load_members(std::vector<std::vector<int>>& m
 	}
 
 	return amount;
-		}
+}
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
 const void MemberBlock<ScoreType>::clear_members ()
