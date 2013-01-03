@@ -84,7 +84,7 @@ std::string Options::get_option(const std::string& name)
 
 	if (world.rank() == 0)
 		return values[name];
-	
+
 	std::string value;
 
 	world.send(0, 0, 2);
@@ -147,13 +147,13 @@ bool Options::internal_parse_command_line_options(int argc, char** argv)
 bool Options::internal_parse_options_from_xml(const std::string& filename)
 {
 	std::fstream stream(filename, std::ios::in);
-    using boost::property_tree::ptree;
-    boost::property_tree::ptree pt;
-    read_xml(stream, pt, boost::property_tree::xml_parser::no_comments);
- 
-    for (auto &v : pt.get_child("options") ) {
-    	internal_set_option(v.first, v.second.get_value<std::string>());
-    }
+	using boost::property_tree::ptree;
+	boost::property_tree::ptree pt;
+	read_xml(stream, pt, boost::property_tree::xml_parser::no_comments);
+
+	for (auto &v : pt.get_child("options") ) {
+		internal_set_option(v.first, v.second.get_value<std::string>());
+	}
 
 	return true;
 }

@@ -64,11 +64,11 @@ private:
 	friend class boost::serialization::access;
 
 	template<class Archive>
-    void serialize(Archive &ar, const unsigned int version)
-    {
-        ar &global_offset;
-        ar &member_blocks;
-    }
+	void serialize(Archive &ar, const unsigned int version)
+	{
+		ar &global_offset;
+		ar &member_blocks;
+	}
 };
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>

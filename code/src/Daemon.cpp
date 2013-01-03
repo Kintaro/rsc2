@@ -70,9 +70,9 @@ void Daemon::run()
 void Daemon::listen_for_next_message()
 {
 	int command;
-  	boost::mpi::communicator world;
-  	boost::mpi::status status = world.recv(boost::mpi::any_source, boost::mpi::any_tag, &command, 1);
-  	this->process_message(command, status.source());
+	boost::mpi::communicator world;
+	boost::mpi::status status = world.recv(boost::mpi::any_source, boost::mpi::any_tag, &command, 1);
+	this->process_message(command, status.source());
 }
 /*-----------------------------------------------------------------------------------------------*/
 void Daemon::process_message(const int command, const int from)
@@ -133,8 +133,8 @@ void Daemon::internal_log(const std::string& level, const int rank, const std::s
 	boost::mpi::communicator world;
 
 	std::ostringstream buffer;
-  	buffer << "[" << rank << " :: " << level << "] " << message;
-  	std::string formatted_string = buffer.str();
+	buffer << "[" << rank << " :: " << level << "] " << message;
+	std::string formatted_string = buffer.str();
 
 	world.send(0, 0, 0);
 	world.send(0, 0, formatted_string);
@@ -144,10 +144,10 @@ void Daemon::error(const char* s, ...)
 {
 	va_list va; 
 	va_start(va,s);
-    char buffer[1024];
-    vsprintf(buffer,s,va);
-    va_end(va); 
-    std::string result(buffer);
+	char buffer[1024];
+	vsprintf(buffer,s,va);
+	va_end(va);
+	std::string result(buffer);
 
 	boost::mpi::communicator world;
 	internal_log("error", world.rank(), buffer);
@@ -157,10 +157,10 @@ void Daemon::log(const char* s, ...)
 {
 	va_list va; 
 	va_start(va,s);
-    char buffer[1024];
-    vsprintf(buffer,s,va);
-    va_end(va); 
-    std::string result(buffer);
+	char buffer[1024];
+	vsprintf(buffer,s,va);
+	va_end(va);
+	std::string result(buffer);
 
 	boost::mpi::communicator world;
 	internal_log("  msg", world.rank(), buffer);
@@ -173,10 +173,10 @@ void Daemon::info(const char* s, ...)
 
 	va_list va; 
 	va_start(va,s);
-    char buffer[1024];
-    vsprintf(buffer,s,va);
-    va_end(va); 
-    std::string result(buffer);
+	char buffer[1024];
+	vsprintf(buffer,s,va);
+	va_end(va);
+	std::string result(buffer);
 
 	boost::mpi::communicator world;
 	internal_log(" info", world.rank(), buffer);
@@ -189,10 +189,10 @@ void Daemon::debug(const char* s, ...)
 
 	va_list va; 
 	va_start(va,s);
-    char buffer[1024];
-    vsprintf(buffer,s,va);
-    va_end(va); 
-    std::string result(buffer);
+	char buffer[1024];
+	vsprintf(buffer,s,va);
+	va_end(va);
+	std::string result(buffer);
 
 	boost::mpi::communicator world;
 	internal_log("debug", world.rank(), buffer);

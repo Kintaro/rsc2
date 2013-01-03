@@ -52,84 +52,84 @@
 
 void set_default_options()
 {
-  Options::set_option("use-binary-files", "false");
-  Options::set_option("info-output", "true");
-  Options::set_option("debug-output", "false");
+	Options::set_option("use-binary-files", "false");
+	Options::set_option("info-output", "true");
+	Options::set_option("debug-output", "false");
 }
 
 void print_options()
 {
-  for (auto &p : Options::get_values())
-    Daemon::debug("  > %s: %s", p.first.c_str(), p.second.c_str());
+	for (auto &p : Options::get_values())
+		Daemon::debug("  > %s: %s", p.first.c_str(), p.second.c_str());
 }
 
 void parse_options_and_start_daemon(int argc, char** argv)
 {
-  boost::mpi::communicator world;
-  if (world.rank() == 0)
-  {
-    set_default_options();
-    Options::internal_parse_command_line_options(argc, argv);
-    if (Options::is_option_set("options"))
-      Options::internal_parse_options_from_xml(Options::get_option_as<std::string>("options"));
-    Options::internal_parse_command_line_options(argc, argv);
-    print_options();
-    Daemon daemon;
-    daemon.run();
-  }
+	boost::mpi::communicator world;
+	if (world.rank() == 0)
+	{
+		set_default_options();
+		Options::internal_parse_command_line_options(argc, argv);
+		if (Options::is_option_set("options"))
+			Options::internal_parse_options_from_xml(Options::get_option_as<std::string>("options"));
+		Options::internal_parse_command_line_options(argc, argv);
+		print_options();
+		Daemon daemon;
+		daemon.run();
+	}
 }
 
 int main(int argc, char** argv)
 {
-  boost::mpi::environment env(argc, argv);
-  boost::mpi::communicator world;
-  boost::mpi::group world_group = world.group();
+	boost::mpi::environment env(argc, argv);
+	boost::mpi::communicator world;
+	boost::mpi::group world_group = world.group();
 
-  std::list<int> excluded_ranks;
-  excluded_ranks.push_back(0);
+	std::list<int> excluded_ranks;
+	excluded_ranks.push_back(0);
 
-  boost::mpi::group computing_group = world_group.exclude(excluded_ranks.begin(), excluded_ranks.end());
-  boost::mpi::communicator *computing_communicator = new boost::mpi::communicator(world, computing_group);
+	boost::mpi::group computing_group = world_group.exclude(excluded_ranks.begin(), excluded_ranks.end());
+	boost::mpi::communicator *computing_communicator = new boost::mpi::communicator(world, computing_group);
 
-  Daemon::set_world(&world);
-  Daemon::set_communicator(computing_communicator);
+	Daemon::set_world(&world);
+	Daemon::set_communicator(computing_communicator);
 
-  parse_options_and_start_daemon(argc, argv);
+	parse_options_and_start_daemon(argc, argv);
 
-  VecDataBlock db;
-  MemberBlock<float> b(db, 10);
-  MemberBlock<float> b2(db, 10);
+	VecDataBlock db;
+	MemberBlock<float> b(db, 10);
+	MemberBlock<float> b2(db, 10);
 
-  if (world.rank() == 1)
-  {
-    std::fstream f("foo.mem", std::ios_base::in);
-    b.internal_load_members(f);
-    f.close();
+	if (world.rank() == 1)
+	{
+		std::fstream f("foo.mem", std::ios_base::in);
+		b.internal_load_members(f);
+		f.close();
 
-    b.set_global_offset((size_t)17);
-    Daemon::comm().recv(1, 0, b2);
-    b.merge_members(&b2, 0);
-  }
-  else if (world.rank() == 2)
-  {
-    std::fstream f2("bar.mem", std::ios_base::in);
-    b2.internal_load_members(f2);
-    f2.close();
+		b.set_global_offset((size_t)17);
+		Daemon::comm().recv(1, 0, b2);
+		b.merge_members(&b2, 0);
+	}
+	else if (world.rank() == 2)
+	{
+		std::fstream f2("bar.mem", std::ios_base::in);
+		b2.internal_load_members(f2);
+		f2.close();
 
-    Daemon::comm().send(0, 0, b2);
-  }
+		Daemon::comm().send(0, 0, b2);
+	}
 
-  if (world.rank() != 0)  
-    computing_communicator->barrier();  
+	if (world.rank() != 0)
+		computing_communicator->barrier();
 
-  if (world.rank() == 1)
-    Daemon::send_stop();
+	if (world.rank() == 1)
+		Daemon::send_stop();
 
-  if (world.rank() != 0)  
-    computing_communicator->barrier();
+	if (world.rank() != 0)
+		computing_communicator->barrier();
 
-  MPI::Finalize();
-  delete computing_communicator;
+	MPI::Finalize();
+	delete computing_communicator;
 
-  return 0;
+	return 0;
 }
