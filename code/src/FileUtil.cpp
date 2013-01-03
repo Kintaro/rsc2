@@ -4,27 +4,31 @@
 bool FileUtil::read_option;
 bool FileUtil::is_binary;
 /*-----------------------------------------------------------------------------------------------*/
+void FileUtil::open_read(const std::string& path, std::fstream& file, bool binary)
+{
+	if (binary)
+		file.open(path.c_str(), std::ios::in | std::ios::binary);
+	else
+		file.open(path.c_str(), std::ios::in);
+}
+/*-----------------------------------------------------------------------------------------------*/
+void FileUtil::open_write(const std::string& path, std::fstream& file, bool binary)
+{
+	if (binary)
+		file.open(path.c_str(), std::ios::out | std::ios::binary);
+	else
+		file.open(path.c_str(), std::ios::out);
+}
+/*-----------------------------------------------------------------------------------------------*/
 const void FileUtil::space(std::fstream& file)
 {
-	if (!read_option)
-	{
-		is_binary = Options::get_option_as<bool>("use-binary-files");
-		read_option = true;
-	}
-
-	if (!is_binary)
+	if (!Options::get_option_as<bool>("use-binary-files"))
 		file << " ";
 }
 /*-----------------------------------------------------------------------------------------------*/
 const void FileUtil::newline(std::fstream& file)
 {
-	if (!read_option)
-	{
-		is_binary = Options::get_option_as<bool>("use-binary-files");
-		read_option = true;
-	}
-
-	if (!is_binary)
+	if (!Options::get_option_as<bool>("use-binary-files"))
 		file << std::endl;
 }
 /*-----------------------------------------------------------------------------------------------*/

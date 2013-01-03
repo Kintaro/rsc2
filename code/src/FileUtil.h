@@ -50,6 +50,8 @@ private:
 	static bool read_option;
 	static bool is_binary;
 public:
+	static void open_read(const std::string& path, std::fstream& file, bool binary = false);
+	static void open_write(const std::string& path, std::fstream& file, bool binary = false);
 	template<typename T> static const T read_from_file(std::fstream& file);
 	template<typename T> static const void write_to_file(std::fstream& file, const T& value, bool text_only = false);
 	static const void space(std::fstream& file);
@@ -59,15 +61,9 @@ public:
 template<typename T>
 const T FileUtil::read_from_file(std::fstream& file)
 {
-	if (!read_option)
-	{
-		is_binary = Options::get_option_as<bool>("use-binary-files");
-		read_option = true;
-	}
-
 	T result;
 
-	if (is_binary)
+	if (Options::get_option_as<bool>("use-binary-files"))
 		file.read((char*)&result, sizeof(T));
 	else
 		file >> result;
@@ -78,15 +74,9 @@ const T FileUtil::read_from_file(std::fstream& file)
 template<typename T>
 const void FileUtil::write_to_file(std::fstream& file, const T& value, bool text_only)
 {
-	if (!read_option)
-	{
-		is_binary = Options::get_option_as<bool>("use-binary-files");
-		read_option = true;
-	}
-
-	if (is_binary && !text_only)
+	if (Options::get_option_as<bool>("use-binary-files") && !text_only)
 		file.write((const char*)&value, sizeof(T));
-	else
+	else if (!Options::get_option_as<bool>("use-binary-files"))
 		file << value;
 }
 /*-----------------------------------------------------------------------------------------------*/

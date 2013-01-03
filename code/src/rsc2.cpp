@@ -109,6 +109,7 @@ int main(int argc, char** argv)
 		b.set_global_offset((size_t)17);
 		Daemon::comm().recv(1, 0, b2);
 		b.merge_members(&b2, 0);
+		Daemon::comm().barrier();
 	}
 	else if (world.rank() == 2)
 	{
@@ -116,12 +117,15 @@ int main(int argc, char** argv)
 		b2.internal_load_members(f2);
 		f2.close();
 
-		std::fstream f3("foo.mem", std::ios_base::out);
-		b2.set_id(boost::optional<std::string>("baz"), boost::optional<int>(23));
+		Daemon::comm().send(0, 0, b2);
+		Daemon::comm().barrier();
+
+		std::fstream f3;
+		FileUtil::open_write("foo.mem", f3, true);
+		b2.set_id(boost::optional<std::string>("baz"), 23);
+		Options::set_option("use-binary-files", "true");
 		b2.internal_save_members(f3);
 		f3.close();
-
-		Daemon::comm().send(0, 0, b2);
 	}
 
 	if (world.rank() != 0)
