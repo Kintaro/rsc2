@@ -85,8 +85,8 @@ public:
 	const bool internal_save_members(std::fstream& file);
 	const bool load_members(const int index = 0);
 	const bool load_members(std::vector<std::vector<int>>& member_index_llist,
- 		std::vector<std::vector<ScoreType>>& member_score_llist,
- 		const int offset, const int amount) const;
+			std::vector<std::vector<ScoreType>>& member_score_llist,
+			const int offset, const int amount) const;
 	const void clear_members ();
 	const void clip_members(const size_t clip_size);
 	const std::vector<ScoreType> extract_member_scores(const size_t item_index);
@@ -121,15 +121,15 @@ private:
 template<typename ScoreType>
 MemberBlock<ScoreType>::MemberBlock(VecDataBlock& block, const int member_list_buffer_size)
 : data_block(block)
-{
+  {
 	this->global_offset = block.get_global_offset();
 	this->number_of_items = block.get_number_of_items();
-}
+  }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
 MemberBlock<ScoreType>::MemberBlock(const MemberBlock& block, const int member_list_size_limit, const boost::optional<int> sample_level)
 :data_block(block.data_block)
-{
+ {
 	this->global_offset = block.global_offset;
 	this->number_of_items = block.number_of_items;
 	this->member_list_buffer_size = block.member_list_buffer_size;
@@ -152,7 +152,7 @@ MemberBlock<ScoreType>::MemberBlock(const MemberBlock& block, const int member_l
 	{
 
 	}
-}
+ }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
 const bool MemberBlock<ScoreType>::receive_members_data(const int source)
@@ -264,9 +264,9 @@ const bool MemberBlock<ScoreType>::load_members(const int index)
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
 const bool MemberBlock<ScoreType>::load_members(std::vector<std::vector<int>>& member_index_llist,
- 		std::vector<std::vector<ScoreType>>& member_score_llist,
- 		const int offset, const int amount) const
-{
+		std::vector<std::vector<ScoreType>>& member_score_llist,
+		const int offset, const int amount) const
+		{
 	amount = std::min(amount, this->number_of_items);
 
 	member_index_llist.resize(amount);
@@ -279,7 +279,7 @@ const bool MemberBlock<ScoreType>::load_members(std::vector<std::vector<int>>& m
 	}
 
 	return amount;
-}
+		}
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
 const void MemberBlock<ScoreType>::clear_members ()
@@ -348,10 +348,10 @@ const int MemberBlock<ScoreType>::internal_build_neighbourhood(IndexStructure<Di
 	Daemon::debug("  > internally building neighbourhood [offset %i, scale factor %f, item index %i", offset, scale_factor, item_index);
 
 	if (this->global_offset < 0 ||
-		this->number_of_items <= 0 ||
-		this->sample_level < - 2 ||
-		offset < 0 ||
-		this->member_list_buffer_size >= data_index.get_number_of_items())
+			this->number_of_items <= 0 ||
+			this->sample_level < - 2 ||
+			offset < 0 ||
+			this->member_list_buffer_size >= data_index.get_number_of_items())
 	{
 		throw new std::exception();
 	}
@@ -391,7 +391,7 @@ const int MemberBlock<ScoreType>::internal_build_neighbourhood_compute_query(Ind
 			std::vector<int> sample_level_sizes = data_index.get_sample_sizes();
 
 			if (effective_sample_level < number_sample_levels && 
-				this->member_list_buffer_size <= sample_level_sizes[effective_sample_level])
+					this->member_list_buffer_size <= sample_level_sizes[effective_sample_level])
 			{
 				do
 				{
@@ -454,7 +454,7 @@ const int MemberBlock<ScoreType>::internal_build_neighbourhood_store(IndexStruct
 				}
 
 				std::random_shuffle(this->member_index_llist[adjusted_item_index].begin() + first_copy_location, 
-					this->member_index_llist[adjusted_item_index].begin() + i);
+						this->member_index_llist[adjusted_item_index].begin() + i);
 			}
 
 			first_copy_location = i + 1;
@@ -507,8 +507,8 @@ const int MemberBlock<ScoreType>::merge_members(MemberBlock<ScoreType>* block, c
 			mb_list[j] = std::make_pair(block->member_index_llist[i][j], block->member_score_llist[i][j]);
 
 		int size = max_list_size > 0 ? 
-		max_list_size : (this->member_index_llist[i].size() < block->member_index_llist[i].size() ? 
-			this->member_index_llist[i].size() : block->member_index_llist[i].size());
+				max_list_size : (this->member_index_llist[i].size() < block->member_index_llist[i].size() ?
+						this->member_index_llist[i].size() : block->member_index_llist[i].size());
 
 		result_list.reserve(size);
 		std::merge(this_list.begin(), this_list.end(), mb_list.begin(), mb_list.end(), std::back_inserter(result_list), sort_helper::sort);
