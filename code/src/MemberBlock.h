@@ -391,7 +391,6 @@ const int MemberBlock<ScoreType>::internal_build_neighbourhood_compute_query(Ind
 {
 	Daemon::debug("  > building member lists for item index %i", item_index);
 
-	int num_members;
 	int adjusted_item_index = item_index - this->global_offset;
 	int effective_sample_level = this->sample_level > 0 ? this->sample_level : 0;
 
@@ -407,31 +406,27 @@ const int MemberBlock<ScoreType>::internal_build_neighbourhood_compute_query(Ind
 
 	DistanceData& query = *this->data_block.access_item_by_block_offset(adjusted_item_index);
 
-	if (scale_factor > 0.0)
+	if (scale_factor <= 0.0)
+		return data_index.find_nearest(query, this->member_list_buffer_size, effective_sample_level);
+
+	int num_members = data_index.find_near(query, this->member_list_buffer_size, effective_sample_level, scale_factor);
+
+	if (num_members >= this->member_list_size_limit)
+		return num_members;
+
+	int number_sample_levels = data_index.get_number_of_levels();
+	std::vector<int> sample_level_sizes = data_index.get_sample_sizes();
+
+	if (!(effective_sample_level < number_sample_levels && 
+			this->member_list_buffer_size <= sample_level_sizes[effective_sample_level]))
+		return num_members;
+
+	do
 	{
+		scale_factor *= 2.0;
 		num_members = data_index.find_near(query, this->member_list_buffer_size, effective_sample_level, scale_factor);
-
-		if (num_members < this->member_list_buffer_size)
-		{
-			int number_sample_levels = data_index.get_number_of_levels();
-			std::vector<int> sample_level_sizes = data_index.get_sample_sizes();
-
-			if (effective_sample_level < number_sample_levels && 
-					this->member_list_buffer_size <= sample_level_sizes[effective_sample_level])
-			{
-				do
-				{
-					scale_factor *= 2.0;
-					num_members = data_index.find_near(query, this->member_list_buffer_size, effective_sample_level, scale_factor);
-				} 
-				while (num_members < this->member_list_buffer_size);
-			}
-		}
-	}
-	else
-	{
-		num_members = data_index.find_nearest(query, this->member_list_buffer_size, effective_sample_level);
-	}
+	} 
+	while (num_members < this->member_list_buffer_size);
 
 	return num_members;
 }
@@ -448,47 +443,47 @@ const int MemberBlock<ScoreType>::internal_build_neighbourhood_store(IndexStruct
 	this->member_index_llist[adjusted_item_index].resize(num_members);
 	this->member_score_llist[adjusted_item_index].resize(num_members);
 
-	if (num_members > 0)
+	if (num_members <= 0)
+		return result_distance_comparisons;
+
+	this->member_index_llist[adjusted_item_index] = data_index.get_result_indices();
+	this->temporary_distance_buffer = data_index.get_result_distances();
+
+	int first_copy_location = 0;
+
+	for (auto i = 0; i < num_members; ++i)
 	{
-		this->member_index_llist[adjusted_item_index] = data_index.get_result_indices();
-		this->temporary_distance_buffer = data_index.get_result_distances();
+		this->member_score_llist[adjusted_item_index][i] = this->temporary_distance_buffer[i];
 
-		int first_copy_location = 0;
+		if (!(i + 1 == num_members || this->temporary_distance_buffer[i + 1] != this->temporary_distance_buffer[first_copy_location]))
+			continue;
 
-		for (auto i = 0; i < num_members; ++i)
+		if (i > first_copy_location)
 		{
-			this->member_score_llist[adjusted_item_index][i] = this->temporary_distance_buffer[i];
-
-			if (!(i + 1 == num_members || this->temporary_distance_buffer[i + 1] != this->temporary_distance_buffer[first_copy_location]))
-				continue;
-
-			if (i > first_copy_location)
+			if (first_copy_location == 0)
 			{
-				if (first_copy_location == 0)
+				for (auto j = 0; j <= i; ++j)
 				{
-					for (auto j = 0; j <= i; ++j)
-					{
-						if (this->member_index_llist[adjusted_item_index][j] != item_index)
-							continue;
+					if (this->member_index_llist[adjusted_item_index][j] != item_index)
+						continue;
 
-						int temp_index = this->member_index_llist[adjusted_item_index][0];
-						this->member_index_llist[adjusted_item_index][0] = item_index;
-						this->member_index_llist[adjusted_item_index][j] = temp_index;
-						++first_copy_location;
-						break;
-					}
+					int temp_index = this->member_index_llist[adjusted_item_index][0];
+					this->member_index_llist[adjusted_item_index][0] = item_index;
+					this->member_index_llist[adjusted_item_index][j] = temp_index;
+					++first_copy_location;
+					break;
 				}
-
-				std::random_shuffle(this->member_index_llist[adjusted_item_index].begin() + first_copy_location, 
-						this->member_index_llist[adjusted_item_index].begin() + i);
 			}
 
-			first_copy_location = i + 1;
+			std::random_shuffle(this->member_index_llist[adjusted_item_index].begin() + first_copy_location, 
+					this->member_index_llist[adjusted_item_index].begin() + i);
 		}
 
-		for (auto &x : this->member_index_llist[adjusted_item_index])
-			x += offset;
+		first_copy_location = i + 1;
 	}
+
+	for (auto &x : this->member_index_llist[adjusted_item_index])
+		x += offset;
 
 	return result_distance_comparisons;
 }
