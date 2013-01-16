@@ -3042,3 +3042,10 @@ void Sash:: setNewQuery (DistanceData* query)
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
+extern "C" {
+    IndexStructure<DistanceData>* BOOST_EXTENSION_EXPORT_DECL create_index_structure(int x) 
+    { 
+        std::cout << "SHARED!" << std::endl; return NULL; 
+    }
+}
+

@@ -1,11 +1,11 @@
-OUT = ../../../build/libsash.so
+OUT = ../../../build/libsash.extension
 CC = mpic++
 IDIR = .
 ODIR = ../../../obj
 SDIR = .
 INC = 
 LIBS =
-CFLAGS = -std=c++0x -g -Wall -shared -fPIC
+CFLAGS = -std=c++0x -g -Wall -shared -fPIC -I../../
 LFLAGS = -lboost_serialization -lboost_mpi
 
 _OBJS = Sash.o mtrand.o

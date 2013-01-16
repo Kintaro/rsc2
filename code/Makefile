@@ -5,7 +5,7 @@ ODIR = obj
 SDIR = src
 INC = 
 LIBS =
-CFLAGS = -std=c++0x -g -Wall
+CFLAGS = -std=c++0x -g -Wall -Isrc/
 LFLAGS = -lboost_serialization -lboost_mpi
 
 _OBJS = Daemon.o Options.o FileUtil.o VecDataBlock.o rsc2.o

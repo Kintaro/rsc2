@@ -142,6 +142,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+ #include <iostream>
 #include <math.h>
 //#include "DistanceData.h"
 #include "mtrand.h"
@@ -1056,6 +1057,8 @@ private:
 
 };
 
-Sash* BOOST_EXTENSION_EXPORT_DECL create_index_structure() { return NULL; }
+extern "C" {
+IndexStructure<DistanceData>* BOOST_EXTENSION_EXPORT_DECL create_index_structure(int x);
+}
 
 #endif
