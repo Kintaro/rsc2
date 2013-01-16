@@ -57,14 +57,14 @@
 
 #include "Sash.h"
 
-////////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*///
 //                                Sash                                //
-////////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*///
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 //                         Public Methods                           //
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -72,47 +72,14 @@
  * random number generator initialization.
  */
 
-Sash:: Sash ()
+Sash::Sash ()
 //
 {
-    data = NULL;
-    size = 0;
-    maxParents = 4;
-    maxChildren = 16;
-    internToExternMapping = NULL;
-    sampleSizeList = NULL;
-    levels = 0;
-    parentIndexLList = NULL;
-    parentDistLList = NULL;
-    parentLSizeList = NULL;
-    childIndexLList = NULL;
-    childDistLList = NULL;
-    childLSizeList = NULL;
-    query = NULL;
-    distFromQueryList = NULL;
-    storedDistIndexList = NULL;
-    numStoredDists = 0;
-    numDistComps = 0UL;
-    levelQuotaList = NULL;
-    queryResultIndexList = NULL;
-    queryResultDistList = NULL;
-    queryResultSize = 0;
-    queryResultSampleSize = 0;
-    scratchIndexList = NULL;
-    scratchDistList = NULL;
-    scratchListSize = 0;
-    verbosity = 0;
-    numOrphans = 0;
-
-    stringBuf = new char [SASH_BUFSIZE_];
-    stringBuf[0] = '\0';
-
-    genInt.seed (314159UL);
     seed = 314159UL;
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -120,215 +87,28 @@ Sash:: Sash ()
  */
 
 
-Sash:: Sash (unsigned long seed)
+Sash::Sash (unsigned long seed)
 //
 {
-    data = NULL;
-    size = 0;
-    maxParents = 4;
-    maxChildren = 16;
-    internToExternMapping = NULL;
-    sampleSizeList = NULL;
-    levels = 0;
-    parentIndexLList = NULL;
-    parentDistLList = NULL;
-    parentLSizeList = NULL;
-    childIndexLList = NULL;
-    childDistLList = NULL;
-    childLSizeList = NULL;
-    query = NULL;
-    distFromQueryList = NULL;
-    storedDistIndexList = NULL;
-    numStoredDists = 0;
-    numDistComps = 0UL;
-    levelQuotaList = NULL;
-    queryResultIndexList = NULL;
-    queryResultDistList = NULL;
-    queryResultSize = 0;
-    queryResultSampleSize = 0;
-    scratchIndexList = NULL;
-    scratchDistList = NULL;
-    scratchListSize = 0;
-    verbosity = 0;
-    numOrphans = 0;
-
-    stringBuf = new char [SASH_BUFSIZE_];
-    stringBuf[0] = '\0';
-
     genInt.seed (seed);
     this->seed = seed;
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
  * Destructor.
  */
 
-Sash:: ~Sash ()
+Sash::~Sash ()
 //
 {
-    int i;
-
-    data = NULL;
-
-    if (internToExternMapping != NULL)
-    {
-        delete [] internToExternMapping;
-        internToExternMapping = NULL;
-    }
-
-    if (sampleSizeList != NULL)
-    {
-        delete [] sampleSizeList;
-        sampleSizeList = NULL;
-    }
-
-    if (parentIndexLList != NULL)
-    {
-        for (i=0; i<size; i++)
-        {
-            if (parentIndexLList[i] != NULL)
-            {
-                delete [] parentIndexLList[i];
-                parentIndexLList[i] = NULL;
-            }
-        }
-
-        delete [] parentIndexLList;
-        parentIndexLList = NULL;
-    }
-
-    if (parentDistLList != NULL)
-    {
-        for (i=0; i<size; i++)
-        {
-            if (parentDistLList[i] != NULL)
-            {
-                delete [] parentDistLList[i];
-                parentDistLList[i] = NULL;
-            }
-        }
-
-        delete [] parentDistLList;
-        parentDistLList = NULL;
-    }
-
-    if (parentLSizeList != NULL)
-    {
-        delete [] parentLSizeList;
-        parentLSizeList = NULL;
-    }
-
-    if (childIndexLList != NULL)
-    {
-        for (i=0; i<size; i++)
-        {
-            if (childIndexLList[i] != NULL)
-            {
-                delete [] childIndexLList[i];
-                childIndexLList[i] = NULL;
-            }
-        }
-
-        delete [] childIndexLList;
-        childIndexLList = NULL;
-    }
-
-    if (childDistLList != NULL)
-    {
-        for (i=0; i<size; i++)
-        {
-            if (childDistLList[i] != NULL)
-            {
-                delete [] childDistLList[i];
-                childDistLList[i] = NULL;
-            }
-        }
-
-        delete [] childDistLList;
-        childDistLList = NULL;
-    }
-
-    if (childLSizeList != NULL)
-    {
-        delete [] childLSizeList;
-        childLSizeList = NULL;
-    }
-
-    query = NULL;
-
-    if (distFromQueryList != NULL)
-    {
-        delete [] distFromQueryList;
-        distFromQueryList = NULL;
-    }
-
-    if (storedDistIndexList != NULL)
-    {
-        delete [] storedDistIndexList;
-        storedDistIndexList = NULL;
-    }
-
-    if (levelQuotaList != NULL)
-    {
-        delete [] levelQuotaList;
-        levelQuotaList = NULL;
-    }
-
-    if (queryResultIndexList != NULL)
-    {
-        delete [] queryResultIndexList;
-        queryResultIndexList = NULL;
-    }
-
-    if (queryResultDistList != NULL)
-    {
-        delete [] queryResultDistList;
-        queryResultDistList = NULL;
-    }
-
-    if (scratchIndexList != NULL)
-    {
-        delete [] scratchIndexList;
-        scratchIndexList = NULL;
-    }
-
-    if (scratchDistList != NULL)
-    {
-        delete [] scratchDistList;
-        scratchDistList = NULL;
-    }
-
-    if (stringBuf != NULL)
-    {
-        delete [] stringBuf;
-        stringBuf = NULL;
-    }
 }
 
 
-//////////////////////////////////////////////////////////////////////
-
-
-/**
- * Constructs the SASH from an array of data items.
- * A default capacity of 4 parents per node is assumed.
- * The number of items comprising the SASH is returned.
- * The number of pairwise distance computations performed
- *   can be obtained via a call to getResultDistComps.
- */
-
-int Sash:: build (DistanceData** inputData, int numItems)
-//
-{
-    return build (inputData, numItems, 4);
-}
-
-
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -340,7 +120,7 @@ int Sash:: build (DistanceData** inputData, int numItems)
  *   can be obtained via a call to getResultDistComps.
  */
 
-int Sash:: build (DistanceData** inputData, int numItems, int numParents)
+int Sash::build (DistanceData** inputData, int numItems, const boost::optional<int>& numParents)
 //
 {
     int i = 0;
@@ -401,7 +181,7 @@ int Sash:: build (DistanceData** inputData, int numItems, int numParents)
 
     numDistComps = 0UL;
 
-    doBuild (numItems);
+    internal_build (numItems);
 
     if (verbosity >= 2)
     {
@@ -412,7 +192,7 @@ int Sash:: build (DistanceData** inputData, int numItems, int numParents)
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -424,7 +204,7 @@ int Sash:: build (DistanceData** inputData, int numItems, int numParents)
  * If unsuccessful, zero is returned.
  */
 
-int Sash:: build (char* fileName, DistanceData** inputData, int numItems)
+int Sash::build (char* fileName, DistanceData** inputData, int numItems)
 //
 {
     int i = 0;
@@ -585,32 +365,7 @@ int Sash:: build (char* fileName, DistanceData** inputData, int numItems)
 }
 
 
-//////////////////////////////////////////////////////////////////////
-
-
-/**
- * Perform an approximate range query for the specified item.
- * The upper limit on the query-to-item distance must be supplied.
- * The number of elements actually found is returned.
- * The query result can be obtained via calls to the following methods:
- *         getResultAcc
- *         getResultDists
- *         getResultDistComps
- *         getResultIndices
- *         getResultNumFound
- *         getResultSampleSize
- * The result items are sorted in increasing order of their distances
- *   to the query.
- */
-
-const int Sash:: find_all_in_range (const DistanceData& query, double limit)
-//
-{
-    return find_all_in_range (query, limit, 0);
-}
-
-
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -632,7 +387,7 @@ const int Sash:: find_all_in_range (const DistanceData& query, double limit)
  *   to the query.
  */
 
-const int Sash:: find_all_in_range (const DistanceData& query, double limit, int sampleRate)
+const int Sash::find_all_in_range (const DistanceData& query, double limit, const boost::optional<int>& sampleRate)
 //
 {
     queryResultSize = 0;
@@ -643,7 +398,7 @@ const int Sash:: find_all_in_range (const DistanceData& query, double limit, int
             || (query == NULL)
             || (limit < 0.0F)
             || (sampleRate < 0)
-            || ((sampleRate >= levels) && (size > 1)))
+            || ((*sampleRate >= levels) && (size > 1)))
     {
         if (verbosity > 0)
         {
@@ -656,11 +411,11 @@ const int Sash:: find_all_in_range (const DistanceData& query, double limit, int
 
     setNewQuery (query);
 
-    return doFindAllInRange (limit, sampleRate);
+    return doFindAllInRange (limit, *sampleRate);
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -678,14 +433,14 @@ const int Sash:: find_all_in_range (const DistanceData& query, double limit, int
  *   to the query.
  */
 
-int Sash:: findMostInRange (DistanceData* query, float limit)
+int Sash::findMostInRange (DistanceData* query, float limit)
 //
 {
     return findMostInRange (query, limit, 0, 1.0F);
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -707,14 +462,14 @@ int Sash:: findMostInRange (DistanceData* query, float limit)
  *   to the query.
  */
 
-int Sash:: findMostInRange (DistanceData* query, float limit, int sampleRate)
+int Sash::findMostInRange (DistanceData* query, float limit, int sampleRate)
 //
 {
     return findMostInRange (query, limit, sampleRate, 1.0F);
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -737,14 +492,14 @@ int Sash:: findMostInRange (DistanceData* query, float limit, int sampleRate)
  *   to the query.
  */
 
-int Sash:: findMostInRange (DistanceData* query, float limit, float scaleFactor)
+int Sash::findMostInRange (DistanceData* query, float limit, float scaleFactor)
 //
 {
     return findMostInRange (query, limit, 0, scaleFactor);
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -771,7 +526,7 @@ int Sash:: findMostInRange (DistanceData* query, float limit, float scaleFactor)
  *   to the query.
  */
 
-int Sash:: findMostInRange
+int Sash::findMostInRange
 (DistanceData* query, float limit, int sampleRate, float scaleFactor)
 //
 {
@@ -800,95 +555,7 @@ int Sash:: findMostInRange
     return doFindMostInRange (limit, sampleRate, scaleFactor);
 }
 
-
-//////////////////////////////////////////////////////////////////////
-
-
-/**
- * Find a set of approximate nearest neighbours for the specified
- *   query item.
- * The desired number of elements must be given ("howMany").
- * The number of elements actually found is returned.
- * The query result can be obtained via calls to the following methods:
- *         getResultAcc
- *         getResultDists
- *         getResultDistComps
- *         getResultIndices
- *         getResultNumFound
- *         getResultSampleSize
- * The result items are sorted in increasing order of their distances
- *   to the query.
- */
-
-int Sash:: findNear (DistanceData* query, int howMany)
-//
-{
-    return findNear (query, howMany, 0, 1.0F);
-}
-
-
-//////////////////////////////////////////////////////////////////////
-
-
-/**
- * Find a set of approximate nearest neighbours for the specified
- *   query item.
- * The search is relative to a data sample of size N / 2^r,
- *   where N is the number of items in the set, and r is
- *   a non-negative integer ("sampleRate").
- * A "sampleRate" of zero indicates a search relative to the entire set.
- * The desired number of elements must be given ("howMany").
- * The number of elements actually found is returned.
- * The query result can be obtained via calls to the following methods:
- *         getResultAcc
- *         getResultDists
- *         getResultDistComps
- *         getResultIndices
- *         getResultNumFound
- *         getResultSampleSize
- * The result items are sorted in increasing order of their distances
- *   to the query.
- */
-
-int Sash:: findNear (DistanceData* query, int howMany, int sampleRate)
-//
-{
-    return findNear (query, howMany, sampleRate, 1.0F);
-}
-
-
-//////////////////////////////////////////////////////////////////////
-
-
-/**
- * Find a set of approximate nearest neighbours for the specified
- *   query item.
- * The desired number of elements must be given ("howMany").
- * The number of elements actually found is returned.
- * The method also makes use of a parameter ("scaleFactor")
- *   that influences the trade-off between time and accuracy.
- * The default value of this parameter is 1.0 - increasing the value
- *   will increase running time (roughly proportionally) and increase
- *   the accuracy of the result.
- * The query result can be obtained via calls to the following methods:
- *         getResultAcc
- *         getResultDists
- *         getResultDistComps
- *         getResultIndices
- *         getResultNumFound
- *         getResultSampleSize
- * The result items are sorted in increasing order of their distances
- *   to the query.
- */
-
-int Sash:: findNear (DistanceData* query, int howMany, float scaleFactor)
-//
-{
-    return findNear (query, howMany, 0, scaleFactor);
-}
-
-
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -916,8 +583,7 @@ int Sash:: findNear (DistanceData* query, int howMany, float scaleFactor)
  *   to the query.
  */
 
-int Sash:: findNear
-(DistanceData* query, int howMany, int sampleRate, float scaleFactor)
+const int Sash::find_near(DistanceData* query, int howMany, int sampleRate, double scaleFactor)
 //
 {
     queryResultSize = 0;
@@ -931,22 +597,17 @@ int Sash:: findNear
             || ((sampleRate >= levels) && (size > 1))
             || (scaleFactor <= 0.0F))
     {
-        if (verbosity > 0)
-        {
-            printf ("ERROR (from findNear): invalid argument(s).\n");
-            fflush (NULL);
-        }
-
-        return 0;
+        Daemon::error("ERROR (from find_near): invalid argument(s).");
+        throw new std::exception();
     }
 
-    setNewQuery (query);
+    this->set_new_query (query);
 
     return doFindNear (howMany, sampleRate, scaleFactor);
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -965,14 +626,14 @@ int Sash:: findNear
  *   to the query.
  */
 
-int Sash:: findNearest (DistanceData* query, int howMany)
+int Sash::findNearest (DistanceData* query, int howMany)
 //
 {
     return findNearest (query, howMany, 0);
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -995,7 +656,7 @@ int Sash:: findNearest (DistanceData* query, int howMany)
  *   to the query.
  */
 
-int Sash:: findNearest (DistanceData* query, int howMany, int sampleRate)
+int Sash::findNearest (DistanceData* query, int howMany, int sampleRate)
 //
 {
     queryResultSize = 0;
@@ -1023,20 +684,20 @@ int Sash:: findNearest (DistanceData* query, int howMany, int sampleRate)
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
  * Returns direct access to the SASH input data list.
  */
 
-DistanceData** Sash:: getData ()
+DistanceData** Sash::getData ()
 {
     return data;
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -1046,7 +707,7 @@ DistanceData** Sash:: getData ()
  * If unsuccessful, zero is returned.
  */
 
-int Sash:: getExternToInternMapping (int* result, int capacity)
+int Sash::getExternToInternMapping (int* result, int capacity)
 //
 {
     int i;
@@ -1072,7 +733,7 @@ int Sash:: getExternToInternMapping (int* result, int capacity)
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -1082,7 +743,7 @@ int Sash:: getExternToInternMapping (int* result, int capacity)
  * If unsuccessful, zero is returned.
  */
 
-int Sash:: getInternToExternMapping (int* result, int capacity)
+int Sash::getInternToExternMapping (int* result, int capacity)
 //
 {
     int i;
@@ -1108,60 +769,60 @@ int Sash:: getInternToExternMapping (int* result, int capacity)
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
  * Returns the upper limit on the number of parents per SASH node.
  */
 
-int Sash:: getMaxParents ()
+int Sash::getMaxParents ()
 {
     return maxParents;
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
  * Returns the number of data items of the SASH.
  */
 
-const int Sash:: get_number_of_items () const
+const int Sash::get_number_of_items () const
 {
     return size;
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
  * Returns the number of sample levels of the SASH.
  */
 
-const int Sash:: get_number_of_levels () const
+const int Sash::get_number_of_levels () const
 {
     return levels;
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
  * Returns the number of orphan nodes encountered during SASH construction.
  */
 
-int Sash:: getNumOrphans ()
+int Sash::getNumOrphans ()
 //
 {
     return numOrphans;
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -1175,7 +836,7 @@ int Sash:: getNumOrphans ()
  * If unsuccessful, a negative value is returned.
  */
 
-float Sash:: getResultAcc (float* exactDistList, int howMany)
+float Sash::getResultAcc (float* exactDistList, int howMany)
 //
 {
     int i;
@@ -1207,7 +868,7 @@ float Sash:: getResultAcc (float* exactDistList, int howMany)
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -1217,7 +878,7 @@ float Sash:: getResultAcc (float* exactDistList, int howMany)
  * If unsuccessful, zero is returned.
  */
 
-const std::vector<double> Sash:: get_result_distances () const
+const std::vector<double> Sash::get_result_distances () const
 //
 {
     std::vector<double> result;
@@ -1232,7 +893,7 @@ const std::vector<double> Sash:: get_result_distances () const
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -1240,14 +901,14 @@ const std::vector<double> Sash:: get_result_distances () const
  *   the most recent SASH operation.
  */
 
-const int Sash:: get_result_distance_comparisons () const;
+const int Sash::get_result_distance_comparisons () const;
 //
 {
     return numDistComps;
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -1257,7 +918,7 @@ const int Sash:: get_result_distance_comparisons () const;
  * If unsuccessful, zero is returned.
  */
 
-const std::vector<int> Sash:: get_result_indices () const
+const std::vector<int> Sash::get_result_indices () const
 //
 {
     std::vector<int> result;
@@ -1272,49 +933,49 @@ const std::vector<int> Sash:: get_result_indices () const
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
  * Returns the number of items found in the most recent query.
  */
 
-int Sash:: getResultNumFound ()
+int Sash::getResultNumFound ()
 //
 {
     return queryResultSize;
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
  * Returns the sample size used in the most recent query.
  */
 
-int Sash:: getResultSampleSize ()
+int Sash::getResultSampleSize ()
 //
 {
     return queryResultSampleSize;
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
  * Returns the seed value used for random number generator initialization.
  */
 
-unsigned long Sash:: getRNGSeed ()
+unsigned long Sash::getRNGSeed ()
 //
 {
     return seed;
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -1324,7 +985,7 @@ unsigned long Sash:: getRNGSeed ()
  * If unsuccessful, zero is returned.
  */
 
-int Sash:: getSampleAssignment (int* result, int capacity)
+int Sash::getSampleAssignment (int* result, int capacity)
 //
 {
     int i;
@@ -1356,7 +1017,7 @@ int Sash:: getSampleAssignment (int* result, int capacity)
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -1369,7 +1030,7 @@ int Sash:: getSampleAssignment (int* result, int capacity)
  * If unsuccessful, zero is returned.
  */
 
-const std::vector<int> Sash:: get_sample_sizes () const
+const std::vector<int> Sash::get_sample_sizes () const
 //
 {
     std::vector<int> result;
@@ -1384,7 +1045,7 @@ const std::vector<int> Sash:: get_sample_sizes () const
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -1394,14 +1055,14 @@ const std::vector<int> Sash:: get_sample_sizes () const
  *   all needed distances from scratch.
  */
 
-void Sash:: resetQuery ()
+void Sash::resetQuery ()
 //
 {
     setNewQuery (NULL);
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
 /**
@@ -1411,7 +1072,7 @@ void Sash:: resetQuery ()
  * If unsuccessful, zero is returned.
  */
 
-int Sash:: saveToFile (char* fileName)
+int Sash::saveToFile (char* fileName)
 //
 {
     int i;
@@ -1503,41 +1164,12 @@ int Sash:: saveToFile (char* fileName)
 }
 
 
-//////////////////////////////////////////////////////////////////////
-
-
-/**
- * Sets the verbosity level for messages.
- * Verbosity of zero or less: no messages produced.
- * Verbosity of 1: error messages only.
- * Verbosity of 2: error and progress messages only.
- * Verbosity of 3 or more: error, progress, and debug messages reported.
- */
-
-void Sash:: setVerbosity (int verbosity)
-//
-{
-    if (verbosity <= 0)
-    {
-        this->verbosity = 0;
-    }
-    else if (verbosity >= 3)
-    {
-        this->verbosity = 3;
-    }
-    else
-    {
-        this->verbosity = verbosity;
-    }
-}
-
-
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 //                         Private Methods                          //
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
-float Sash:: computeDistFromQuery (int itemIndex)
+const double Sash::compute_distance_from_query(int item_index)
 //
 // Returns the distance from the current query object to the
 //   specified data object.
@@ -1546,23 +1178,22 @@ float Sash:: computeDistFromQuery (int itemIndex)
 // Otherwise, the distance is computed and stored before returning it.
 //
 {
-    if (distFromQueryList[itemIndex] == SASH_UNKNOWN_)
+    if (distance_from_query_list[item_index] < 0.0)
     {
-        distFromQueryList[itemIndex]
-        = query->distance_to (*data[internToExternMapping[itemIndex]]);
-        storedDistIndexList[numStoredDists] = itemIndex;
-        numStoredDists++;
-        numDistComps++;
+        distance_from_query_list[item_index] = query->distance_to (data[internToExternMapping[item_index]]);
+        stored_distance_index_list[numStoredDists] = item_index;
+        ++numStoredDists;
+        ++numDistComps;
     }
 
-    return distFromQueryList[itemIndex];
+    return distance_from_query_list[item_index];
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
-void Sash:: doBuild (int numItems)
+void Sash::internal_build (int numItems)
 //
 // Recursively builds a SASH on items in the first locations of the
 //   scrambled data array.
@@ -1627,7 +1258,7 @@ void Sash:: doBuild (int numItems)
     // Build the SASH recursively on half the items.
 
     halfSize = (numItems + 1) / 2;
-    doBuild (halfSize);
+    internal_build (halfSize);
 
     // We now want to connect the bottom level of the
     //   recursively-constructed SASH to the remainder of the items.
@@ -1862,10 +1493,10 @@ void Sash:: doBuild (int numItems)
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
-int Sash:: doFindAllInRange (float limit, int sampleRate)
+int Sash::doFindAllInRange (float limit, int sampleRate)
 //
 // Performs an exact range query from the current query object,
 //   with respect to a subset of the items.
@@ -1930,10 +1561,10 @@ int Sash:: doFindAllInRange (float limit, int sampleRate)
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
-int Sash:: doFindMostInRange (float limit, int sampleRate, float scaleFactor)
+int Sash::doFindMostInRange (float limit, int sampleRate, float scaleFactor)
 //
 // Performs an approximate range query from the current query object,
 //   with respect to a subset of the items.
@@ -2099,10 +1730,10 @@ int Sash:: doFindMostInRange (float limit, int sampleRate, float scaleFactor)
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
-int Sash:: doFindNear (int howMany, int sampleRate, float scaleFactor)
+int Sash::doFindNear (int howMany, int sampleRate, float scaleFactor)
 //
 // Computes approximate nearest neighbours of the current query object,
 //   with respect to a subset of the items.
@@ -2238,10 +1869,10 @@ int Sash:: doFindNear (int howMany, int sampleRate, float scaleFactor)
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
-int Sash:: doFindNearest (int howMany, int sampleRate)
+int Sash::doFindNearest (int howMany, int sampleRate)
 //
 // Computes exact nearest neighbours of the current query object,
 //   with respect to a subset of the items.
@@ -2287,10 +1918,10 @@ int Sash:: doFindNearest (int howMany, int sampleRate)
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
-int Sash:: doFindParents (int howMany)
+int Sash::doFindParents (int howMany)
 //
 // Finds a set of parents for the current query item from among the
 //   bottom-level items of the current SASH.
@@ -2349,10 +1980,10 @@ int Sash:: doFindParents (int howMany)
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
-int Sash:: extractBestEdges
+int Sash::extractBestEdges
 (int howMany,
  float* toDistList, int* toIndexList, int toFirst, int toCapacity,
  float* fromDistList, int* fromIndexList, int fromFirst, int fromLast)
@@ -2401,10 +2032,10 @@ int Sash:: extractBestEdges
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
-int Sash:: partialQuickSort
+int Sash::partialQuickSort
 (int howMany,
  float* distList, int* indexList,
  int rangeFirst, int rangeLast)
@@ -2831,10 +2462,10 @@ int Sash:: partialQuickSort
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
-void Sash:: printStats ()
+void Sash::printStats ()
 //
 // Print statistics related to the SASH construction.
 // Should only be called immediately after the construction.
@@ -2854,17 +2485,16 @@ void Sash:: printStats ()
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
-void Sash:: reserveStorage (int numItems, int numParents)
+void Sash::reserveStorage (int numItems, int numParents)
 //
 // Reserve storage for the SASH and its data.
 // The number of SASH items and the maximum number of parents per node
 //   must be given.
 //
 {
-    int i;
     int sampleSize = 0;
 
     size = numItems;
@@ -2897,11 +2527,11 @@ void Sash:: reserveStorage (int numItems, int numParents)
         }
     }
 
-    levelQuotaList = new int [levels];
-    sampleSizeList = new int [levels+1];
+    this->level_quota_list.resize(levels);
+    this->sample_size_list.resize(levels + 1);
     sampleSize = size;
 
-    for (i=0; i<levels; i++)
+    for (int i = 0; i < levels; ++i)
     {
         levelQuotaList[i] = 0;
         sampleSizeList[i] = sampleSize;
@@ -2913,32 +2543,25 @@ void Sash:: reserveStorage (int numItems, int numParents)
     // Reserve storage for the mapping between internal and external
     //   data indices.
 
-    internToExternMapping = new int [size];
+    internToExternMapping.resize(size);
 
-    for (i=0; i<size; i++)
-    {
+    for (int i = 0; i < size; ++i)
         internToExternMapping[i] = i;
-    }
 
     // Set up storage for child-to-parent edges and parent-to-child edges.
 
-    parentIndexLList = new int* [size];
-    parentDistLList = new float* [size];
-    parentLSizeList = new int [size];
+    parent_index_llist.resize(size);
+    parent_distance_llist.resize(size);
 
-    childIndexLList = new int* [size];
-    childDistLList = new float* [size];
-    childLSizeList = new int [size];
+    child_index_llist.resize(size);
+    child_distance_llist.resize(size);
 
-    for (i=0; i<size; i++)
+    for (int i=0; i<size; i++)
     {
-        parentIndexLList[i] = NULL;
-        parentDistLList[i] = NULL;
-        parentLSizeList[i] = 0;
-
-        childIndexLList[i] = NULL;
-        childDistLList[i] = NULL;
-        childLSizeList[i] = 0;
+        parent_index_llist[i].clear();
+        parent_distance_llist[i].clear();
+        child_index_llist[i].clear();
+        child_distance_llist[i].clear();
     }
 
     // Set up storage for managing distance computations and
@@ -2953,7 +2576,7 @@ void Sash:: reserveStorage (int numItems, int numParents)
     queryResultSize = 0;
     queryResultSampleSize = 0;
 
-    for (i=0; i<size; i++)
+    for (int i=0; i<size; i++)
     {
         distFromQueryList[i] = SASH_UNKNOWN_;
         storedDistIndexList[i] = SASH_NONE_;
@@ -2969,7 +2592,7 @@ void Sash:: reserveStorage (int numItems, int numParents)
     scratchDistList = new float [scratchListSize];
     scratchIndexList = new int [scratchListSize];
 
-    for (i=0; i<scratchListSize; i++)
+    for (int i=0; i<scratchListSize; i++)
     {
         scratchDistList[i] = SASH_UNKNOWN_;
         scratchIndexList[i] = SASH_NONE_;
@@ -2979,10 +2602,10 @@ void Sash:: reserveStorage (int numItems, int numParents)
 }
 
 
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
-void Sash:: setNewQuery (DistanceData* query)
+void Sash::set_new_query (const DistanceData& query)
 //
 // Accepts a new item as the query object for future distance comparisons.
 // Any previously-stored distances are cleared by this operation,
@@ -2990,11 +2613,9 @@ void Sash:: setNewQuery (DistanceData* query)
 //   to the current query object.
 //
 {
-    int i;
-
     if (query != this->query)
     {
-        for (i=0; i<numStoredDists; i++)
+        for (int i = 0; i < numStoredDists; ++i)
         {
             distFromQueryList[storedDistIndexList[i]] = SASH_UNKNOWN_;
         }
@@ -3005,9 +2626,9 @@ void Sash:: setNewQuery (DistanceData* query)
 }
 
 
-//////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------------------------*/
 
 extern "C" {
     IndexStructure<DistanceData>* BOOST_EXTENSION_EXPORT_DECL create_index_structure(int x) 

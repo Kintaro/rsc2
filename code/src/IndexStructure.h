@@ -59,7 +59,7 @@ public:
 	virtual const int get_result_distance_comparisons() const = 0;
 	virtual const int find_all_in_range(const T& query, double limit) = 0;
 	virtual const int find_most_in_range(const T& query, double limit) = 0;
-	virtual const int find_near(const T& query, int how_many, int sample_rate, double scale_factor) = 0;
+	virtual const int find_near(const T& query, int how_many, int sample_rate = 0, double scale_factor = 1.0) = 0;
 	virtual const int find_nearest(const T& query, int how_many, int sample_rate) = 0;
 
 	static IndexStructure<T>* create_from_plugin(const std::string& plugin_name)

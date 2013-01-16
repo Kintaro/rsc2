@@ -180,7 +180,7 @@ public:
     /* For each SASH item, distances to parents. 
        This storage is deallocated after the SASH construction
        is complete */
-    std::vector<std::vector<double>> parent_dist_llist; //   and distances to parents
+    std::vector<std::vector<double>> parent_distance_llist; //   and distances to parents
 
     /* For each SASH item, lists of indices to children.
        This storage is deallocated after the SASH construction
@@ -231,13 +231,13 @@ public:
     unsigned long seed;           // Random number generator seed.
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
     //                         Public Methods                           //
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 public:
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -248,7 +248,7 @@ public:
     Sash ();
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -258,7 +258,7 @@ public:
     Sash (unsigned long seed);
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -267,22 +267,7 @@ public:
 
     ~Sash ();
 
-
-    //////////////////////////////////////////////////////////////////////
-
-
-    /**
-     * Constructs the SASH from an array of data items.
-     * A default capacity of 4 parents per node is assumed.
-     * The number of items comprising the SASH is returned.
-     * The number of pairwise distance computations performed
-     *   can be obtained via a call to getResultDistComps.
-     */
-
-    int build (DistanceData** inputData, int numItems);
-
-
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -294,10 +279,10 @@ public:
      *   can be obtained via a call to getResultDistComps.
      */
 
-    int build (DistanceData** inputData, int numItems, int numParents);
+    int build (DistanceData** inputData, int numItems, const boost::optional<int>& numParents = 4);
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -312,7 +297,7 @@ public:
     int build (char* fileName, DistanceData** inputData, int numItems);
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -330,35 +315,9 @@ public:
      *   to the query.
      */
 
-    const int find_all_in_range (const DistanceData& query, double limit);
+    const int find_all_in_range (const DistanceData& query, double limit, const boost::optional<int>& sample_rate = 0);
 
-
-    //////////////////////////////////////////////////////////////////////
-
-
-    /**
-     * Perform an approximate range query for the specified item.
-     * The upper limit on the query-to-item distance must be supplied.
-     * The number of elements actually found is returned.
-     * The search is relative to a data sample of size N / 2^r,
-     *   where N is the number of items in the set, and r is
-     *   a non-negative integer ("sampleRate").
-     * A "sampleRate" of zero indicates a search relative to the entire set.
-     * The query result can be obtained via calls to the following methods:
-     *         getResultAcc
-     *         getResultDists
-     *         getResultDistComps
-     *         getResultIndices
-     *         getResultNumFound
-     *         getResultSampleSize
-     * The result items are sorted in increasing order of their distances
-     *   to the query.
-     */
-
-    const int find_all_in_range (const DistanceData& query, double limit, int sampleRate);
-
-
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -379,7 +338,7 @@ public:
     int findMostInRange (DistanceData* query, float limit);
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -404,7 +363,7 @@ public:
     int findMostInRange (DistanceData* query, float limit, int sampleRate);
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -430,7 +389,7 @@ public:
     int findMostInRange (DistanceData* query, float limit, float scaleFactor);
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -461,82 +420,7 @@ public:
     (DistanceData* query, float limit, int sampleRate, float scaleFactor);
 
 
-    //////////////////////////////////////////////////////////////////////
-
-
-    /**
-     * Find a set of approximate nearest neighbours for the specified
-     *   query item.
-     * The desired number of elements must be given ("howMany").
-     * The number of elements actually found is returned.
-     * The query result can be obtained via calls to the following methods:
-     *         getResultAcc
-     *         getResultDists
-     *         getResultDistComps
-     *         getResultIndices
-     *         getResultNumFound
-     *         getResultSampleSize
-     * The result items are sorted in increasing order of their distances
-     *   to the query.
-     */
-
-    int findNear (DistanceData* query, int howMany);
-
-
-    //////////////////////////////////////////////////////////////////////
-
-
-    /**
-     * Find a set of approximate nearest neighbours for the specified
-     *   query item.
-     * The search is relative to a data sample of size N / 2^r,
-     *   where N is the number of items in the set, and r is
-     *   a non-negative integer ("sampleRate").
-     * A "sampleRate" of zero indicates a search relative to the entire set.
-     * The desired number of elements must be given ("howMany").
-     * The number of elements actually found is returned.
-     * The query result can be obtained via calls to the following methods:
-     *         getResultAcc
-     *         getResultDists
-     *         getResultDistComps
-     *         getResultIndices
-     *         getResultNumFound
-     *         getResultSampleSize
-     * The result items are sorted in increasing order of their distances
-     *   to the query.
-     */
-
-    int findNear (DistanceData* query, int howMany, int sampleRate);
-
-
-    //////////////////////////////////////////////////////////////////////
-
-
-    /**
-     * Find a set of approximate nearest neighbours for the specified
-     *   query item.
-     * The desired number of elements must be given ("howMany").
-     * The number of elements actually found is returned.
-     * The method also makes use of a parameter ("scaleFactor")
-     *   that influences the trade-off between time and accuracy.
-     * The default value of this parameter is 1.0 - increasing the value
-     *   will increase running time (roughly proportionally) and increase
-     *   the accuracy of the result.
-     * The query result can be obtained via calls to the following methods:
-     *         getResultAcc
-     *         getResultDists
-     *         getResultDistComps
-     *         getResultIndices
-     *         getResultNumFound
-     *         getResultSampleSize
-     * The result items are sorted in increasing order of their distances
-     *   to the query.
-     */
-
-    int findNear (DistanceData* query, int howMany, float scaleFactor);
-
-
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -564,11 +448,10 @@ public:
      *   to the query.
      */
 
-    int findNear
-    (DistanceData* query, int howMany, int sampleRate, float scaleFactor);
+    const int find_near(DistanceData* query, int howMany, int sampleRate = 0, double scaleFactor = 1.0);
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -590,7 +473,7 @@ public:
     int findNearest (DistanceData* query, int howMany);
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -616,7 +499,7 @@ public:
     int findNearest (DistanceData* query, int howMany, int sampleRate);
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -626,7 +509,7 @@ public:
     DistanceData** getData ();
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -639,7 +522,7 @@ public:
     int getExternToInternMapping (int* result, int capacity);
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -652,7 +535,7 @@ public:
     int getInternToExternMapping (int* result, int capacity);
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -662,7 +545,7 @@ public:
     int getMaxParents ();
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -672,7 +555,7 @@ public:
     const int get_number_of_items () const;
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -682,7 +565,7 @@ public:
     const int get_number_of_levels () const;
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -692,7 +575,7 @@ public:
     int getNumOrphans ();
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -709,7 +592,7 @@ public:
     float getResultAcc (float* exactDistList, int howMany);
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -722,7 +605,7 @@ public:
     const std::vector<double> get_result_distances () const;
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -733,7 +616,7 @@ public:
     const int get_result_distance_comparisons () const;
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -746,7 +629,7 @@ public:
     const std::vector<int> get_result_indices () const;
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -756,7 +639,7 @@ public:
     int getResultNumFound ();
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -766,7 +649,7 @@ public:
     int getResultSampleSize ();
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -776,7 +659,7 @@ public:
     unsigned long getRNGSeed ();
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -789,7 +672,7 @@ public:
     int getSampleAssignment (int* result, int capacity);
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -805,7 +688,7 @@ public:
     const std::vector<int> get_sample_sizes () const;
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -818,7 +701,7 @@ public:
     void resetQuery ();
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -831,7 +714,7 @@ public:
     int saveToFile (char* fileName);
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     /**
@@ -845,13 +728,13 @@ public:
     void setVerbosity (int verbosity);
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
     //                         Private Methods                          //
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 private:
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     float computeDistFromQuery (int itemIndex);
@@ -863,17 +746,17 @@ private:
     // Otherwise, the distance is computed and stored before returning it.
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
-    void doBuild (int numItems);
+    void internal_build (int numItems);
     //
     // Recursively builds a SASH on items in the first locations of the
     //   scrambled data array.
     // The number of items to be incorporated into the SASH must be specified.
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     int doFindAllInRange (float limit, int sampleRate);
@@ -886,7 +769,7 @@ private:
     // The results are stored in the SASH query result lists.
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     int doFindMostInRange (float limit, int sampleRate, float scaleFactor);
@@ -904,7 +787,7 @@ private:
     //   but would take roughly twice as much time to process.
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     int doFindNear (int howMany, int sampleRate, float scaleFactor);
@@ -922,7 +805,7 @@ private:
     //   but would take roughly twice as much time to process.
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     int doFindNearest (int howMany, int sampleRate);
@@ -935,7 +818,7 @@ private:
     // The results are stored in the SASH query result lists.
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     int doFindParents (int howMany);
@@ -945,7 +828,7 @@ private:
     // The results are stored in the SASH query result lists.
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     int extractBestEdges
@@ -965,7 +848,7 @@ private:
     // WARNING: this operation destroys entries of the input list!
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     int partialQuickSort
@@ -983,7 +866,7 @@ private:
     //   by this operation!
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     void printStats ();
@@ -992,7 +875,7 @@ private:
     // Should only be called immediately after the construction.
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     void reserveStorage (int numItems, int numParents);
@@ -1002,7 +885,7 @@ private:
     //   must be given.
 
 
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
 
 
     void setNewQuery (DistanceData* query);
@@ -1013,9 +896,9 @@ private:
     //   to the current query object.
 
 
-    //////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////
+/*-----------------------------------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------------------------*/
 
 };
 
