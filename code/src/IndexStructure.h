@@ -42,6 +42,9 @@
 #define __INDEX_STRUCTURE_H__
 
 #include <vector>
+#include <boost/extension/extension.hpp>
+#include <boost/extension/shared_library.hpp>
+#include <boost/function.hpp>
 
 template<typename T>
 class IndexStructure
@@ -58,6 +61,14 @@ public:
 	virtual const int find_most_in_range(const T& query, double limit) = 0;
 	virtual const int find_near(const T& query, int how_many, int sample_rate, double scale_factor) = 0;
 	virtual const int find_nearest(const T& query, int how_many, int sample_rate) = 0;
+
+	static IndexStructure<T>* create_from_plugin(const std::string& plugin_name)
+	{
+		boost::extensions::shared_library lib("./lib" + plugin_name + ".extension");
+		lib.open();
+		boost::function<IndexStructure<T>* (int)> l(lib.get<IndexStructure<T>*, int>("create_index_structure"));
+		return l(42);
+	}
 };
 
 #endif

@@ -603,10 +603,10 @@ int Sash:: build (char* fileName, DistanceData** inputData, int numItems)
  *   to the query.
  */
 
-int Sash:: findAllInRange (DistanceData* query, float limit)
+const int Sash:: find_all_in_range (const DistanceData& query, double limit)
 //
 {
-    return findAllInRange (query, limit, 0);
+    return find_all_in_range (query, limit, 0);
 }
 
 
@@ -632,7 +632,7 @@ int Sash:: findAllInRange (DistanceData* query, float limit)
  *   to the query.
  */
 
-int Sash:: findAllInRange (DistanceData* query, float limit, int sampleRate)
+const int Sash:: find_all_in_range (const DistanceData& query, double limit, int sampleRate)
 //
 {
     queryResultSize = 0;
@@ -647,7 +647,7 @@ int Sash:: findAllInRange (DistanceData* query, float limit, int sampleRate)
     {
         if (verbosity > 0)
         {
-            printf ("ERROR (from findAllInRange): invalid argument(s).\n");
+            printf ("ERROR (from find_all_in_range): invalid argument(s).\n");
             fflush (NULL);
         }
 
@@ -1128,7 +1128,7 @@ int Sash:: getMaxParents ()
  * Returns the number of data items of the SASH.
  */
 
-int Sash:: getNumItems ()
+const int Sash:: get_number_of_items () const
 {
     return size;
 }
@@ -1141,7 +1141,7 @@ int Sash:: getNumItems ()
  * Returns the number of sample levels of the SASH.
  */
 
-int Sash:: getNumLevels ()
+const int Sash:: get_number_of_levels () const
 {
     return levels;
 }
@@ -1217,29 +1217,18 @@ float Sash:: getResultAcc (float* exactDistList, int howMany)
  * If unsuccessful, zero is returned.
  */
 
-int Sash:: getResultDists (float* result, int capacity)
+const std::vector<double> Sash:: get_result_distances () const
 //
 {
+    std::vector<double> result;
     int i;
-
-    if ((result == NULL) || (capacity < queryResultSize))
-    {
-        if (verbosity > 0)
-        {
-            printf ("ERROR (from getResultDists): ");
-            printf  ("result list capacity is too small.\n");
-            fflush (NULL);
-        }
-
-        return 0;
-    }
 
     for (i=0; i<queryResultSize; i++)
     {
-        result[i] = queryResultDistList[i];
+        result.push_back(queryResultDistList[i]);
     }
 
-    return queryResultSize;
+    return result;
 }
 
 
@@ -1251,7 +1240,7 @@ int Sash:: getResultDists (float* result, int capacity)
  *   the most recent SASH operation.
  */
 
-unsigned long Sash:: getResultDistComps ()
+const int Sash:: get_result_distance_comparisons () const;
 //
 {
     return numDistComps;
@@ -1268,29 +1257,18 @@ unsigned long Sash:: getResultDistComps ()
  * If unsuccessful, zero is returned.
  */
 
-int Sash:: getResultIndices (int* result, int capacity)
+const std::vector<int> Sash:: get_result_indices () const
 //
 {
+    std::vector<int> result;
     int i;
-
-    if ((result == NULL) || (capacity < queryResultSize))
-    {
-        if (verbosity > 0)
-        {
-            printf ("ERROR (from getResultIndices): ");
-            printf  ("result list capacity is too small.\n");
-            fflush (NULL);
-        }
-
-        return 0;
-    }
 
     for (i=0; i<queryResultSize; i++)
     {
-        result[i] = internToExternMapping[queryResultIndexList[i]];
+        result.push_back(internToExternMapping[queryResultIndexList[i]]);
     }
 
-    return queryResultSize;
+    return result;
 }
 
 
@@ -1391,29 +1369,18 @@ int Sash:: getSampleAssignment (int* result, int capacity)
  * If unsuccessful, zero is returned.
  */
 
-int Sash:: getSampleSizes (int* result, int capacity)
+const std::vector<int> Sash:: get_sample_sizes () const
 //
 {
+    std::vector<int> result;
     int lvl;
-
-    if ((result == NULL) || (capacity < levels))
-    {
-        if (verbosity > 0)
-        {
-            printf ("ERROR (from getSampleSizes): ");
-            printf  ("result list capacity is too small.\n");
-            fflush (NULL);
-        }
-
-        return 0;
-    }
 
     for (lvl=0; lvl<levels; lvl++)
     {
-        result[lvl] = sampleSizeList[lvl];
+        result.push_back(sampleSizeList[lvl]);
     }
 
-    return levels;
+    return result;
 }
 
 
@@ -3045,7 +3012,7 @@ void Sash:: setNewQuery (DistanceData* query)
 extern "C" {
     IndexStructure<DistanceData>* BOOST_EXTENSION_EXPORT_DECL create_index_structure(int x) 
     { 
-        std::cout << "SHARED!" << std::endl; return NULL; 
+        return new Sash(x);
     }
 }
 
