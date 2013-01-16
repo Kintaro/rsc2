@@ -41,6 +41,8 @@
 #ifndef __INDEX_STRUCTURE_H__
 #define __INDEX_STRUCTURE_H__
 
+#include <vector>
+
 template<typename T>
 class IndexStructure
 {

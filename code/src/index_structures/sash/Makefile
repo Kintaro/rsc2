@@ -1,14 +1,14 @@
-OUT = build/rsc2
+OUT = ../../../build/libsash.so
 CC = mpic++
 IDIR = .
-ODIR = obj
-SDIR = src
+ODIR = ../../../obj
+SDIR = .
 INC = 
 LIBS =
-CFLAGS = -std=c++0x -g -Wall
+CFLAGS = -std=c++0x -g -Wall -shared -fPIC
 LFLAGS = -lboost_serialization -lboost_mpi
 
-_OBJS = Daemon.o Options.o FileUtil.o VecDataBlock.o rsc2.o
+_OBJS = Sash.o mtrand.o
 
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
@@ -18,8 +18,7 @@ all: $(OBJS) $(OUT)
 $(ODIR)/%.o: $(SDIR)/%.cpp 
 	$(CC) -c $(INC) -o $@ $< $(CFLAGS)
 
-$(OUT): $(OBJS)
-	$(MAKE) -C src/index_structures/sash
+$(OUT): $(OBJS)	
 	$(CC) -o $@ $^ $(CFLAGS) $(LFLAGS) $(LIBS)
 	strip $(OUT)
 
