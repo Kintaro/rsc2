@@ -2613,16 +2613,14 @@ void Sash::set_new_query (const DistanceData& query)
 //   to the current query object.
 //
 {
-    if (query != this->query)
-    {
-        for (int i = 0; i < numStoredDists; ++i)
-        {
-            distFromQueryList[storedDistIndexList[i]] = SASH_UNKNOWN_;
-        }
+    if (query == this->query)
+        return;
 
-        this->query = query;
-        numStoredDists = 0;
-    }
+    for (auto &x : this->storedDistIndexList)
+        this->distance_from_query_list[x] = -1.0;
+
+    this->query = query;
+    numStoredDists = 0;
 }
 
 
