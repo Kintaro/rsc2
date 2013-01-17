@@ -705,12 +705,9 @@ const std::vector<double> Sash::get_result_distances () const
 //
 {
     std::vector<double> result;
-    int i;
 
-    for (i=0; i<queryResultSize; i++)
-    {
-        result.push_back(queryResultDistList[i]);
-    }
+    for (int i = 0; i < this->query_result_distance_list.size(); ++i)
+        result.push_back(this->query_result_distance_list[i]);
 
     return result;
 }
@@ -745,12 +742,9 @@ const std::vector<int> Sash::get_result_indices () const
 //
 {
     std::vector<int> result;
-    int i;
 
-    for (i=0; i<queryResultSize; i++)
-    {
-        result.push_back(internToExternMapping[queryResultIndexList[i]]);
-    }
+    for (int i = 0; i < queryResultSize; ++i)
+        result.push_back(this->internToExternMapping[this->query_result_index_list[i]]);
 
     return result;
 }
