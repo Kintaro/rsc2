@@ -109,7 +109,7 @@
 //  dataSash->getResultIndices (approxIndexList, approxListCapacity);
 //  resultSize = dataSash->getResultNumFound ();
 //  numberOfDistanceComputations = dataSash->getResultDistComps ();
-//  accuracy = dataSash->getResultAcc (exactDistList, 100);
+//  accuracy = dataSash->get_result_accuracy (exactDistList, 100);
 //
 //  // Exact range query for distance limit 0.1
 //  // Approx range query for distance limit 0.1, and verifying its accuracy
@@ -127,7 +127,7 @@
 //      dataSash->getResultDists (approxDistList, approxListCapacity);
 //      dataSash->getResultIndices (approxIndexList, approxListCapacity);
 //      numberOfDistanceComputations = dataSash->getResultDistComps ();
-//      accuracy = dataSash->getResultAcc (exactDistList, 100);
+//      accuracy = dataSash->get_result_accuracy (exactDistList, 100);
 //    }
 //  }
 //
@@ -163,15 +163,18 @@ public:
     int maxParents;               // Upper limits on the maximum number of
     int maxChildren;              //   parent and child pointers per node.
 
-    std::vector<int> internToExternMapping; // Stores the mapping from internal
-                                            //   item indices to external (input) indices.
+    /* Stores the mapping from internal
+       item indices to external (input) indices. */
+    std::vector<int> intern_to_extern_mapping; 
 
-    int levels;                   // Number of sample levels in the SASH
-    //   (other than the root's).
-    // The bottom SASH level has index 0,
-    //   the root has level "level".
+    /* Number of sample levels in the SASH
+       (other than the root's).
+       The bottom SASH level has index 0,
+       the root has level "level". */
+    int levels;                   
 
-    std::vector<int> sample_size_list; // The size of each SASH sample level.
+    /* The size of each SASH sample level. */
+    std::vector<int> sample_size_list; 
 
     /* For each SASH item, lists of indices to parents
        This storage is deallocated after the SASH construction
@@ -180,7 +183,7 @@ public:
     /* For each SASH item, distances to parents. 
        This storage is deallocated after the SASH construction
        is complete */
-    std::vector<std::vector<double>> parent_distance_llist; //   and distances to parents
+    std::vector<std::vector<double>> parent_distance_llist; 
 
     /* For each SASH item, lists of indices to children.
        This storage is deallocated after the SASH construction
@@ -191,11 +194,15 @@ public:
        is complete */
     std::vector<std::vector<double>> child_distance_llist;
 
-    boost::optional<DistanceData> query; // Storage supporting distance computation.
-    std::vector<double> distance_from_query_list; // The "storedDistIndexList" array holds
-    std::vector<int> stored_distance_index_list; //   the (internal) indices of items
-    // The distance themselves are stored
-    //   in the array "distFromQueryList".
+    /* Storage supporting distance computation. */
+    boost::optional<DistanceData> query; 
+    
+    /* The distance themselves are stored
+       in the array "distFromQueryList". */
+    std::vector<double> distance_from_query_list; 
+    /* The "storedDistIndexList" array holds 
+       the (internal) indices of items */
+    std::vector<int> stored_distance_index_list; 
 
     unsigned long numDistComps;   // The number of distance computations
     //   performed during the most recent
@@ -225,15 +232,11 @@ public:
     char* stringBuf;              // Character buffer used for string
     //   manipulation.
 
-    int number_of_orphans;               // Number of orphan nodes encountered during
-    //   the SASH construction.
+    /* Number of orphan nodes encountered during
+       the SASH construction. */
+    int number_of_orphans;               
 
     unsigned long seed;           // Random number generator seed.
-
-
-/*-----------------------------------------------------------------------------------------------*/
-    //                         Public Methods                           //
-/*-----------------------------------------------------------------------------------------------*/
 
 public:
 
@@ -305,7 +308,7 @@ public:
      * The upper limit on the query-to-item distance must be supplied.
      * The number of elements actually found is returned.
      * The query result can be obtained via calls to the following methods:
-     *         getResultAcc
+     *         get_result_accuracy
      *         getResultDists
      *         getResultDistComps
      *         getResultIndices
@@ -335,7 +338,7 @@ public:
      *   will increase running time (roughly proportionally) and increase
      *   the accuracy of the result.
      * The query result can be obtained via calls to the following methods:
-     *         getResultAcc
+     *         get_result_accuracy
      *         getResultDists
      *         getResultDistComps
      *         getResultIndices
@@ -366,7 +369,7 @@ public:
      *   will increase running time (roughly proportionally) and increase
      *   the accuracy of the result.
      * The query result can be obtained via calls to the following methods:
-     *         getResultAcc
+     *         get_result_accuracy
      *         getResultDists
      *         getResultDistComps
      *         getResultIndices
@@ -392,7 +395,7 @@ public:
      * The desired number of elements must be given ("howMany").
      * The number of elements actually found is returned.
      * The query result can be obtained via calls to the following methods:
-     *         getResultAcc
+     *         get_result_accuracy
      *         getResultDists
      *         getResultDistComps
      *         getResultIndices
@@ -494,8 +497,7 @@ public:
      *   items found in the query result.
      * If unsuccessful, a negative value is returned.
      */
-
-    float getResultAcc (float* exactDistList, int howMany);
+    const double get_result_accuracy (const std::vector<double>& exactDistList) const
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -575,7 +577,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    int getSampleAssignment (int* result, int capacity);
+    int get_sample_assignment (int* result, int capacity);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -604,7 +606,7 @@ public:
      *   all needed distances from scratch.
      */
 
-    void resetQuery ();
+    void reset_query ();
 
 
 /*-----------------------------------------------------------------------------------------------*/

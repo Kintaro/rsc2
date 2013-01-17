@@ -356,7 +356,7 @@ int Sash::build (const std::string& filename, DistanceData** inputData, int numI
  *   a non-negative integer ("sampleRate").
  * A "sampleRate" of zero indicates a search relative to the entire set.
  * The query result can be obtained via calls to the following methods:
- *         getResultAcc
+ *         get_result_accuracy
  *         getResultDists
  *         getResultDistComps
  *         getResultIndices
@@ -411,7 +411,7 @@ const int Sash::find_all_in_range (const DistanceData& query, double limit, cons
  *   will increase running time (roughly proportionally) and increase
  *   the accuracy of the result.
  * The query result can be obtained via calls to the following methods:
- *         getResultAcc
+ *         get_result_accuracy
  *         getResultDists
  *         getResultDistComps
  *         getResultIndices
@@ -467,7 +467,7 @@ const int Sash::find_most_in_range(const DistanceData& query, const double limit
  *   will increase running time (roughly proportionally) and increase
  *   the accuracy of the result.
  * The query result can be obtained via calls to the following methods:
- *         getResultAcc
+ *         get_result_accuracy
  *         getResultDists
  *         getResultDistComps
  *         getResultIndices
@@ -514,7 +514,7 @@ const int Sash::find_near(const DistanceData& query, const int howMany, const bo
  * The desired number of elements must be given ("howMany").
  * The number of elements actually found is returned.
  * The query result can be obtained via calls to the following methods:
- *         getResultAcc
+ *         get_result_accuracy
  *         getResultDists
  *         getResultDistComps
  *         getResultIndices
@@ -667,35 +667,27 @@ int Sash::getNumOrphans ()
  * If unsuccessful, a negative value is returned.
  */
 
-float Sash::getResultAcc (float* exactDistList, int howMany)
+const double Sash::get_result_accuracy (const std::vector<double>& exactDistList) const
 //
 {
-    int i;
     int loc = 0;
 
-    if ((exactDistList == NULL)
-            || (howMany < queryResultSize))
+    if (exactDistList.size() < queryResultSize)
     {
-        if (verbosity > 0)
-        {
-            printf ("ERROR (from getResultAcc): ");
-            printf  ("exact distance list is too small.\n");
-            fflush (NULL);
-        }
+        Daemon::error ("ERROR (from get_result_accuracy): ");
+        Daemon::error ("exact distance list is too small.");
 
-        return SASH_UNKNOWN_;
+        throw new std::exception();
     }
 
-    for (i=0; i<howMany; i++)
+    for (int i = 0; i < exactDistList.size(); i++)
     {
         if ((loc < queryResultSize)
                 && (queryResultDistList[loc] <= exactDistList[i]))
-        {
             loc++;
-        }
     }
 
-    return ((float) loc) / howMany;
+    return ((double) loc) / howMany;
 }
 
 
@@ -816,7 +808,7 @@ unsigned long Sash::getRNGSeed ()
  * If unsuccessful, zero is returned.
  */
 
-int Sash::getSampleAssignment (int* result, int capacity)
+int Sash::get_sample_assignment (int* result, int capacity)
 //
 {
     int i;
@@ -826,7 +818,7 @@ int Sash::getSampleAssignment (int* result, int capacity)
     {
         if (verbosity > 0)
         {
-            printf ("ERROR (from getSampleAssignment): ");
+            printf ("ERROR (from get_sample_assignment): ");
             printf  ("result list capacity is too small.\n");
             fflush (NULL);
         }
@@ -878,7 +870,7 @@ const std::vector<int> Sash::get_sample_sizes () const
  *   all needed distances from scratch.
  */
 
-void Sash::resetQuery ()
+void Sash::reset_query ()
 //
 {
     this->set_new_query(boost::none);
