@@ -667,7 +667,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    int doFindAllInRange (float limit, int sampleRate);
+    int internal_find_all_in_range (float limit, int sampleRate);
     //
     // Performs an exact range query from the current query object,
     //   with respect to a subset of the items.
