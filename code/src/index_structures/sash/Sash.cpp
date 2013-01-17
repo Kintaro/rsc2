@@ -170,12 +170,7 @@ int Sash::build (DistanceData** inputData, int numItems, const boost::optional<i
     }
 
     for (i=size-1; i>=0; i--)
-    {
-        loc = genInt () % (i+1);
-        temp = internToExternMapping[loc];
-        internToExternMapping[loc] = internToExternMapping[i];
-        internToExternMapping[i] = temp;
-    }
+        std::swap(this->internToExternMapping[genInt () % (i+1)], this->internToExternMapping[i]);
 
     // Recursively build the SASH structure.
 
@@ -204,7 +199,7 @@ int Sash::build (DistanceData** inputData, int numItems, const boost::optional<i
  * If unsuccessful, zero is returned.
  */
 
-int Sash::build (char* fileName, DistanceData** inputData, int numItems)
+int Sash::build (const std::string& filename, DistanceData** inputData, int numItems)
 //
 {
     int i = 0;
@@ -267,39 +262,30 @@ int Sash::build (char* fileName, DistanceData** inputData, int numItems)
         return 0;
     }
 
-    // Skip two comment lines.
+    std::fstream in_file = FileUtil::open_read(filename);
 
-    fgets (stringBuf, SASH_BUFSIZE_, inFile);
-    fgets (stringBuf, SASH_BUFSIZE_, inFile);
-
-    // Read in basic parameters.
-
-    fscanf
-    (inFile, "%d%d%d%d%ld",
-     &(inSize), &(inLevels), &(inMaxParents), &(numOrphans), &(seed));
+    inSize       = FileUtil::read_from_file<int>(in_file);
+    inLevels     = FileUtil::read_from_file<int>(in_file);
+    inMaxParents = FileUtil::read_from_file<int>(in_file);
+    numOrphans   = FileUtil::read_from_file<int>(in_file);
+    seed         = FileUtil::read_from_file<int>(in_file);
 
     // Are these parameter values what we expected?
     // If not, then abort!
 
     if (inSize != numItems)
     {
-        if (verbosity > 0)
-        {
-            printf ("ERROR (from build):");
-            printf (" unexpected SASH parameters in file %s.sash.\n", fileName);
-        }
+        Daemon::error("ERROR (from build):");
+        Daemon::error(" unexpected SASH parameters in file %s.sash.\n", filename.c_str());
 
-        fclose (inFile);
-        fflush (NULL);
-
-        return 0;
+        throw new std::exception();
     }
 
     // Reserve SASH storage, and set up tree parameters.
     // As a result of this operation, the expected SASH size,
     //   number of levels, etc, are set.
 
-    reserveStorage (inSize, inMaxParents);
+    this->reserve_storage (inSize, inMaxParents);
 
     // Skip another comment line.
 
@@ -313,27 +299,21 @@ int Sash::build (char* fileName, DistanceData** inputData, int numItems)
     //   and indices of children.
     // Build the list of children, if any exist.
 
-    for (i=0; i<size; i++)
+    for (int i = 0; i < size; ++i)
     {
+        loc = FileUtil::read_from_file<int>(in_file);
         fscanf (inFile, "%d", &(loc));
 
         if (loc != i)
         {
-            if (verbosity > 0)
-            {
-                printf ("ERROR (from build):");
-                printf (" invalid entry in file %s.sash.\n", fileName);
-            }
+            Daemon::error("ERROR (from build):")
+            Daemon::error(" invalid entry in file %s.sash.\n", filemame.c_str());
 
-            fclose (inFile);
-            fflush (NULL);
-
-            return 0;
+            throw new std::exception();
         }
 
-        fscanf (inFile, "%d%d",
-                &(internToExternMapping[i]),
-                &(numChildren));
+        internToExternMapping[i] = FileUtil::read_from_file<int>(in_file);
+        numChildren = FileUtil::read_from_file<int>(in_file);
 
         if (numChildren > 0)
         {
@@ -347,14 +327,13 @@ int Sash::build (char* fileName, DistanceData** inputData, int numItems)
         childIndexLList[i] = childList;
         childLSizeList[i] = numChildren;
 
-        for (j=0; j<numChildren; j++)
+        for (int j = 0; j < numChildren; ++j)
         {
-            fscanf (inFile, "%d", &(childList[j]));
+            childList[j] = FileUtil::read_from_file<int>(in_file);
         }
     }
 
-    fclose (inFile);
-    fflush (NULL);
+    in_file.close();
 
     if (verbosity >= 2)
     {
@@ -422,90 +401,6 @@ const int Sash::find_all_in_range (const DistanceData& query, double limit, cons
  * Perform an approximate range query for the specified item.
  * The upper limit on the query-to-item distance must be supplied.
  * The number of elements actually found is returned.
- * The query result can be obtained via calls to the following methods:
- *         getResultAcc
- *         getResultDists
- *         getResultDistComps
- *         getResultIndices
- *         getResultNumFound
- *         getResultSampleSize
- * The result items are sorted in increasing order of their distances
- *   to the query.
- */
-
-int Sash::findMostInRange (DistanceData* query, float limit)
-//
-{
-    return findMostInRange (query, limit, 0, 1.0F);
-}
-
-
-/*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Perform an approximate range query for the specified item.
- * The upper limit on the query-to-item distance must be supplied.
- * The number of elements actually found is returned.
- * The search is relative to a data sample of size N / 2^r,
- *   where N is the number of items in the set, and r is
- *   a non-negative integer ("sampleRate").
- * A "sampleRate" of zero indicates a search relative to the entire set.
- * The query result can be obtained via calls to the following methods:
- *         getResultAcc
- *         getResultDists
- *         getResultDistComps
- *         getResultIndices
- *         getResultNumFound
- *         getResultSampleSize
- * The result items are sorted in increasing order of their distances
- *   to the query.
- */
-
-int Sash::findMostInRange (DistanceData* query, float limit, int sampleRate)
-//
-{
-    return findMostInRange (query, limit, sampleRate, 1.0F);
-}
-
-
-/*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Perform an approximate range query for the specified item.
- * The upper limit on the query-to-item distance must be supplied.
- * The number of elements actually found is returned.
- * The method also makes use of a parameter ("scaleFactor")
- *   that influences the trade-off between time and accuracy.
- * The default value of this parameter is 1.0 - increasing the value
- *   will increase running time (roughly proportionally) and increase
- *   the accuracy of the result.
- * The query result can be obtained via calls to the following methods:
- *         getResultAcc
- *         getResultDists
- *         getResultDistComps
- *         getResultIndices
- *         getResultNumFound
- *         getResultSampleSize
- * The result items are sorted in increasing order of their distances
- *   to the query.
- */
-
-int Sash::findMostInRange (DistanceData* query, float limit, float scaleFactor)
-//
-{
-    return findMostInRange (query, limit, 0, scaleFactor);
-}
-
-
-/*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Perform an approximate range query for the specified item.
- * The upper limit on the query-to-item distance must be supplied.
- * The number of elements actually found is returned.
  * The search is relative to a data sample of size N / 2^r,
  *   where N is the number of items in the set, and r is
  *   a non-negative integer ("sampleRate").
@@ -526,8 +421,7 @@ int Sash::findMostInRange (DistanceData* query, float limit, float scaleFactor)
  *   to the query.
  */
 
-int Sash::findMostInRange
-(DistanceData* query, float limit, int sampleRate, float scaleFactor)
+const int Sash::find_most_in_range(const DistanceData& query, const double limit, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
 //
 {
     queryResultSize = 0;
@@ -583,7 +477,7 @@ int Sash::findMostInRange
  *   to the query.
  */
 
-const int Sash::find_near(DistanceData* query, int howMany, int sampleRate, double scaleFactor)
+const int Sash::find_near(const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
 //
 {
     queryResultSize = 0;
@@ -613,32 +507,6 @@ const int Sash::find_near(DistanceData* query, int howMany, int sampleRate, doub
 /**
  * Find a set of exact nearest neighbours for the specified
  *   query item.
- * The desired number of elements must be given ("howMany").
- * The number of elements actually found is returned.
- * The query result can be obtained via calls to the following methods:
- *         getResultAcc
- *         getResultDists
- *         getResultDistComps
- *         getResultIndices
- *         getResultNumFound
- *         getResultSampleSize
- * The result items are sorted in increasing order of their distances
- *   to the query.
- */
-
-int Sash::findNearest (DistanceData* query, int howMany)
-//
-{
-    return findNearest (query, howMany, 0);
-}
-
-
-/*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Find a set of exact nearest neighbours for the specified
- *   query item.
  * The search is relative to a data sample of size N / 2^r,
  *   where N is the number of items in the set, and r is
  *   a non-negative integer ("sampleRate").
@@ -656,7 +524,7 @@ int Sash::findNearest (DistanceData* query, int howMany)
  *   to the query.
  */
 
-int Sash::findNearest (DistanceData* query, int howMany, int sampleRate)
+const int Sash::find_nearest (const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate)
 //
 {
     queryResultSize = 0;
@@ -669,16 +537,11 @@ int Sash::findNearest (DistanceData* query, int howMany, int sampleRate)
             || (sampleRate < 0)
             || ((sampleRate >= levels) && (size > 1)))
     {
-        if (verbosity > 0)
-        {
-            printf ("ERROR (from findNearest): invalid argument(s).\n");
-            fflush (NULL);
-        }
-
-        return 0;
+        Daemon::error ("ERROR (from find_nearest): invalid argument(s).");
+        throw new std::exception();
     }
 
-    setNewQuery (query);
+    this->set_new_query (query);
 
     return doFindNearest (howMany, sampleRate);
 }
@@ -707,29 +570,16 @@ DistanceData** Sash::getData ()
  * If unsuccessful, zero is returned.
  */
 
-int Sash::getExternToInternMapping (int* result, int capacity)
+std::vector<int> Sash::get_extern_to_intern_mapping() const
 //
 {
-    int i;
+    std::vector<int> result;
+    result.resize(this->internToExternMapping.size());
 
-    if ((result == NULL) || (capacity < size))
-    {
-        if (verbosity > 0)
-        {
-            printf ("ERROR (from getExternToInternMapping): ");
-            printf  ("result list capacity is too small.\n");
-            fflush (NULL);
-        }
+    for (int i = 0; i < result.size(); ++i)
+        result[this->internToExternMapping[i]] = i;
 
-        return 0;
-    }
-
-    for (i=0; i<size; i++)
-    {
-        result[internToExternMapping[i]] = i;
-    }
-
-    return size;
+    return result;
 }
 
 
@@ -743,29 +593,10 @@ int Sash::getExternToInternMapping (int* result, int capacity)
  * If unsuccessful, zero is returned.
  */
 
-int Sash::getInternToExternMapping (int* result, int capacity)
+std::vector<int> Sash::get_intern_to_extern_mapping() const
 //
 {
-    int i;
-
-    if ((result == NULL) || (capacity < size))
-    {
-        if (verbosity > 0)
-        {
-            printf ("ERROR (from getInternToExternMapping): ");
-            printf  ("result list capacity is too small.\n");
-            fflush (NULL);
-        }
-
-        return 0;
-    }
-
-    for (i=0; i<size; i++)
-    {
-        result[i] = internToExternMapping[i];
-    }
-
-    return size;
+    return this->internToExternMapping;
 }
 
 
@@ -1033,15 +864,7 @@ int Sash::getSampleAssignment (int* result, int capacity)
 const std::vector<int> Sash::get_sample_sizes () const
 //
 {
-    std::vector<int> result;
-    int lvl;
-
-    for (lvl=0; lvl<levels; lvl++)
-    {
-        result.push_back(sampleSizeList[lvl]);
-    }
-
-    return result;
+    return this->sample_size_list;
 }
 
 
@@ -1058,7 +881,7 @@ const std::vector<int> Sash::get_sample_sizes () const
 void Sash::resetQuery ()
 //
 {
-    setNewQuery (NULL);
+    this->set_new_query(boost::none);
 }
 
 
@@ -1072,11 +895,9 @@ void Sash::resetQuery ()
  * If unsuccessful, zero is returned.
  */
 
-int Sash::saveToFile (char* fileName)
+int Sash::save_to_file (const std::string& filename)
 //
 {
-    int i;
-    int j;
     int numChildren = 0;
     int* childList = NULL;
     FILE* outFile = NULL;
@@ -1119,18 +940,13 @@ int Sash::saveToFile (char* fileName)
         return 0;
     }
 
-    // Begin writing to the output file.
-    // First, write a comment identifying the SASH version and the
-    //   output file name.
-
-    fprintf (outFile, "%% SASH %s: %s.sash\n", SASH_VERSION_, fileName);
-
-    // Write the main SASH parameters.
-
-    fprintf (outFile, "%% size levels maxParents numOrphans seed\n");
-    fprintf
-    (outFile, "%d %d %d %d %ld\n",
-     size, levels, maxParents, numOrphans, seed);
+    std::fstream out_file = FileUtil::open_write(filename);
+    FileUtil::write_to_file<int>(out_file, size); FileUtil::space(out_file);
+    FileUtil::write_to_file<int>(out_file, levels); FileUtil::space(out_file);
+    FileUtil::write_to_file<int>(out_file, maxParents); FileUtil::space(out_file);
+    FileUtil::write_to_file<int>(out_file, numOrphans); FileUtil::space(out_file);
+    FileUtil::write_to_file<int>(out_file, seed); FileUtil::space(out_file);
+    FileUtil::newline(out_file);
 
     // For each item, write out:
     //   its index,
@@ -1141,24 +957,27 @@ int Sash::saveToFile (char* fileName)
     fprintf
     (outFile, "%% nodeID origItemID numChildren child0 child1 ...\n");
 
-    for (i=0; i<size; i++)
+    for (int i = 0; i < size; ++i)
     {
         numChildren = childLSizeList[i];
         childList = childIndexLList[i];
 
+        FileUtil::write_to_file<int>(out_file, i); FileUtil::space(out_file);
+        FileUtil::write_to_file<int>(out_file, internToExternMapping[i]); FileUtil::space(out_file);
+        FileUtil::write_to_file<int>(out_file, numChildren); FileUtil::space(out_file);
+
         fprintf
         (outFile, "%d %d %d", i, internToExternMapping[i], numChildren);
 
-        for (j=0; j<numChildren; j++)
+        for (int j = 0; j < numChildren; ++j)
         {
-            fprintf (outFile, " %d", childList[j]);
+            FileUtil::space(out_file);
+            FileUtil::write_to_file<int>(out_file, childList[j]);
         }
-
-        fprintf (outFile, "\n");
+        FileUtil::newline(out_file);
     }
 
-    fclose (outFile);
-    fflush (NULL);
+    out_file.close();
 
     return size;
 }
@@ -1276,7 +1095,7 @@ void Sash::internal_build (int numItems)
             fflush (NULL);
         }
 
-        setNewQuery (data[internToExternMapping[child]]);
+        this->set_new_query (this->data[this->internToExternMapping[child]]);
         doFindParents (maxParents);
 
         parentLSizeList[child] = queryResultSize;
@@ -1302,12 +1121,12 @@ void Sash::internal_build (int numItems)
         quarterSize = (halfSize + 1) / 2;
     }
 
-    for (parent=quarterSize; parent<halfSize; parent++)
+    for (parent = quarterSize; parent < halfSize; parent++)
     {
         if (childLSizeList[parent] > 0)
         {
-            childIndexLList[parent] = new int [childLSizeList[parent]];
-            childDistLList[parent] = new float [childLSizeList[parent]];
+            this->child_index_llist[parent].clear();
+            this->child_distance_llist[parent].clear();
             childLSizeList[parent] = 0;
         }
     }
@@ -1353,13 +1172,15 @@ void Sash::internal_build (int numItems)
             tempDistList = childDistLList[parent];
             tempIndexList = childIndexLList[parent];
             childDistLList[parent] = NULL;
-            childIndexLList[parent] = new int [maxChildren];
+            this->child_index_llist[parent].resize(maxChildren);
 
-            childLSizeList[parent]
-            = partialQuickSort
-              (maxChildren,
-               tempDistList, tempIndexList,
-               0, childLSizeList[parent]-1);
+            Sort::partial_sort<int, double>(tempIndexList, tempDistList, 0, tempDistList.size());
+
+            // childLSizeList[parent]
+            // = partialQuickSort
+            //   (maxChildren,
+            //    tempDistList, tempIndexList,
+            //    0, childLSizeList[parent]-1);
 
             // Connect the parent to its quota of children.
             // Inform the children that another request has been granted.
@@ -2605,7 +2426,7 @@ void Sash::reserveStorage (int numItems, int numParents)
 /*-----------------------------------------------------------------------------------------------*/
 
 
-void Sash::set_new_query (const DistanceData& query)
+void Sash::set_new_query (const boost::optional<DistanceData>& query)
 //
 // Accepts a new item as the query object for future distance comparisons.
 // Any previously-stored distances are cleared by this operation,

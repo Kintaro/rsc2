@@ -191,7 +191,7 @@ public:
        is complete */
     std::vector<std::vector<double>> child_distance_llist;
 
-    DistanceData& query; // Storage supporting distance computation.
+    boost::optional<DistanceData> query; // Storage supporting distance computation.
     std::vector<double> distance_from_query_list; // The "storedDistIndexList" array holds
     std::vector<int> stored_distance_index_list; //   the (internal) indices of items
     // The distance themselves are stored
@@ -279,7 +279,7 @@ public:
      *   can be obtained via a call to getResultDistComps.
      */
 
-    int build (DistanceData** inputData, int numItems, const boost::optional<int>& numParents = 4);
+    int build (std::vector<DistanceData>& inputData, int numItems, const boost::optional<int>& numParents = 4);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -294,7 +294,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    int build (char* fileName, DistanceData** inputData, int numItems);
+    int build (const std::string& filename, std::vector<DistanceData>& inputData, const int numItems);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -315,78 +315,7 @@ public:
      *   to the query.
      */
 
-    const int find_all_in_range (const DistanceData& query, double limit, const boost::optional<int>& sample_rate = 0);
-
-/*-----------------------------------------------------------------------------------------------*/
-
-
-    /**
-     * Perform an approximate range query for the specified item.
-     * The upper limit on the query-to-item distance must be supplied.
-     * The number of elements actually found is returned.
-     * The query result can be obtained via calls to the following methods:
-     *         getResultAcc
-     *         getResultDists
-     *         getResultDistComps
-     *         getResultIndices
-     *         getResultNumFound
-     *         getResultSampleSize
-     * The result items are sorted in increasing order of their distances
-     *   to the query.
-     */
-
-    int findMostInRange (DistanceData* query, float limit);
-
-
-/*-----------------------------------------------------------------------------------------------*/
-
-
-    /**
-     * Perform an approximate range query for the specified item.
-     * The upper limit on the query-to-item distance must be supplied.
-     * The number of elements actually found is returned.
-     * The search is relative to a data sample of size N / 2^r,
-     *   where N is the number of items in the set, and r is
-     *   a non-negative integer ("sampleRate").
-     * A "sampleRate" of zero indicates a search relative to the entire set.
-     * The query result can be obtained via calls to the following methods:
-     *         getResultAcc
-     *         getResultDists
-     *         getResultDistComps
-     *         getResultIndices
-     *         getResultNumFound
-     *         getResultSampleSize
-     * The result items are sorted in increasing order of their distances
-     *   to the query.
-     */
-
-    int findMostInRange (DistanceData* query, float limit, int sampleRate);
-
-
-/*-----------------------------------------------------------------------------------------------*/
-
-
-    /**
-     * Perform an approximate range query for the specified item.
-     * The upper limit on the query-to-item distance must be supplied.
-     * The number of elements actually found is returned.
-     * The method also makes use of a parameter ("scaleFactor")
-     *   that influences the trade-off between time and accuracy.
-     * The default value of this parameter is 1.0 - increasing the value
-     *   will increase running time (roughly proportionally) and increase
-     *   the accuracy of the result.
-     * The query result can be obtained via calls to the following methods:
-     *         getResultAcc
-     *         getResultDists
-     *         getResultDistComps
-     *         getResultIndices
-     *         getResultNumFound
-     *         getResultSampleSize
-     * The result items are sorted in increasing order of their distances
-     *   to the query.
-     */
-
-    int findMostInRange (DistanceData* query, float limit, float scaleFactor);
+    const int find_all_in_range (const DistanceData& query, const double limit, const boost::optional<int>& sample_rate = 0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -416,8 +345,7 @@ public:
      *   to the query.
      */
 
-    int findMostInRange
-    (DistanceData* query, float limit, int sampleRate, float scaleFactor);
+    const int find_most_in_range(const DistanceData& query, const double limit, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -448,29 +376,7 @@ public:
      *   to the query.
      */
 
-    const int find_near(DistanceData* query, int howMany, int sampleRate = 0, double scaleFactor = 1.0);
-
-
-/*-----------------------------------------------------------------------------------------------*/
-
-
-    /**
-     * Find a set of exact nearest neighbours for the specified
-     *   query item.
-     * The desired number of elements must be given ("howMany").
-     * The number of elements actually found is returned.
-     * The query result can be obtained via calls to the following methods:
-     *         getResultAcc
-     *         getResultDists
-     *         getResultDistComps
-     *         getResultIndices
-     *         getResultNumFound
-     *         getResultSampleSize
-     * The result items are sorted in increasing order of their distances
-     *   to the query.
-     */
-
-    int findNearest (DistanceData* query, int howMany);
+    const int find_near(const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate = 0, const bool::optional<double>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -496,7 +402,7 @@ public:
      *   to the query.
      */
 
-    int findNearest (DistanceData* query, int howMany, int sampleRate);
+    const int find_nearest (const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate = 0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -519,7 +425,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    int getExternToInternMapping (int* result, int capacity);
+    std::vector<int> get_extern_to_intern_mapping() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -532,7 +438,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    int getInternToExternMapping (int* result, int capacity);
+    std::vector<int> get_intern_to_extern_mapping() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
