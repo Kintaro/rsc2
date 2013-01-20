@@ -5,7 +5,7 @@ ODIR = ../../../obj
 SDIR = .
 INC = 
 LIBS =
-CFLAGS = -std=c++0x -g -Wall -shared -fPIC -I../../ -Wno-c++11-extensions
+CFLAGS = -std=c++0x -g -Wall -shared -fPIC -I../../ -Wno-c++11-extensions -Wno-overloaded-virtual
 LFLAGS = -lboost_serialization -lboost_mpi
 
 _OBJS = Sash.o mtrand.o

@@ -67,15 +67,15 @@
 //
 //  DistanceData* query;
 //  int resultSize;
-//  float accuracy;
+//  double accuracy;
 //  unsigned long numberOfDistanceComputations;
 //
 //  int exactListCapacity = 1000;
-//  float* exactDistList = new float [exactListCapacity];
+//  double* exactDistList = new double [exactListCapacity];
 //
 //  int approxListCapacity = 1000;
-//  float* approxDistList = new float [approxListCapacity];
-//  int* approxIndexList = new float [approxListCapacity];
+//  double* approxDistList = new double [approxListCapacity];
+//  int* approxIndexList = new double [approxListCapacity];
 //
 //  ...
 //
@@ -90,7 +90,7 @@
 //
 //  // Loading a previously-computed SASH from the file "example.sash"
 //
-//  dataSash = new Sash ();
+//  dataSash = new Sash();
 //  dataSash->setVerbosity (2);
 //  dataSash->build ("example", data, size);
 //
@@ -107,8 +107,8 @@
 //  dataSash->findNear (query, 100, 2.0F);
 //  dataSash->getResultDists (approxDistList, approxListCapacity);
 //  dataSash->getResultIndices (approxIndexList, approxListCapacity);
-//  resultSize = dataSash->getResultNumFound ();
-//  numberOfDistanceComputations = dataSash->getResultDistComps ();
+//  resultSize = dataSash->getResultNumFound();
+//  numberOfDistanceComputations = dataSash->getResultDistComps();
 //  accuracy = dataSash->get_result_accuracy (exactDistList, 100);
 //
 //  // Exact range query for distance limit 0.1
@@ -116,17 +116,17 @@
 //  // Time-accuracy trade-off parameter is 2.0
 //
 //  dataSash->find_all_in_range (query, 0.1F);
-//  resultSize = dataSash->getResultNumFound ();
+//  resultSize = dataSash->getResultNumFound();
 //  if (resultSize <= exactListCapacity)
 //  {
 //    dataSash->getResultDists (exactDistList, exactListCapacity);
 //    dataSash->findMostInRange (query, 0.1F, 2.0F);
-//    resultSize = dataSash->getResultNumFound ();
+//    resultSize = dataSash->getResultNumFound();
 //    if (resultSize <= approxListCapacity)
 //    {
 //      dataSash->getResultDists (approxDistList, approxListCapacity);
 //      dataSash->getResultIndices (approxIndexList, approxListCapacity);
-//      numberOfDistanceComputations = dataSash->getResultDistComps ();
+//      numberOfDistanceComputations = dataSash->getResultDistComps();
 //      accuracy = dataSash->get_result_accuracy (exactDistList, 100);
 //    }
 //  }
@@ -150,6 +150,7 @@
 #include "../../DistanceData.h"
 
 #include <boost/extension/extension.hpp>
+#include <boost/serialization/optional.hpp>
 
 
 static MTRand_int32 genInt;     // Random number generator object.
@@ -179,20 +180,20 @@ public:
     /* For each SASH item, lists of indices to parents
        This storage is deallocated after the SASH construction
        is complete */
-    std::vector<std::vector<int>> parent_index_llist; 
+    std::vector<std::vector<int> > parent_index_llist; 
     /* For each SASH item, distances to parents. 
        This storage is deallocated after the SASH construction
        is complete */
-    std::vector<std::vector<double>> parent_distance_llist; 
+    std::vector<std::vector<double> > parent_distance_llist; 
 
     /* For each SASH item, lists of indices to children.
        This storage is deallocated after the SASH construction
        is complete */
-    std::vector<std::vector<int>> child_index_llist;
+    std::vector<std::vector<int> > child_index_llist;
     /* For each SASH item, lists of distances to children.
        This storage is deallocated after the SASH construction
        is complete */
-    std::vector<std::vector<double>> child_distance_llist;
+    std::vector<std::vector<double> > child_distance_llist;
 
     /* Storage supporting distance computation. */
     boost::optional<DistanceData> query; 
@@ -204,7 +205,7 @@ public:
        the (internal) indices of items */
     std::vector<int> stored_distance_index_list; 
 
-    unsigned long numDistComps;   // The number of distance computations
+    unsigned long number_of_distance_comparisons;   // The number of distance computations
     //   performed during the most recent
     //   SASH operation.
 
@@ -225,7 +226,7 @@ public:
     std::vector<double> scratch_distance_list;
 
     int* scratchIndexList;        // Temporary index and distance storage
-    float* scratchDistList;       //   used during search.
+    double* scratchDistList;       //   used during search.
     // This storage is allocated only once,
     //   here, to improve search efficiency.
 
@@ -248,7 +249,7 @@ public:
      * random number generator initialization.
      */
 
-    Sash ();
+    Sash();
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -268,7 +269,7 @@ public:
      * Destructor.
      */
 
-    ~Sash ();
+    ~Sash();
 
 /*-----------------------------------------------------------------------------------------------*/
 
@@ -282,7 +283,7 @@ public:
      *   can be obtained via a call to getResultDistComps.
      */
 
-    int build (std::vector<DistanceData>& inputData, int numItems, const boost::optional<int>& numParents = 4);
+    const int build (std::vector<DistanceData>& inputData, const boost::optional<int>& numParents = 4);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -297,7 +298,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    int build (const std::string& filename, std::vector<DistanceData>& inputData, const int numItems);
+    const int build (const std::string& filename, std::vector<DistanceData>& inputData);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -379,7 +380,7 @@ public:
      *   to the query.
      */
 
-    const int find_near(const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate = 0, const bool::optional<double>& scaleFactor = 1.0);
+    const int find_near(const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -415,7 +416,7 @@ public:
      * Returns direct access to the SASH input data list.
      */
 
-    DistanceData** getData ();
+    DistanceData** getData();
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -428,7 +429,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    std::vector<int> get_extern_to_intern_mapping() const;
+    const std::vector<int> get_extern_to_intern_mapping() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -441,7 +442,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    std::vector<int> get_intern_to_extern_mapping() const;
+    const std::vector<int> get_intern_to_extern_mapping() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -451,7 +452,7 @@ public:
      * Returns the upper limit on the number of parents per SASH node.
      */
 
-    int getMaxParents ();
+    const int get_max_number_of_parents() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -461,7 +462,7 @@ public:
      * Returns the number of data items of the SASH.
      */
 
-    const int get_number_of_items () const;
+    const int get_number_of_items() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -471,7 +472,7 @@ public:
      * Returns the number of sample levels of the SASH.
      */
 
-    const int get_number_of_levels () const;
+    const int get_number_of_levels() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -481,7 +482,7 @@ public:
      * Returns the number of orphan nodes encountered during SASH construction.
      */
 
-    int getNumOrphans ();
+    const int get_number_of_orphans();
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -497,7 +498,7 @@ public:
      *   items found in the query result.
      * If unsuccessful, a negative value is returned.
      */
-    const double get_result_accuracy (const std::vector<double>& exactDistList) const
+    const double get_result_accuracy (const std::vector<double>& exactDistList) const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -510,7 +511,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    const std::vector<double> get_result_distances () const;
+    const std::vector<double> get_result_distances() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -521,7 +522,7 @@ public:
      *   the most recent SASH operation.
      */
 
-    const int get_result_distance_comparisons () const;
+    const int get_result_distance_comparisons() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -534,7 +535,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    const std::vector<int> get_result_indices () const;
+    const std::vector<int> get_result_indices() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -544,7 +545,7 @@ public:
      * Returns the number of items found in the most recent query.
      */
 
-    int getResultNumFound ();
+    const int get_number_of_results_found();
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -554,7 +555,7 @@ public:
      * Returns the sample size used in the most recent query.
      */
 
-    int getResultSampleSize ();
+    const int get_result_sample_size();
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -564,7 +565,7 @@ public:
      * Returns the seed value used for random number generator initialization.
      */
 
-    unsigned long getRNGSeed ();
+    unsigned long getRNGSeed();
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -576,8 +577,7 @@ public:
      * If successful, the number of SASH items is returned.
      * If unsuccessful, zero is returned.
      */
-
-    int get_sample_assignment (int* result, int capacity);
+    const std::vector<int> get_sample_assignment() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -593,7 +593,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    const std::vector<int> get_sample_sizes () const;
+    const std::vector<int> get_sample_sizes() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -606,7 +606,7 @@ public:
      *   all needed distances from scratch.
      */
 
-    void reset_query ();
+    void reset_query();
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -619,7 +619,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    int saveToFile (char* fileName);
+    const int saveToFile (const std::string& fileName);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -633,7 +633,7 @@ public:
      * Verbosity of 3 or more: error, progress, and debug messages reported.
      */
 
-    void setVerbosity (int verbosity);
+    void setVerbosity (const int verbosity);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -645,7 +645,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    float computeDistFromQuery (int itemIndex);
+    const double computeDistFromQuery (const int itemIndex);
     //
     // Returns the distance from the current query object to the
     //   specified data object.
@@ -657,7 +657,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    void internal_build (int numItems);
+    void internal_build (const int numItems);
     //
     // Recursively builds a SASH on items in the first locations of the
     //   scrambled data array.
@@ -667,7 +667,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    int internal_find_all_in_range (float limit, int sampleRate);
+    const int internal_find_all_in_range (const double limit, const int sampleRate);
     //
     // Performs an exact range query from the current query object,
     //   with respect to a subset of the items.
@@ -680,7 +680,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    int doFindMostInRange (float limit, int sampleRate, float scaleFactor);
+    const int doFindMostInRange (const double limit, const int sampleRate, const double scaleFactor);
     //
     // Performs an approximate range query from the current query object,
     //   with respect to a subset of the items.
@@ -698,7 +698,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    int doFindNear (int howMany, int sampleRate, float scaleFactor);
+    const int doFindNear (const int howMany, const int sampleRate, const double scaleFactor);
     //
     // Computes approximate nearest neighbours of the current query object,
     //   with respect to a subset of the items.
@@ -716,7 +716,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    int doFindNearest (int howMany, int sampleRate);
+    const int doFindNearest (const int howMany, const int sampleRate);
     //
     // Computes exact nearest neighbours of the current query object,
     //   with respect to a subset of the items.
@@ -729,7 +729,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    int doFindParents (int howMany);
+    const int doFindParents (const int howMany);
     //
     // Finds a set of parents for the current query item from among the
     //   bottom-level items of the current SASH.
@@ -741,8 +741,8 @@ private:
 
     int extractBestEdges
     (int howMany,
-     float* toDistList, int* toIndexList, int toFirst, int toCapacity,
-     float* fromDistList, int* fromIndexList, int fromFirst, int fromLast);
+     double* toDistList, int* toIndexList, int toFirst, int toCapacity,
+     double* fromDistList, int* fromIndexList, int fromFirst, int fromLast);
     //
     // Copies a requested number of directed edges having minimum distances
     //   to their targets.
@@ -761,7 +761,7 @@ private:
 
     int partialQuickSort
     (int howMany,
-     float* distList, int* indexList,
+     double* distList, int* indexList,
      int rangeFirst, int rangeLast);
     //
     // Sorts the smallest items in the supplied list ranges, in place,
@@ -777,7 +777,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    void printStats ();
+    void printStats();
     //
     // Print statistics related to the SASH construction.
     // Should only be called immediately after the construction.
@@ -810,8 +810,9 @@ private:
 
 };
 
-extern "C" {
-IndexStructure<DistanceData>* BOOST_EXTENSION_EXPORT_DECL create_index_structure(int x);
+extern "C" 
+{
+    IndexStructure<DistanceData>* BOOST_EXTENSION_EXPORT_DECL create_index_structure(int x);
 }
 
 #endif
