@@ -826,9 +826,7 @@ int Sash::save_to_file (const std::string& filename)
     // If the SASH has not yet been built, abort.
 
     if (size <= 0)
-    {
         return 0;
-    }
 
     // Open the file for writing.
     // If this fails, then abort.
@@ -836,17 +834,10 @@ int Sash::save_to_file (const std::string& filename)
 	filename += ".sash";
     std::fstream out_file = FileUtil::open_write(filename);
 
-    if (outFile == NULL)
+    if (!out_file.is_open())
     {
-        if (verbosity > 0)
-        {
-            printf
-            ("ERROR (from saveToFile): file %s.sash could not be opened.\n",
-             fileName);
-            fflush (NULL);
-        }
-
-        return 0;
+		Daemon::error("ERROR (from save_to_file): file %s could not be opened.", filename.c_str());
+        throw new std::exception();
     }
 
     FileUtil::write_to_file<int>(out_file, size); FileUtil::space(out_file);
@@ -861,10 +852,6 @@ int Sash::save_to_file (const std::string& filename)
     //   the index of the item in the original input list,
     //   the number of children of the item,
     //   and a list of the indices of the children.
-
-    fprintf
-    (outFile, "%% nodeID origItemID numChildren child0 child1 ...\n");
-
     for (int i = 0; i < size; ++i)
     {
         numChildren = childLSizeList[i];
@@ -874,14 +861,12 @@ int Sash::save_to_file (const std::string& filename)
         FileUtil::write_to_file<int>(out_file, internToExternMapping[i]); FileUtil::space(out_file);
         FileUtil::write_to_file<int>(out_file, numChildren); FileUtil::space(out_file);
 
-        fprintf
-        (outFile, "%d %d %d", i, internToExternMapping[i], numChildren);
-
         for (int j = 0; j < numChildren; ++j)
         {
             FileUtil::space(out_file);
             FileUtil::write_to_file<int>(out_file, childList[j]);
         }
+
         FileUtil::newline(out_file);
     }
 
@@ -905,13 +890,13 @@ const double Sash::compute_distance_from_query(const int item_index)
 // Otherwise, the distance is computed and stored before returning it.
 //
 {
-    if (distance_from_query_list[item_index] >= 0.0)
-        return distance_from_query_list[item_index];
+    if (this->istance_from_query_list[item_index] >= 0.0)
+        return this->istance_from_query_list[item_index];
 
-    distance_from_query_list[item_index] = query->distance_to (data[internToExternMapping[item_index]]);
-    stored_distance_index_list[numStoredDists] = item_index;
-    ++numStoredDists;
-    ++number_of_distance_comparisons;
+    this->distance_from_query_list[item_index] = query->distance_to (this->data[this->internToExternMapping[item_index]]);
+    this->tored_distance_index_list[numStoredDists] = item_index;
+    ++nthis->umStoredDists;
+    ++nthis->umber_of_distance_comparisons;
 
     return distance_from_query_list[item_index];
 }
@@ -962,7 +947,7 @@ void Sash::internal_build (const int number_of_items)
             childLSizeList[0] = number_of_items - 1;
             childIndexLList[0] = new int [number_of_items-1];
 
-            for (i=1; i<number_of_items; i++)
+            for (int i = 1; i < number_of_items; ++i)
                 childIndexLList[0][i-1] = i;
         }
 
@@ -1252,7 +1237,7 @@ const int Sash::internal_find_all_in_range (const double limit, const int sample
 /*-----------------------------------------------------------------------------------------------*/
 
 
-int Sash::doFindMostInRange (double limit, int sampleRate, double scaleFactor)
+int Sash::internal_find_most_in_range (double limit, int sampleRate, double scaleFactor)
 //
 // Performs an approximate range query from the current query object,
 //   with respect to a subset of the items.
