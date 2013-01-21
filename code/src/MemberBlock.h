@@ -64,8 +64,8 @@ private:
 	boost::optional<std::string> filename_prefix;
 
 	VecDataBlock& data_block;
-	std::vector<std::vector<int>> member_index_llist;
-	std::vector<std::vector<ScoreType>> member_score_llist;
+	std::vector<std::vector<int> > member_index_llist;
+	std::vector<std::vector<ScoreType> > member_score_llist;
 	std::vector<ScoreType> temporary_distance_buffer;
 public:
 	MemberBlock(VecDataBlock& block, const int member_list_buffer_size, const boost::optional<int>& sample_level = boost::none);
@@ -82,8 +82,8 @@ public:
 	const bool internal_load_members(std::fstream& file);
 	const bool internal_save_members(std::fstream& file);
 	const bool load_members(const boost::optional<int>& index = boost::none);
-	const bool load_members(std::vector<std::vector<int>>& member_index_llist,
-			std::vector<std::vector<ScoreType>>& member_score_llist,
+	const bool load_members(std::vector<std::vector<int> >& member_index_llist,
+			std::vector<std::vector<ScoreType> >& member_score_llist,
 			const int offset, const int amount) const;
 	const void clear_members ();
 	const void clip_members(const size_t clip_size);
@@ -289,8 +289,8 @@ const bool MemberBlock<ScoreType>::load_members(const boost::optional<int>& inde
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-const bool MemberBlock<ScoreType>::load_members(std::vector<std::vector<int>>& member_index_llist,
-		std::vector<std::vector<ScoreType>>& member_score_llist,
+const bool MemberBlock<ScoreType>::load_members(std::vector<std::vector<int> >& member_index_llist,
+		std::vector<std::vector<ScoreType> >& member_score_llist,
 		const int offset, const int amount) const
 {
 	amount = std::min(amount, *this->number_of_items);
@@ -489,7 +489,7 @@ const int MemberBlock<ScoreType>::internal_build_neighbourhood_store(IndexStruct
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-const int MemberBlock<ScoreType>::merge_members(MemberBlock<ScoreType>* block, const int max_list_size)
+const int MemberBlock<ScoreType>::merge_members(MemberBlock<ScoreType>& block, const int max_list_size)
 {
 	struct sort_helper 
 	{
@@ -517,19 +517,19 @@ const int MemberBlock<ScoreType>::merge_members(MemberBlock<ScoreType>* block, c
 
 	for (auto i = 0; i < this->number_of_items; ++i)
 	{
-		std::vector<std::pair<int, ScoreType>> this_list, mb_list, result_list;
+		std::vector<std::pair<int, ScoreType> > this_list, mb_list, result_list;
 
 		this_list.resize(this->member_index_llist[i].size());
-		mb_list.resize(block->member_index_llist[i].size());
+		mb_list.resize(block.member_index_llist[i].size());
 
 		for (unsigned int j = 0; j < this->member_index_llist[i].size(); ++j)
 			this_list[j] = std::make_pair(this->member_index_llist[i][j], this->member_score_llist[i][j]);
-		for (unsigned int j = 0; j < block->member_index_llist[i].size(); ++j)
-			mb_list[j] = std::make_pair(block->member_index_llist[i][j], block->member_score_llist[i][j]);
+		for (unsigned int j = 0; j < block.member_index_llist[i].size(); ++j)
+			mb_list[j] = std::make_pair(block.member_index_llist[i][j], block.member_score_llist[i][j]);
 
 		int size = max_list_size > 0 ? 
-				max_list_size : (this->member_index_llist[i].size() < block->member_index_llist[i].size() ?
-						this->member_index_llist[i].size() : block->member_index_llist[i].size());
+				max_list_size : (this->member_index_llist[i].size() < block.member_index_llist[i].size() ?
+						this->member_index_llist[i].size() : block.member_index_llist[i].size());
 
 		result_list.reserve(size);
 		std::merge(this_list.begin(), this_list.end(), mb_list.begin(), mb_list.end(), std::back_inserter(result_list), sort_helper::sort);

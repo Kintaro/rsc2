@@ -416,7 +416,7 @@ public:
      * Returns direct access to the SASH input data list.
      */
 
-    DistanceData** getData();
+	std::vector<DistanceData>& getData();
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -645,7 +645,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    const double computeDistFromQuery (const int itemIndex);
+    const double compute_distance_from_query (const int itemIndex);
     //
     // Returns the distance from the current query object to the
     //   specified data object.
@@ -680,7 +680,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    const int doFindMostInRange (const double limit, const int sampleRate, const double scaleFactor);
+    const int internal_find_most_in_range (const double limit, const int sampleRate, const double scaleFactor);
     //
     // Performs an approximate range query from the current query object,
     //   with respect to a subset of the items.
@@ -696,27 +696,25 @@ private:
 
 
 /*-----------------------------------------------------------------------------------------------*/
-
-
-    const int doFindNear (const int howMany, const int sampleRate, const double scaleFactor);
-    //
-    // Computes approximate nearest neighbours of the current query object,
-    //   with respect to a subset of the items.
-    // The subset consists of all items at the indicated sample level and higher.
-    // The number of neighbours sought is "howMany"; the number of neighbours
-    //   actually found is returned.
-    // The results are stored in the SASH query result lists.
-    // The parameter "scaleFactor" influences the tradeoff between speed
-    //   and accuracy.
-    // The base setting is "scaleFactor=1.0"; queries with "scaleFactor=2.0"
-    //   would be expected to be more accurate than those with "scaleFactor=1.0",
-    //   but would take roughly twice as much time to process.
-
-
+	/*
+     *
+     * Computes approximate nearest neighbours of the current query object,
+     *   with respect to a subset of the items.
+     * The subset consists of all items at the indicated sample level and higher.
+     * The number of neighbours sought is "howMany"; the number of neighbours
+     *   actually found is returned.
+     * The results are stored in the SASH query result lists.
+     * The parameter "scaleFactor" influences the tradeoff between speed
+     *   and accuracy.
+     * The base setting is "scaleFactor=1.0"; queries with "scaleFactor=2.0"
+     *   would be expected to be more accurate than those with "scaleFactor=1.0",
+     *   but would take roughly twice as much time to process.i
+	 */
+    const int internal_find_near (const int howMany, const int sampleRate, const double scaleFactor);
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    const int doFindNearest (const int howMany, const int sampleRate);
+    const int internal_find_nearest (const int howMany, const int sampleRate);
     //
     // Computes exact nearest neighbours of the current query object,
     //   with respect to a subset of the items.
@@ -729,7 +727,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    const int doFindParents (const int howMany);
+    const int internal_find_parents (const int howMany);
     //
     // Finds a set of parents for the current query item from among the
     //   bottom-level items of the current SASH.
@@ -796,7 +794,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    void setNewQuery (DistanceData* query);
+    void set_new_query (DistanceData* query);
     //
     // Accepts a new item as the query object for future distance comparisons.
     // Any previously-stored distances are cleared by this operation,
