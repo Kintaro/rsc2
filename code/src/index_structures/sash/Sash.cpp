@@ -148,16 +148,16 @@ const int Sash::build (std::vector<DistanceData>& inputData, const boost::option
     for (int i = 0; i < size; ++i)
         this->intern_to_extern_mapping[i] = i;
 
-    for (i=size-1; i>=0; i--)
-        std::swap(this->internToExternMapping[genInt () % (i+1)], this->internToExternMapping[i]);
+    for (int i = size - 1; i >= 0; --i)
+        std::swap(this->internToExternMapping[genInt () % (i + 1)], this->internToExternMapping[i]);
 
     // Recursively build the SASH structure.
 
     this->number_of_distance_comparisons = 0UL;
 
-    this->internal_build (inputData.size());
+    this->internal_build(inputData.size());
 
-    this->print_stats ();
+    this->print_stats();
 
     return size;
 }
@@ -190,18 +190,13 @@ const int Sash::build (const std::string& filename, std::vector<DistanceData>& i
 
     // If the data set is empty, then abort.
 
-    if ((fileName == NULL) || (number_of_items <= 0) || (inputData == NULL))
+    if ((fileName == NULL) || (inputData.size() <= 0))
     {
-        if (verbosity > 0)
         {
-            if (number_of_items == 1)
-            {
-                printf ("ERROR (from build): data set has only 1 item.\n");
-            }
+            if (inputData.size() == 1)
+                Daemon::error ("ERROR (from build): data set has only 1 item.");
             else
-            {
-                printf ("ERROR (from build): empty data set or filename.\n");
-            }
+                Daemon::error ("ERROR (from build): empty data set or filename.");
 
             fflush (NULL);
         }
@@ -209,35 +204,19 @@ const int Sash::build (const std::string& filename, std::vector<DistanceData>& i
         return 0;
     }
 
-    if (verbosity >= 2)
-    {
-        printf ("Loading SASH from file %s.sash ...\n", fileName);
-        fflush (NULL);
-    }
-
+    Daemon::debug("Loading SASH from file %s.sash ...", fileName);
     data = inputData;
 
     // Open the file containing the SASH.
     // If we fail to open the file, then abort.
+	filename += ".sash";
+    std::fstream in_file = FileUtil::open_read(filename);
 
-    strcpy (stringBuf, fileName);
-    strcat (stringBuf, ".sash");
-    inFile = fopen (stringBuf, "rt");
-
-    if (inFile == NULL)
+    if (!in_file.is_open())
     {
-        if (verbosity > 0)
-        {
-            printf
-            ("ERROR (from build): file %s.sash could not be opened.\n",
-             fileName);
-            fflush (NULL);
-        }
-
+    	Daemon::error("ERROR (from build): file %s.sash could not be opened.", filename.c_str());
         return 0;
     }
-
-    std::fstream in_file = FileUtil::open_read(filename);
 
     inSize       = FileUtil::read_from_file<int>(in_file);
     inLevels     = FileUtil::read_from_file<int>(in_file);
@@ -247,11 +226,10 @@ const int Sash::build (const std::string& filename, std::vector<DistanceData>& i
 
     // Are these parameter values what we expected?
     // If not, then abort!
-
     if (inSize != number_of_items)
     {
         Daemon::error("ERROR (from build):");
-        Daemon::error(" unexpected SASH parameters in file %s.sash.\n", filename.c_str());
+        Daemon::error(" unexpected SASH parameters in file %s.sash.", filename.c_str());
 
         throw new std::exception();
     }
@@ -259,11 +237,9 @@ const int Sash::build (const std::string& filename, std::vector<DistanceData>& i
     // Reserve SASH storage, and set up tree parameters.
     // As a result of this operation, the expected SASH size,
     //   number of levels, etc, are set.
-
     this->reserve_storage (inSize, inMaxParents);
 
     // Skip another comment line.
-
     fgets (stringBuf, SASH_BUFSIZE_, inFile);
     fgets (stringBuf, SASH_BUFSIZE_, inFile);
 
@@ -273,7 +249,6 @@ const int Sash::build (const std::string& filename, std::vector<DistanceData>& i
     //   number of children,
     //   and indices of children.
     // Build the list of children, if any exist.
-
     for (int i = 0; i < size; ++i)
     {
         loc = FileUtil::read_from_file<int>(in_file);
@@ -282,7 +257,7 @@ const int Sash::build (const std::string& filename, std::vector<DistanceData>& i
         if (loc != i)
         {
             Daemon::error("ERROR (from build):")
-            Daemon::error(" invalid entry in file %s.sash.\n", filemame.c_str());
+            Daemon::error(" invalid entry in file %s.sash.", filemame.c_str());
 
             throw new std::exception();
         }
@@ -914,7 +889,7 @@ void Sash::internal_build (const int number_of_items)
 {
     int halfSize = 0;
     int quarterSize = 0;
-    unsigned char notFound = TRUE;
+    bool not_found = true;
     int range = 0;
     double* temp_distance_list = NULL;
     int* temp_index_list = NULL;
@@ -1002,8 +977,8 @@ void Sash::internal_build (const int number_of_items)
     {
         if (childLSizeList[parent] > 0)
         {
-            this->child_index_llist[parent].clear();
-            this->child_distance_llist[parent].clear();
+            this->child_index_list[parent].clear();
+            this->child_distance_list[parent].clear();
         }
     }
 
@@ -1043,7 +1018,7 @@ void Sash::internal_build (const int number_of_items)
         	temp_distance_list = this->child_distance_list[parent];
         	temp_index_list = this->child_index_list[parent];
             this->child_distance_list[parent].clear();
-            this->child_index_llist[parent].resize(maxChildren);
+            this->child_index_list[parent].resize(maxChildren);
 
             Sort::partial_sort<int, double>(temp_index_list, temp_distance_list, 0, temp_distance_list.size());
 
@@ -1064,7 +1039,7 @@ void Sash::internal_build (const int number_of_items)
 
             temp_distance_list.clear();
             temp_index_list.clear();
-        }
+ 		}
         else
         {
             // Inform the children that another request has been granted.
@@ -1090,13 +1065,13 @@ void Sash::internal_build (const int number_of_items)
             // But just to be sure, we test to make sure that the range is
             //   not bigger than the number of items in the SASH.
             ++numOrphans;
-            notFound = TRUE;
+            not_found = true;
             range = 2 * maxParents;
 
-            while (notFound && (range <= number_of_items))
+            while (not_found && (range <= number_of_items))
             {
-                set_new_query (data[internToExternMapping[child]]);
-                doFindParents (range);
+                set_new_query(data[internToExternMapping[child]]);
+                internal_find_parents(range);
 
                 for (int i = 0; i < queryResultSize; ++i)
                 {
@@ -1135,7 +1110,7 @@ void Sash::internal_build (const int number_of_items)
                         child_distance_list[parent] = distFromQueryList;
                         child_index_list[parent][childLSizeList[parent]] = child;
                         childLSizeList[parent]++;
-                        notFound = FALSE;
+                        not_found = false;
 
                         break;
                     }
@@ -1151,7 +1126,7 @@ void Sash::internal_build (const int number_of_items)
     // Clean up and return.
 
     for (int parent = quarterSize; parent < halfSize; ++parent)
-        child_distance_list[parent] = NULL;
+      	child_distance_list[parent].clear();
 
     levels++;
 
@@ -1265,7 +1240,7 @@ int Sash::internal_find_most_in_range (double limit, int sampleRate, double scal
     // Compute the minimum number of neighbours for each sample level.
 
     minNeighbours
-    = (int) ((maxParents * maxChildren * 0.5F * scaleFactor) + 0.5F);
+    = (int) ((maxParents * maxChildren * 0.5 * scaleFactor) + 0.5);
 
     // Load the root as the tentative sole member of the query result list.
     // If its distance to the query is less than or equal to the limit,
@@ -1313,7 +1288,7 @@ int Sash::internal_find_most_in_range (double limit, int sampleRate, double scal
         // The requested number of edges with smallest distances are preserved,
         //   but other entries may be destroyed.
 
-	numFound = Sort::partial_sort(scratchIndexList, scratchDistList, 0, scratchListSize);
+		numFound = Sort::partial_sort(scratchIndexList, scratchDistList, 0, scratchListSize);
 
         // Copy over the extracted edges to the output lists,
         //   and return the number of edges extracted.
@@ -2096,17 +2071,16 @@ void Sash::printStats ()
 // Should only be called immediately after the construction.
 //
 {
-    printf ("\n");
-    printf ("SASH build statistics:\n");
-    printf ("  size                  == %d\n", size);
-    printf ("  levels                == %d\n", levels);
-    printf ("  max parents per node  == %d\n", maxParents);
-    printf ("  max children per node == %d\n", maxChildren);
-    printf ("  orphan nodes          == %d\n", numOrphans);
-    printf ("  distance comparisons  == %ld\n", number_of_distance_comparisons);
-    printf ("  RNG seed              == %ld\n", seed);
-    printf ("\n");
-    fflush (NULL);
+    Daemon::error ("");
+    Daemon::error ("SASH build statistics:");
+    Daemon::error ("  size                  == %d", size);
+    Daemon::error ("  levels                == %d", levels);
+    Daemon::error ("  max parents per node  == %d", maxParents);
+    Daemon::error ("  max children per node == %d", maxChildren);
+    Daemon::error ("  orphan nodes          == %d", numOrphans);
+    Daemon::error ("  distance comparisons  == %ld", number_of_distance_comparisons);
+    Daemon::error ("  RNG seed              == %ld", seed);
+    Daemon::error ("");
 }
 
 
@@ -2171,18 +2145,18 @@ void Sash::reserve_storage (int number_of_items, int numParents)
 
     // Set up storage for child-to-parent edges and parent-to-child edges.
 
-    parent_index_llist.resize(size);
-    parent_distance_llist.resize(size);
+    parent_index_list.resize(size);
+    parent_distance_list.resize(size);
 
-    child_index_llist.resize(size);
-    child_distance_llist.resize(size);
+    child_index_list.resize(size);
+    child_distance_list.resize(size);
 
     for (int i=0; i<size; i++)
     {
-        parent_index_llist[i].clear();
-        parent_distance_llist[i].clear();
-        child_index_llist[i].clear();
-        child_distance_llist[i].clear();
+        parent_index_list[i].clear();
+        parent_distance_list[i].clear();
+        child_index_list[i].clear();
+        child_distance_list[i].clear();
     }
 
     // Set up storage for managing distance computations and

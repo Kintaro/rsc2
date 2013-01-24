@@ -1,16 +1,16 @@
 // C++ header file Sash.h
 // Implementation of the SASH index for approximate similarity search,
 // as described in
-//   Michael E. Houle (author),
+//   Michael E. Houle(author),
 //   "SASH: a Spatial Approximation Sample Hierarchy for Similarity Search",
 //   IBM Tokyo Research Laboratory Technical Report RT-0517, 5 March 2003.
 // and
-//   Michael E. Houle and Jun Sakuma (authors),
+//   Michael E. Houle and Jun Sakuma(authors),
 //   "Fast Approximate Search in Extremely High-Dimensional Data Sets",
-//   in Proc. 21st International Conference on Data Engineering (ICDE 2005),
+//   in Proc. 21st International Conference on Data Engineering(ICDE 2005),
 //   Tokyo, Japan, April 2005, pp. 619-630.
 //
-// Copyright (C) 2004-2006 Michael E. Houle,
+// Copyright(C) 2004-2006 Michael E. Houle,
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -36,10 +36,10 @@
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
 // A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
 // OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+// EXEMPLARY, OR CONSEQUENTIAL DAMAGES(INCLUDING, BUT NOT LIMITED TO,
 // PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
 // PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT(INCLUDING
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
@@ -81,53 +81,53 @@
 //
 //  // Building a SASH directly from a data array
 //
-//  dataSash = new Sash (12345UL);
-//  dataSash->setVerbosity (2);
-//  dataSash->build (data, size, 4);
-//  dataSash->saveToFile ("example");
+//  dataSash = new Sash(12345UL);
+//  dataSash->setVerbosity(2);
+//  dataSash->build(data, size, 4);
+//  dataSash->save_to_file("example");
 //
 //  ...
 //
 //  // Loading a previously-computed SASH from the file "example.sash"
 //
 //  dataSash = new Sash();
-//  dataSash->setVerbosity (2);
-//  dataSash->build ("example", data, size);
+//  dataSash->setVerbosity(2);
+//  dataSash->build("example", data, size);
 //
 //  ...
 //
 //  // Exact similarity query for 100 items
 //
-//  dataSash->findNearest (query, 100);
-//  dataSash->getResultDists (exactDistList, exactListCapacity);
+//  dataSash->findNearest(query, 100);
+//  dataSash->getResultDists(exactDistList, exactListCapacity);
 //
 //  // Approx similarity query for 100 items, and verifying its accuracy
 //  // Time-accuracy trade-off parameter is 2.0
 //
-//  dataSash->findNear (query, 100, 2.0F);
-//  dataSash->getResultDists (approxDistList, approxListCapacity);
-//  dataSash->getResultIndices (approxIndexList, approxListCapacity);
+//  dataSash->findNear(query, 100, 2.0F);
+//  dataSash->getResultDists(approxDistList, approxListCapacity);
+//  dataSash->getResultIndices(approxIndexList, approxListCapacity);
 //  resultSize = dataSash->getResultNumFound();
 //  numberOfDistanceComputations = dataSash->getResultDistComps();
-//  accuracy = dataSash->get_result_accuracy (exactDistList, 100);
+//  accuracy = dataSash->get_result_accuracy(exactDistList, 100);
 //
 //  // Exact range query for distance limit 0.1
 //  // Approx range query for distance limit 0.1, and verifying its accuracy
 //  // Time-accuracy trade-off parameter is 2.0
 //
-//  dataSash->find_all_in_range (query, 0.1F);
+//  dataSash->find_all_in_range(query, 0.1F);
 //  resultSize = dataSash->getResultNumFound();
-//  if (resultSize <= exactListCapacity)
+//  if(resultSize <= exactListCapacity)
 //  {
-//    dataSash->getResultDists (exactDistList, exactListCapacity);
-//    dataSash->findMostInRange (query, 0.1F, 2.0F);
+//    dataSash->getResultDists(exactDistList, exactListCapacity);
+//    dataSash->findMostInRange(query, 0.1F, 2.0F);
 //    resultSize = dataSash->getResultNumFound();
-//    if (resultSize <= approxListCapacity)
+//    if(resultSize <= approxListCapacity)
 //    {
-//      dataSash->getResultDists (approxDistList, approxListCapacity);
-//      dataSash->getResultIndices (approxIndexList, approxListCapacity);
+//      dataSash->getResultDists(approxDistList, approxListCapacity);
+//      dataSash->getResultIndices(approxIndexList, approxListCapacity);
 //      numberOfDistanceComputations = dataSash->getResultDistComps();
-//      accuracy = dataSash->get_result_accuracy (exactDistList, 100);
+//      accuracy = dataSash->get_result_accuracy(exactDistList, 100);
 //    }
 //  }
 //
@@ -165,11 +165,11 @@ public:
     int maxChildren;              //   parent and child pointers per node.
 
     /* Stores the mapping from internal
-       item indices to external (input) indices. */
+       item indices to external(input) indices. */
     std::vector<int> intern_to_extern_mapping; 
 
     /* Number of sample levels in the SASH
-       (other than the root's).
+      (other than the root's).
        The bottom SASH level has index 0,
        the root has level "level". */
     int levels;                   
@@ -180,20 +180,20 @@ public:
     /* For each SASH item, lists of indices to parents
        This storage is deallocated after the SASH construction
        is complete */
-    std::vector<std::vector<int> > parent_index_llist; 
+    std::vector<std::vector<int> > parent_index_list; 
     /* For each SASH item, distances to parents. 
        This storage is deallocated after the SASH construction
        is complete */
-    std::vector<std::vector<double> > parent_distance_llist; 
+    std::vector<std::vector<double> > parent_distance_list; 
 
     /* For each SASH item, lists of indices to children.
        This storage is deallocated after the SASH construction
        is complete */
-    std::vector<std::vector<int> > child_index_llist;
+    std::vector<std::vector<int> > child_index_list;
     /* For each SASH item, lists of distances to children.
        This storage is deallocated after the SASH construction
        is complete */
-    std::vector<std::vector<double> > child_distance_llist;
+    std::vector<std::vector<double> > child_distance_list;
 
     /* Storage supporting distance computation. */
     boost::optional<DistanceData> query; 
@@ -202,7 +202,7 @@ public:
        in the array "distFromQueryList". */
     std::vector<double> distance_from_query_list; 
     /* The "storedDistIndexList" array holds 
-       the (internal) indices of items */
+       the(internal) indices of items */
     std::vector<int> stored_distance_index_list; 
 
     unsigned long number_of_distance_comparisons;   // The number of distance computations
@@ -259,7 +259,7 @@ public:
      * Constructor using seed for random number generator initialization.
      */
 
-    Sash (unsigned long seed);
+    Sash(unsigned long seed);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -283,7 +283,7 @@ public:
      *   can be obtained via a call to getResultDistComps.
      */
 
-    const int build (std::vector<DistanceData>& inputData, const boost::optional<int>& numParents = 4);
+    const int build(std::vector<DistanceData>& inputData, const boost::optional<int>& numParents = 4);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -291,14 +291,14 @@ public:
 
     /**
      * Loads a previously-computed SASH from the specified file.
-     * The original data set must also be provided (as well as the
+     * The original data set must also be provided(as well as the
      *   number of items in the data set).
      * The extension ".sash" is automatically appended to the file name.
      * If successful, the number of SASH items is returned.
      * If unsuccessful, zero is returned.
      */
 
-    const int build (const std::string& filename, std::vector<DistanceData>& inputData);
+    const int build(const std::string& filename, std::vector<DistanceData>& inputData);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -319,7 +319,7 @@ public:
      *   to the query.
      */
 
-    const int find_all_in_range (const DistanceData& query, const double limit, const boost::optional<int>& sample_rate = 0);
+    const int find_all_in_range(const DistanceData& query, const double limit, const boost::optional<int>& sample_rate = 0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -331,12 +331,12 @@ public:
      * The number of elements actually found is returned.
      * The search is relative to a data sample of size N / 2^r,
      *   where N is the number of items in the set, and r is
-     *   a non-negative integer ("sampleRate").
+     *   a non-negative integer("sampleRate").
      * A "sampleRate" of zero indicates a search relative to the entire set.
-     * The method also makes use of a parameter ("scaleFactor")
+     * The method also makes use of a parameter("scaleFactor")
      *   that influences the trade-off between time and accuracy.
      * The default value of this parameter is 1.0 - increasing the value
-     *   will increase running time (roughly proportionally) and increase
+     *   will increase running time(roughly proportionally) and increase
      *   the accuracy of the result.
      * The query result can be obtained via calls to the following methods:
      *         get_result_accuracy
@@ -360,14 +360,14 @@ public:
      *   query item.
      * The search is relative to a data sample of size N / 2^r,
      *   where N is the number of items in the set, and r is
-     *   a non-negative integer ("sampleRate").
+     *   a non-negative integer("sampleRate").
      * A "sampleRate" of zero indicates a search relative to the entire set.
-     * The desired number of elements must be given ("howMany").
+     * The desired number of elements must be given("howMany").
      * The number of elements actually found is returned.
-     * The method also makes use of a parameter ("scaleFactor")
+     * The method also makes use of a parameter("scaleFactor")
      *   that influences the trade-off between time and accuracy.
      * The default value of this parameter is 1.0 - increasing the value
-     *   will increase running time (roughly proportionally) and increase
+     *   will increase running time(roughly proportionally) and increase
      *   the accuracy of the result.
      * The query result can be obtained via calls to the following methods:
      *         get_result_accuracy
@@ -391,9 +391,9 @@ public:
      *   query item.
      * The search is relative to a data sample of size N / 2^r,
      *   where N is the number of items in the set, and r is
-     *   a non-negative integer ("sampleRate").
+     *   a non-negative integer("sampleRate").
      * A "sampleRate" of zero indicates a search relative to the entire set.
-     * The desired number of elements must be given ("howMany").
+     * The desired number of elements must be given("howMany").
      * The number of elements actually found is returned.
      * The query result can be obtained via calls to the following methods:
      *         get_result_accuracy
@@ -406,7 +406,7 @@ public:
      *   to the query.
      */
 
-    const int find_nearest (const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate = 0);
+    const int find_nearest(const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate = 0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -416,7 +416,7 @@ public:
      * Returns direct access to the SASH input data list.
      */
 
-	std::vector<DistanceData>& getData();
+	std::vector<DistanceData>& get_data();
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -498,7 +498,7 @@ public:
      *   items found in the query result.
      * If unsuccessful, a negative value is returned.
      */
-    const double get_result_accuracy (const std::vector<double>& exactDistList) const;
+    const double get_result_accuracy(const std::vector<double>& exactDistList) const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -529,7 +529,7 @@ public:
 
 
     /**
-     * Fills the supplied list with the (external) indices of the
+     * Fills the supplied list with the(external) indices of the
      *   items found in the most recent SASH query.
      * If successful, the number of items found is returned.
      * If unsuccessful, zero is returned.
@@ -589,7 +589,7 @@ public:
      * The result does not include the "sample" consisting solely of the
      *   SASH root item.
      * If successful, the number of SASH sample levels is returned
-     *   (excluding that of the root).
+     *  (excluding that of the root).
      * If unsuccessful, zero is returned.
      */
 
@@ -619,7 +619,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    const int saveToFile (const std::string& fileName);
+    const int save_to_file(const std::string& fileName);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -633,7 +633,7 @@ public:
      * Verbosity of 3 or more: error, progress, and debug messages reported.
      */
 
-    void setVerbosity (const int verbosity);
+    void setVerbosity(const int verbosity);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -645,7 +645,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    const double compute_distance_from_query (const int itemIndex);
+    const double compute_distance_from_query(const int itemIndex);
     //
     // Returns the distance from the current query object to the
     //   specified data object.
@@ -657,7 +657,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    void internal_build (const int numItems);
+    void internal_build(const int numItems);
     //
     // Recursively builds a SASH on items in the first locations of the
     //   scrambled data array.
@@ -667,7 +667,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    const int internal_find_all_in_range (const double limit, const int sampleRate);
+    const int internal_find_all_in_range(const double limit, const int sampleRate);
     //
     // Performs an exact range query from the current query object,
     //   with respect to a subset of the items.
@@ -680,7 +680,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    const int internal_find_most_in_range (const double limit, const int sampleRate, const double scaleFactor);
+    const int internal_find_most_in_range(const double limit, const int sampleRate, const double scaleFactor);
     //
     // Performs an approximate range query from the current query object,
     //   with respect to a subset of the items.
@@ -710,11 +710,11 @@ private:
      *   would be expected to be more accurate than those with "scaleFactor=1.0",
      *   but would take roughly twice as much time to process.i
 	 */
-    const int internal_find_near (const int howMany, const int sampleRate, const double scaleFactor);
+    const int internal_find_near(const int howMany, const int sampleRate, const double scaleFactor);
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    const int internal_find_nearest (const int howMany, const int sampleRate);
+    const int internal_find_nearest(const int howMany, const int sampleRate);
     //
     // Computes exact nearest neighbours of the current query object,
     //   with respect to a subset of the items.
@@ -727,7 +727,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    const int internal_find_parents (const int howMany);
+    const int internal_find_parents(const int howMany);
     //
     // Finds a set of parents for the current query item from among the
     //   bottom-level items of the current SASH.
@@ -738,7 +738,7 @@ private:
 
 
     int extractBestEdges
-    (int howMany,
+   (int howMany,
      double* toDistList, int* toIndexList, int toFirst, int toCapacity,
      double* fromDistList, int* fromIndexList, int fromFirst, int fromLast);
     //
@@ -758,7 +758,7 @@ private:
 
 
     int partialQuickSort
-    (int howMany,
+   (int howMany,
      double* distList, int* indexList,
      int rangeFirst, int rangeLast);
     //
@@ -784,7 +784,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    void reserveStorage (int numItems, int numParents);
+    void reserve_storage(int numItems, int numParents);
     //
     // Reserve storage for the SASH and its data.
     // The number of SASH items and the maximum number of parents per node
@@ -794,7 +794,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    void set_new_query (DistanceData* query);
+    void set_new_query(DistanceData* query);
     //
     // Accepts a new item as the query object for future distance comparisons.
     // Any previously-stored distances are cleared by this operation,
