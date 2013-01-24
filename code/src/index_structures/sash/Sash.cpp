@@ -67,7 +67,7 @@
 //                         Public Methods                           //
 /*-----------------------------------------------------------------------------------------------*/
 
-
+std::mt19937 Sash::genInt;
 /**
  * Constructor using default seed value for
  * random number generator initialization.
@@ -77,6 +77,7 @@ Sash::Sash ()
 //
 {
     seed = 314159UL;
+    genInt.seed(seed);
 }
 
 
@@ -177,35 +178,19 @@ const int Sash::build (std::vector<DistanceData>& inputData, const boost::option
 
 const int Sash::build (const std::string& filename, std::vector<DistanceData>& inputData)
 {
-    int i = 0;
-    int j = 0;
-    int loc = 0;
-    int temp = 0;
-    int inSize = 0;
-    int inLevels = 0;
-    int inMaxParents = 0;
-    int numChildren = 0;
-    int* childList = NULL;
-    FILE* inFile = NULL;
-
     // If the data set is empty, then abort.
-
-    if ((fileName == NULL) || (inputData.size() <= 0))
+    if (fileName.empty() || (inputData.size() <= 0))
     {
-        {
-            if (inputData.size() == 1)
-                Daemon::error ("ERROR (from build): data set has only 1 item.");
-            else
-                Daemon::error ("ERROR (from build): empty data set or filename.");
-
-            fflush (NULL);
-        }
+        if (inputData.size() == 1)
+            Daemon::error ("ERROR (from build): data set has only 1 item.");
+        else
+            Daemon::error ("ERROR (from build): empty data set or filename.");
 
         return 0;
     }
 
     Daemon::debug("Loading SASH from file %s.sash ...", fileName);
-    data = inputData;
+    this->data = inputData;
 
     // Open the file containing the SASH.
     // If we fail to open the file, then abort.
@@ -218,11 +203,11 @@ const int Sash::build (const std::string& filename, std::vector<DistanceData>& i
         return 0;
     }
 
-    inSize       = FileUtil::read_from_file<int>(in_file);
-    inLevels     = FileUtil::read_from_file<int>(in_file);
-    inMaxParents = FileUtil::read_from_file<int>(in_file);
-    numOrphans   = FileUtil::read_from_file<int>(in_file);
-    seed         = FileUtil::read_from_file<int>(in_file);
+    int inSize       = FileUtil::read_from_file<int>(in_file);
+    int inLevels     = FileUtil::read_from_file<int>(in_file);
+    int inMaxParents = FileUtil::read_from_file<int>(in_file);
+    this->numOrphans = FileUtil::read_from_file<int>(in_file);
+    this->seed       = FileUtil::read_from_file<int>(in_file);
 
     // Are these parameter values what we expected?
     // If not, then abort!
@@ -239,10 +224,6 @@ const int Sash::build (const std::string& filename, std::vector<DistanceData>& i
     //   number of levels, etc, are set.
     this->reserve_storage (inSize, inMaxParents);
 
-    // Skip another comment line.
-    fgets (stringBuf, SASH_BUFSIZE_, inFile);
-    fgets (stringBuf, SASH_BUFSIZE_, inFile);
-
     // Read in information for each node:
     //   internal index,
     //   external index,
@@ -251,8 +232,7 @@ const int Sash::build (const std::string& filename, std::vector<DistanceData>& i
     // Build the list of children, if any exist.
     for (int i = 0; i < size; ++i)
     {
-        loc = FileUtil::read_from_file<int>(in_file);
-        fscanf (inFile, "%d", &(loc));
+        int loc = FileUtil::read_from_file<int>(in_file);
 
         if (loc != i)
         {
@@ -262,33 +242,22 @@ const int Sash::build (const std::string& filename, std::vector<DistanceData>& i
             throw new std::exception();
         }
 
-        internToExternMapping[i] = FileUtil::read_from_file<int>(in_file);
-        numChildren = FileUtil::read_from_file<int>(in_file);
+        this->internToExternMapping[i] = FileUtil::read_from_file<int>(in_file);
+        int numChildren = FileUtil::read_from_file<int>(in_file);
 
         if (numChildren > 0)
-        {
-            childList = new int [numChildren];
-        }
+            this->child_index_list[i].resize(numChildren);
         else
-        {
-            childList = NULL;
-        }
-
-        child_index_list[i] = childList;
-        childLSizeList[i] = numChildren;
+            this->child_index_list[i].clear();
 
         for (int j = 0; j < numChildren; ++j)
-        {
-            childList[j] = FileUtil::read_from_file<int>(in_file);
-        }
+            this->child_index_list[i][j] = FileUtil::read_from_file<int>(in_file);
     }
 
     in_file.close();
 
     if (verbosity >= 2)
-    {
         printStats ();
-    }
 
     return size;
 }
@@ -416,9 +385,10 @@ const int Sash::find_most_in_range(const DistanceData& query, const double limit
 
 const int Sash::find_near(const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
 {
-    queryResultSize = 0;
-    query_result_sample_size = 0;
-    number_of_distance_comparisons = 0UL;
+	this->query_result_index_list.clear();
+	this->query_result_distance_list.clear();
+    this->query_result_sample_size = 0;
+    this->number_of_distance_comparisons = 0UL;
 
     if ((size <= 0)
             || (howMany <= 0)
@@ -430,9 +400,9 @@ const int Sash::find_near(const DistanceData& query, const int howMany, const bo
         throw new std::exception();
     }
 
-    this->set_new_query (query);
+    this->set_new_query(query);
 
-    return internal_find_near (howMany, *sampleRate, *scaleFactor);
+    return this->internal_find_near(howMany, *sampleRate, *scaleFactor);
 }
 
 
@@ -462,7 +432,8 @@ const int Sash::find_near(const DistanceData& query, const int howMany, const bo
 const int Sash::find_nearest (const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate)
 //
 {
-    this->queryResultSize = 0;
+    this->query_result_index_list.clear();
+	this->query_result_distance_list.clear();
     this->query_result_sample_size = 0;
     this->number_of_distance_comparisons = 0UL;
 
@@ -477,7 +448,7 @@ const int Sash::find_nearest (const DistanceData& query, const int howMany, cons
 
     this->set_new_query(query);
 
-    return internal_find_nearest(howMany, *sampleRate);
+    return this->internal_find_nearest(howMany, *sampleRate);
 }
 
 
@@ -863,15 +834,15 @@ const double Sash::compute_distance_from_query(const int item_index)
 // Otherwise, the distance is computed and stored before returning it.
 //
 {
-    if (this->istance_from_query_list[item_index] >= 0.0)
-        return this->istance_from_query_list[item_index];
+    if (this->distance_from_query_list[item_index] >= 0.0)
+        return this->distance_from_query_list[item_index];
 
     this->distance_from_query_list[item_index] = query->distance_to (this->data[this->internToExternMapping[item_index]]);
-    this->tored_distance_index_list[numStoredDists] = item_index;
-    ++nthis->umStoredDists;
-    ++nthis->umber_of_distance_comparisons;
+    this->stored_distance_index_list[numStoredDists] = item_index;
+    ++nthis->numStoredDists;
+    ++nthis->number_of_distance_comparisons;
 
-    return distance_from_query_list[item_index];
+    return this->distance_from_query_list[item_index];
 }
 
 
@@ -885,12 +856,9 @@ void Sash::internal_build (const int number_of_items)
 // The number of items to be incorporated into the SASH must be specified.
 //
 {
-    int halfSize = 0;
     int quarterSize = 0;
     bool not_found = true;
     int range = 0;
-    double* temp_distance_list = NULL;
-    int* temp_index_list = NULL;
 	std::vector<double> temp_distance_list;
 	std::vector<int> temp_index_list;
 
@@ -934,7 +902,7 @@ void Sash::internal_build (const int number_of_items)
     // The number of items is large.
     // Build the SASH recursively on half the items.
 
-    halfSize = (number_of_items + 1) / 2;
+    int halfSize = (number_of_items + 1) / 2;
     this->internal_build (halfSize);
 
     // We now want to connect the bottom level of the
@@ -951,7 +919,7 @@ void Sash::internal_build (const int number_of_items)
             Daemon::debug("Inserting item %d (out of %d)...", child + 1, size);
 
         this->set_new_query (this->data[this->internToExternMapping[child]]);
-       internal_find_parents (maxParents);
+        internal_find_parents (maxParents);
 
         parentLSizeList[child] = queryResultSize;
         parent_index_list[child] = new int [maxParents];
@@ -989,7 +957,7 @@ void Sash::internal_build (const int number_of_items)
         for (int i = parentLSizeList[child] - 1; i >= 0; --i)
         {
             parent = parent_index_list[child][i];
-            j = childLSizeList[parent];
+            int j = childLSizeList[parent];
             child_index_list[parent][j] = child;
             child_distance_list[parent][j] = parent_distance_list[child][i];
             childLSizeList[parent]++;
@@ -1018,20 +986,16 @@ void Sash::internal_build (const int number_of_items)
             this->child_distance_list[parent].clear();
             this->child_index_list[parent].resize(maxChildren);
 
-            Sort::partial_sort<int, double>(temp_index_list, temp_distance_list, 0, temp_distance_list.size());
-
-            // childLSizeList[parent]
-            // = partialQuickSort
-            //   (maxChildren,
-            //    temp_distance_list, temp_index_list,
-            //    0, childLSizeList[parent]-1);
+            int length = Sort::partial_sort<int, double>(temp_index_list, temp_distance_list, 0, maxChildren);
+            this->child_distance_list[parent].resize(length);
+            this->child_index_list[parent].resize(length);
 
             // Connect the parent to its quota of children.
             // Inform the children that another request has been granted.
             for (int i = childLSizeList[parent] - 1; i >= 0; --i)
             {
                 child = temp_index_list[i];
-                child_index_list[parent][i] = child;
+                this->child_index_list[parent][i] = child;
                 parentLSizeList[child]++;
             }
 
@@ -1046,7 +1010,7 @@ void Sash::internal_build (const int number_of_items)
         }
 
         // Eliminate the edge distance information.
-       	child_distance_list[parent].clear();
+       	this->child_distance_list[parent].clear();
     }
 
     // For each child, check to see if at least one parent granted
@@ -1068,8 +1032,8 @@ void Sash::internal_build (const int number_of_items)
 
             while (not_found && (range <= number_of_items))
             {
-                set_new_query(data[internToExternMapping[child]]);
-                internal_find_parents(range);
+                this->set_new_query(this->data[this->internToExternMapping[child]]);
+                this->internal_find_parents(range);
 
                 for (int i = 0; i < queryResultSize; ++i)
                 {
@@ -1085,28 +1049,28 @@ void Sash::internal_build (const int number_of_items)
                         //   indicate whether parents are fostering any orphans.
                         // If "child_distance_list[parent]!=NULL", then "parent" is
                         //   assumed to be fostering at least one orphan.
-                        if (child_distance_list[parent] == NULL)
+                        if (this->child_distance_list[parent] == NULL)
                         {
                             // This parent is fostering an orphan for the first time.
                             // Expand the size of its child list to the maximum
                             //   possible, to accommodate the current orphan
                             //   and any future orphans.
                             temp_index_list = child_index_list[parent];
-                            child_index_list[parent] = new int [maxChildren];
+                            this->child_index_list[parent] = new int [maxChildren];
 
                             for (int j = childLSizeList[parent] - 1; j >= 0; --j)
-                                child_index_list[parent][j] = temp_index_list[j];
+                                this->child_index_list[parent][j] = temp_index_list[j];
 
                             delete [] temp_index_list;
-                            temp_index_list = NULL;
+                            temp_index_list.clear();
                         }
 
                         // Add the child to the parent's list.
                         // To indicate that the parent is now fostering orphans,
                         //   set its child edge distance list to anything non-null
                         //   (the list "distFromQueryList").
-                        child_distance_list[parent] = distFromQueryList;
-                        child_index_list[parent][childLSizeList[parent]] = child;
+                        this->child_distance_list[parent] = distance_from_query_list;
+                        this->child_index_list[parent][childLSizeList[parent]] = child;
                         childLSizeList[parent]++;
                         not_found = false;
 
@@ -1124,7 +1088,7 @@ void Sash::internal_build (const int number_of_items)
     // Clean up and return.
 
     for (int parent = quarterSize; parent < halfSize; ++parent)
-      	child_distance_list[parent].clear();
+      	this->child_distance_list[parent].clear();
 
     levels++;
 
