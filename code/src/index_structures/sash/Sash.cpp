@@ -320,7 +320,7 @@ const int Sash::find_all_in_range (const DistanceData& query, const double limit
 //
 {
     queryResultSize = 0;
-    queryResultSampleSize = 0;
+    query_result_sample_size = 0;
     number_of_distance_comparisons = 0UL;
 
     if ((size <= 0)
@@ -368,23 +368,22 @@ const int Sash::find_all_in_range (const DistanceData& query, const double limit
 const int Sash::find_most_in_range(const DistanceData& query, const double limit, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
 {
     queryResultSize = 0;
-    queryResultSampleSize = 0;
+    query_result_sample_size = 0;
     number_of_distance_comparisons = 0UL;
 
     if ((size <= 0)
-            || (query == NULL)
-            || (limit < 0.0F)
-            || (sampleRate < 0)
-            || ((sampleRate >= levels) && (size > 1))
-            || (scaleFactor <= 0.0F))
+            || (limit < 0.0)
+            || (*sampleRate < 0)
+            || ((*sampleRate >= levels) && (size > 1))
+            || (*scaleFactor <= 0.0F))
     {
 		Daemon::error("ERROR (from find_most_in_range): invalid argument(s).");
 		throw new std::exception();
     }
 
-    this->set_new_query (query);
+    this->set_new_query(query);
 
-    return internal_find_most_in_range(limit, *sampleRate, scaleFactor);
+    return internal_find_most_in_range(limit, *sampleRate, *scaleFactor);
 }
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -418,15 +417,14 @@ const int Sash::find_most_in_range(const DistanceData& query, const double limit
 const int Sash::find_near(const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
 {
     queryResultSize = 0;
-    queryResultSampleSize = 0;
+    query_result_sample_size = 0;
     number_of_distance_comparisons = 0UL;
 
     if ((size <= 0)
-            || (query == NULL)
             || (howMany <= 0)
-            || (sampleRate < 0)
-            || ((sampleRate >= levels) && (size > 1))
-            || (scaleFactor <= 0.0F))
+            || (*sampleRate < 0)
+            || ((*sampleRate >= levels) && (size > 1))
+            || (*scaleFactor <= 0.0))
     {
         Daemon::error("ERROR (from find_near): invalid argument(s).");
         throw new std::exception();
@@ -434,7 +432,7 @@ const int Sash::find_near(const DistanceData& query, const int howMany, const bo
 
     this->set_new_query (query);
 
-    return internal_find_near (howMany, sampleRate, scaleFactor);
+    return internal_find_near (howMany, *sampleRate, *scaleFactor);
 }
 
 
@@ -465,21 +463,21 @@ const int Sash::find_nearest (const DistanceData& query, const int howMany, cons
 //
 {
     this->queryResultSize = 0;
-    this->queryResultSampleSize = 0;
+    this->query_result_sample_size = 0;
     this->number_of_distance_comparisons = 0UL;
 
     if ((size <= 0)
             || (howMany <= 0)
-            || (sampleRate < 0)
-            || ((sampleRate >= levels) && (size > 1)))
+            || (*sampleRate < 0)
+            || ((*sampleRate >= levels) && (size > 1)))
     {
         Daemon::error ("ERROR (from find_nearest): invalid argument(s).");
         throw new std::exception();
     }
 
-    this->set_new_query (query);
+    this->set_new_query(query);
 
-    return internal_find_nearest (howMany, sampleRate);
+    return internal_find_nearest(howMany, *sampleRate);
 }
 
 
@@ -705,7 +703,7 @@ int Sash::getResultNumFound ()
 
 int Sash::getResultSampleSize ()
 {
-    return queryResultSampleSize;
+    return query_result_sample_size;
 }
 
 
@@ -1153,7 +1151,7 @@ const int Sash::internal_find_all_in_range (const double limit, const int sample
     {
         query_result_distance_list[0] = compute_distance_from_query (0);
         query_result_index_list[0] = 0;
-        queryResultSampleSize = 1;
+        query_result_sample_size = 1;
 
         if (query_result_distance_list[0] <= limit)
             queryResultSize = 1;
@@ -1163,10 +1161,10 @@ const int Sash::internal_find_all_in_range (const double limit, const int sample
         return queryResultSize;
     }
 
-    queryResultSampleSize = sampleSizeList[sampleRate];
+    query_result_sample_size = sampleSizeList[sampleRate];
 
     // Compute distances from the current query to all items.
-    for (int i = 0; i < queryResultSampleSize; ++i)
+    for (int i = 0; i < query_result_sample_size; ++i)
     {
         query_result_distance_list[i] = compute_distance_from_query (i);
         query_result_index_list[i] = i;
@@ -1174,7 +1172,7 @@ const int Sash::internal_find_all_in_range (const double limit, const int sample
 
     // Sort the items by distances, returning the number of
     //   elements actually found.
-    queryResultSize = Sort::partial_sort(query_result_index_list, query_result_distance_list, 0, queryResultSampleSize);
+    queryResultSize = Sort::partial_sort(query_result_index_list, query_result_distance_list, 0, query_result_sample_size);
 
     // Report only those items whose distances fall within the limit.
 
@@ -1223,7 +1221,7 @@ int Sash::internal_find_most_in_range (double limit, int sampleRate, double scal
     {
         query_result_distance_list[0] = compute_distance_from_query (0);
         query_result_index_list[0] = 0;
-        queryResultSampleSize = 1;
+        query_result_sample_size = 1;
 
         if (query_result_distance_list[0] <= limit)
             queryResultSize = 1;
@@ -1235,7 +1233,7 @@ int Sash::internal_find_most_in_range (double limit, int sampleRate, double scal
 
     // Compute the sample size for the operation.
 
-    queryResultSampleSize = sampleSizeList[sampleRate];
+    query_result_sample_size = sampleSizeList[sampleRate];
 
     // Compute the minimum number of neighbours for each sample level.
 
@@ -1378,14 +1376,14 @@ int Sash::internal_find_near (int howMany, int sampleRate, double scaleFactor)
         queryResultSize = 1;
         query_result_distance_list[0] = compute_distance_from_query (0);
         query_result_index_list[0] = 0;
-        queryResultSampleSize = 1;
+        query_result_sample_size = 1;
 
         return 1;
     }
 
     // Compute the sample size for the operation.
 
-    queryResultSampleSize = sampleSizeList[sampleRate];
+    query_result_sample_size = sampleSizeList[sampleRate];
 
     // Compute the item quota for each sample level.
 
@@ -1453,7 +1451,7 @@ int Sash::internal_find_near (int howMany, int sampleRate, double scaleFactor)
         // Extract the closest nodes from the list of accumulated children,
         //   and append them to the tentative query result.
 
-        numFound = extractBestEdges
+        numFound = extract_best_edges
                    (levelQuotaList[lvl],
                     query_result_distance_list, query_result_index_list,
                     activeLevelLast+1, size,
@@ -1488,22 +1486,20 @@ int Sash::internal_find_nearest (int howMany, int sampleRate)
 //
 {
     // Handle the singleton case separately.
-
     if (size == 1)
     {
         queryResultSize = 1;
         query_result_distance_list[0] = this->compute_distance_from_query (0);
         query_result_index_list[0] = 0;
-        queryResultSampleSize = 1;
+        query_result_sample_size = 1;
 
         return 1;
     }
 
-    queryResultSampleSize = sampleSizeList[sampleRate];
+    query_result_sample_size = sampleSizeList[sampleRate];
 
     // Compute distances from the current query to all items.
-
-    for (int i = 0; i < queryResultSampleSize; ++i)
+    for (int i = 0; i < query_result_sample_size; ++i)
     {
         query_result_distance_list[i] = this->compute_distance_from_query (i);
         query_result_index_list[i] = i;
@@ -1511,13 +1507,7 @@ int Sash::internal_find_nearest (int howMany, int sampleRate)
 
     // Sort the items by distances, returning the number of
     //   elements actually found.
-
-    Sort::partial_sort(this->query_result_index_list, this->query_result_distance_list, 0, howMany);
-
-    // queryResultSize = partialQuickSort
-    //                   (howMany,
-    //                    query_result_distance_list, query_result_index_list,
-    //                    0, queryResultSampleSize-1);
+    queryResultSize = Sort::partial_sort(this->query_result_index_list, this->query_result_distance_list, 0, howMany);
 
     return queryResultSize;
 }
@@ -1533,33 +1523,24 @@ int Sash::doFindParents (int howMany)
 // The results are stored in the SASH query result lists.
 //
 {
-    int i;
-    int j;
-    int lvl;
-    int nodeIndex = 0;
-    int numChildren = 0;
-
     // Load the root as the tentative sole member of the query result list.
-
     query_result_distance_list[0] = compute_distance_from_query (0);
     query_result_index_list[0] = 0;
     queryResultSize = 1;
 
     // From the root, search out other nodes to place in the query result.
-
-    for (lvl=0; lvl<levels; lvl++)
+    for (int lvl = 0; lvl < levels; ++lvl)
     {
         // For every node at the active level, load its children
         //   into the scratch list, and compute their distances to the query.
-
         scratchListSize = 0;
 
-        for (i=0; i<queryResultSize; i++)
+        for (int i = 0; i < queryResultSize; ++i)
         {
-            nodeIndex = query_result_index_list[i];
-            numChildren = childLSizeList[nodeIndex];
+            int nodeIndex = query_result_index_list[i];
+            int numChildren = childLSizeList[nodeIndex];
 
-            for (j=0; j<numChildren; j++)
+            for (int j = 0; j < numChildren; ++j)
             {
                 scratchIndexList[scratchListSize] = child_index_list[nodeIndex][j];
                 scratchDistList[scratchListSize]
@@ -1572,13 +1553,10 @@ int Sash::doFindParents (int howMany)
         //   and keep them as the tentative parents of the query.
         // Note that only the candidates from the most recently-processed
         //   level are kept.
-
-        queryResultSize = extractBestEdges
+        queryResultSize = extract_best_edges
                           (howMany,
                            query_result_distance_list, query_result_index_list,
-                           0, size,
-                           scratchDistList, scratchIndexList,
-                           0, scratchListSize-1);
+                           0, scratchDistList, scratchIndexList, 0);
     }
 
     return queryResultSize;
@@ -1588,16 +1566,16 @@ int Sash::doFindParents (int howMany)
 /*-----------------------------------------------------------------------------------------------*/
 
 
-const int Sash::extractBestEdges
+const int Sash::extract_best_edges
 (const int howMany,
- std::vector<double>& toDistList, std::vector<<int>& toIndexList, const int toFirst,
- std::vector<double>& fromDistList, std::vector<int>& fromIndexList, const int fromFirst, const int fromLast)
+ std::vector<double>& to_distance_list, std::vector<<int>& to_index_list, const int toFirst,
+ std::vector<double>& from_distance_list, std::vector<int>& from_index_list, const int fromFirst)
 //
 // Copies a requested number of directed edges having minimum distances
 //   to their targets.
-// The input edges are stored in "fromIndexList" and "fromDistList", in the
+// The input edges are stored in "from_index_list" and "from_distance_list", in the
 //   range of locations beginning at "fromFirst" and ending at "fromLast".
-// The extracted edges are stored in "toIndexList" and "toDistList",
+// The extracted edges are stored in "to_index_list" and "to_distance_list",
 //   in locations starting at "toFirst".
 // If the requested number of edges "howMany" would exceed the
 //   output list capacity "toCapacity" if copying were to start at
@@ -1605,36 +1583,26 @@ const int Sash::extractBestEdges
 // WARNING: this operation destroys entries of the input list!
 //
 {
-    int i;
-    int numExtracted = 0;
-
     // Make sure that we don't extract more edges than currently exist.
-
-    if (howMany > toDistList.size() - toFirst)
-    {
-        howMany = toDistList.size() - toFirst;
-    }
+    if (howMany > to_distance_list.size() - toFirst)
+        howMany = to_distance_list.size() - toFirst;
 
     // Sort the source lists in place, according to distance.
     // The requested number of edges with smallest distances are preserved,
     //   but other entries may be destroyed.
-
-    Sort::partial_sort(fromIndexList, fromDistList, fromFirst, fromFirst + howMany);
-    // numExtracted = partialQuickSort
-    //                (howMany, fromDistList, fromIndexList, fromFirst, fromLast);
+    int num_extracted = Sort::partial_sort(from_index_list, from_distance_list, fromFirst, fromFirst + howMany);
 
     // Copy over the extracted edges to the output lists,
     //   and return the number of edges extracted.
-
-    for (i = 0; i < numExtracted; ++i)
+    for (int i = 0; i < num_extracted; ++i)
     {
-        toDistList[toFirst] = fromDistList[fromFirst];
-        toIndexList[toFirst] = fromIndexList[fromFirst];
-        toFirst++;
-        fromFirst++;
+        to_distance_list[toFirst] = from_distance_list[fromFirst];
+        to_index_list[toFirst] = from_index_list[fromFirst];
+        ++toFirst;
+		++fromFirst;
     }
 
-    return numExtracted;
+    return num_extracted;
 }
 
 
@@ -2169,7 +2137,7 @@ void Sash::reserve_storage (int number_of_items, int numParents)
     query_result_distance_list = new double [size];
     query_result_index_list = new int [size];
     queryResultSize = 0;
-    queryResultSampleSize = 0;
+    query_result_sample_size = 0;
 
     for (int i=0; i<size; i++)
     {

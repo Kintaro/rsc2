@@ -144,7 +144,6 @@
 #include <string.h>
 #include <iostream>
 #include <math.h>
-//#include "DistanceData.h"
 #include "mtrand.h"
 #include "../../IndexStructure.h"
 #include "../../DistanceData.h"
@@ -222,13 +221,11 @@ public:
     //   the most recent similarity search was
     //   performed.
 
+    // This storage is allocated only once,
+    //   here, to improve search efficiency.
     std::vector<int> scratch_index_list;
     std::vector<double> scratch_distance_list;
 
-    int* scratchIndexList;        // Temporary index and distance storage
-    double* scratchDistList;       //   used during search.
-    // This storage is allocated only once,
-    //   here, to improve search efficiency.
 
     char* stringBuf;              // Character buffer used for string
     //   manipulation.
@@ -737,7 +734,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    int extractBestEdges
+    int extract_best_edges
    (int howMany,
      double* toDistList, int* toIndexList, int toFirst, int toCapacity,
      double* fromDistList, int* fromIndexList, int fromFirst, int fromLast);
