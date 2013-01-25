@@ -824,7 +824,7 @@ const double Sash::compute_distance_from_query(const int item_index)
 	if (this->distance_from_query_list[item_index] >= 0.0)
 		return this->distance_from_query_list[item_index];
 
-	this->distance_from_query_list[item_index] = query->distance_to ((*this->data)[this->intern_to_extern_mapping[item_index]]);
+	this->distance_from_query_list[item_index] = query->distance_to (*(*this->data)[this->intern_to_extern_mapping[item_index]]);
 	this->stored_distance_index_list.push_back(item_index);
 	++this->number_of_distance_comparisons;
 
@@ -846,7 +846,7 @@ void Sash::internal_build (const int number_of_items)
 	int halfSize = this->internal_build_recursively(number_of_items);
 	int quarterSize = this->internal_build_reserve_tentative_storage(halfSize);
 	this->internal_build_construct_child_lists(number_of_items, halfSize); 
-	this->internal_build_trim_child_lists();
+	this->internal_build_trim_child_lists(quarterSize, halfSize);
 	this->internal_build_connect_orphans(number_of_items, halfSize);
 
 	// All orphans have now found foster parents.
@@ -1307,7 +1307,7 @@ const int Sash::internal_find_most_in_range (const double limit, const int sampl
 /*-----------------------------------------------------------------------------------------------*/
 
 
-int Sash::internal_find_near (int howMany, int sampleRate, double scaleFactor)
+const int Sash::internal_find_near (const int howMany, const int sampleRate, const double scaleFactor)
 	//
 	// Computes approximate nearest neighbours of the current query object,
 	//   with respect to a subset of the items.
@@ -1429,7 +1429,7 @@ int Sash::internal_find_near (int howMany, int sampleRate, double scaleFactor)
 /*-----------------------------------------------------------------------------------------------*/
 
 
-int Sash::internal_find_nearest (int howMany, int sampleRate)
+const int Sash::internal_find_nearest (const int howMany, const int sampleRate)
 	//
 	// Computes exact nearest neighbours of the current query object,
 	//   with respect to a subset of the items.
@@ -1472,7 +1472,7 @@ int Sash::internal_find_nearest (int howMany, int sampleRate)
 /*-----------------------------------------------------------------------------------------------*/
 
 
-int Sash::doFindParents (int howMany)
+const int Sash::internal_find_parents (const int howMany)
 	//
 	// Finds a set of parents for the current query item from among the
 	//   bottom-level items of the current SASH.
@@ -1677,7 +1677,7 @@ void Sash::reserve_storage (const int number_of_items, const int numParents)
 /*-----------------------------------------------------------------------------------------------*/
 
 
-void Sash::set_new_query (const boost::optional<DistanceData*>& query)
+void Sash::set_new_query (const boost::optional<const DistanceData*>& query)
 	//
 	// Accepts a new item as the query object for future distance comparisons.
 	// Any previously-stored distances are cleared by this operation,
