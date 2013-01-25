@@ -42,6 +42,7 @@
 #define __INDEX_STRUCTURE_H__
 
 #include <vector>
+#include <boost/serialization/optional.hpp>
 #include <boost/extension/extension.hpp>
 #include <boost/extension/shared_library.hpp>
 #include <boost/function.hpp>
@@ -57,10 +58,10 @@ public:
 	virtual const std::vector<int> get_result_indices() const = 0;
 	virtual const std::vector<double> get_result_distances() const = 0;
 	virtual const int get_result_distance_comparisons() const = 0;
-	virtual const int find_all_in_range(const T& query, double limit) = 0;
-	virtual const int find_most_in_range(const T& query, double limit) = 0;
-	virtual const int find_near(const T& query, int how_many, int sample_rate = 0, double scale_factor = 1.0) = 0;
-	virtual const int find_nearest(const T& query, int how_many, int sample_rate) = 0;
+	virtual const int find_all_in_range(const DistanceData& query, const double limit, const boost::optional<int>& sample_rate = 0);
+	virtual const int find_most_in_range(const DistanceData& query, const double limit, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
+	virtual const int find_near(const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
+	virtual const int find_nearest(const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate = 0);
 
 	static IndexStructure<T>* create_from_plugin(const std::string& plugin_name)
 	{

@@ -144,6 +144,7 @@
 #include <string.h>
 #include <iostream>
 #include <functional>
+#include <vector>
 #include <math.h>
 #include "mtrand.h"
 #include "../../IndexStructure.h"
@@ -317,7 +318,7 @@ public:
      *   to the query.
      */
 
-    const int find_all_in_range(const DistanceData& query, const double limit, const boost::optional<int>& sample_rate = 0);
+    virtual const int find_all_in_range(const DistanceData& query, const double limit, const boost::optional<int>& sample_rate = 0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -347,7 +348,7 @@ public:
      *   to the query.
      */
 
-    const int find_most_in_range(const DistanceData& query, const double limit, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
+    virtual const int find_most_in_range(const DistanceData& query, const double limit, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -378,7 +379,7 @@ public:
      *   to the query.
      */
 
-    const int find_near(const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
+    virtual const int find_near(const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -404,7 +405,7 @@ public:
      *   to the query.
      */
 
-    const int find_nearest(const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate = 0);
+    virtual const int find_nearest(const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate = 0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -460,7 +461,7 @@ public:
      * Returns the number of data items of the SASH.
      */
 
-    const int get_number_of_items() const;
+    virtual const int get_number_of_items() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -470,7 +471,7 @@ public:
      * Returns the number of sample levels of the SASH.
      */
 
-    const int get_number_of_levels() const;
+    virtual const int get_number_of_levels() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -509,7 +510,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    const std::vector<double> get_result_distances() const;
+    virtual const std::vector<double> get_result_distances() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -520,7 +521,7 @@ public:
      *   the most recent SASH operation.
      */
 
-    const int get_result_distance_comparisons() const;
+    virtual const int get_result_distance_comparisons() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -533,7 +534,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    const std::vector<int> get_result_indices() const;
+    virtual const std::vector<int> get_result_indices() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -591,7 +592,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    const std::vector<int> get_sample_sizes() const;
+    virtual const std::vector<int> get_sample_sizes() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -666,7 +667,7 @@ private:
 	const int internal_build_recursively(const int number_of_items);
 	void internal_build_reserve_tentative_storage(const int halfSize);
 	void internal_build_construct_child_lists(const int number_of_items, const int halfSize);
-	void internal_build_trim_child_lists();
+	void internal_build_trim_child_lists(const int quarterSize, const int halfSize);
 	void internal_build_connect_orphans(const int number_of_items, const int halfSize);
 	void internal_build_connect_orphan(const int number_of_items);
 

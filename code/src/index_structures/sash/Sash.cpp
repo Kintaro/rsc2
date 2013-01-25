@@ -281,7 +281,6 @@ const int Sash::build (const std::string& filename, std::vector<DistanceData>& i
  */
 
 const int Sash::find_all_in_range (const DistanceData& query, const double limit, const boost::optional<int>& sampleRate)
-	//
 {
 	this->query_result_index_list.size() = 0;
 	this->query_result_sample_size = 0;
@@ -425,7 +424,6 @@ const int Sash::find_near(const DistanceData& query, const int howMany, const bo
  */
 
 const int Sash::find_nearest (const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate)
-	//
 {
 	this->query_result_index_list.clear();
 	this->query_result_distance_list.clear();
@@ -471,7 +469,6 @@ std::vector<DistanceData>& Sash::get_data()
  */
 
 const std::vector<int> Sash::get_extern_to_intern_mapping() const
-//
 {
 	std::vector<int> result;
 	result.resize(this->intern_to_extern_mapping.size());
@@ -494,7 +491,6 @@ const std::vector<int> Sash::get_extern_to_intern_mapping() const
  */
 
 const std::vector<int> Sash::get_intern_to_extern_mapping() const
-//
 {
 	return this->intern_to_extern_mapping;
 }
@@ -568,7 +564,6 @@ int Sash::getNumOrphans ()
  */
 
 const double Sash::get_result_accuracy (const std::vector<double>& exactDistList) const
-//
 {
 	int loc = 0;
 
@@ -995,7 +990,7 @@ void Sash::internal_build_construct_child_lists(const int number_of_items, const
 	}
 }
 /*-----------------------------------------------------------------------------------------------*/
-void Sash::internal_build_trim_child_lists()
+void Sash::internal_build_trim_child_lists(const int quarterSize, const int halfSize)
 {
 	// If a child list exceeds the length quota, then trim it.
 	// The smallest edges are selected, and the distances are cleared.
@@ -1008,8 +1003,9 @@ void Sash::internal_build_trim_child_lists()
 	{
 		if (this->child_size_list[parent] > maxChildren)
 		{
-			temp_distance_list = this->child_distance_list[parent];
-			temp_index_list = this->child_index_list[parent];
+			std::vector<double> temp_distance_list = this->child_distance_list[parent];
+			std::vector<int> temp_index_list = this->child_index_list[parent];
+
 			this->child_distance_list[parent].clear();
 			this->child_index_list[parent].resize(maxChildren);
 
@@ -1025,9 +1021,6 @@ void Sash::internal_build_trim_child_lists()
 				this->child_index_list[parent][i] = child;
 				++this->parent_size_list[child];
 			}
-
-			temp_distance_list.clear();
-			temp_index_list.clear();
 		}
 		else
 		{
