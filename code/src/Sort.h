@@ -77,7 +77,7 @@ public:
 			b[i] = temp[i].second;
 		}
 
-		return std::min(a.size(), to - from);
+		return std::min((int)a.size(), (int)(to - from));
 	}
 };
 

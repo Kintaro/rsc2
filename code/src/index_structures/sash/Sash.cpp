@@ -281,7 +281,7 @@ const int Sash::build (const std::string& filename, std::vector<DistanceData*>& 
  *   to the query.
  */
 
-const int Sash::find_all_in_range (const DistanceData& query, const double limit, const boost::optional<int>& sampleRate)
+const int Sash::find_all_in_range (const DistanceData* query, const double limit, const boost::optional<int>& sampleRate)
 {
 	this->query_result_index_list.clear();
 	this->query_result_distance_list.clear();
@@ -330,7 +330,7 @@ const int Sash::find_all_in_range (const DistanceData& query, const double limit
  *   to the query.
  */
 
-const int Sash::find_most_in_range(const DistanceData& query, const double limit, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
+const int Sash::find_most_in_range(const DistanceData* query, const double limit, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
 {
 	this->query_result_index_list.clear();
 	this->query_result_distance_list.clear();
@@ -380,7 +380,7 @@ const int Sash::find_most_in_range(const DistanceData& query, const double limit
  *   to the query.
  */
 
-const int Sash::find_near(const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
+const int Sash::find_near(const DistanceData* query, const int howMany, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
 {
 	this->query_result_index_list.clear();
 	this->query_result_distance_list.clear();
@@ -426,7 +426,7 @@ const int Sash::find_near(const DistanceData& query, const int howMany, const bo
  *   to the query.
  */
 
-const int Sash::find_nearest (const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate)
+const int Sash::find_nearest (const DistanceData* query, const int howMany, const boost::optional<int>& sampleRate)
 {
 	this->query_result_index_list.clear();
 	this->query_result_distance_list.clear();
@@ -700,7 +700,7 @@ const std::vector<int> Sash::get_sample_assignment() const
 	result.resize(0);
 
 	for (int lvl = 0; lvl < levels; ++lvl)
-		for (int i = sampleSizeList[lvl + 1]; i < sampleSizeList[lvl]; ++i)
+		for (int i = sample_size_list[lvl + 1]; i < sample_size_list[lvl]; ++i)
 			result[this->intern_to_extern_mapping[i]] = lvl;
 
 	result[this->intern_to_extern_mapping[0]] = levels;
@@ -1117,7 +1117,7 @@ const int Sash::internal_find_all_in_range (const double limit, const int sample
 {
 	// Handle the singleton case separately.
 
-	if (size == 1)
+	if (this->data->size() == 1)
 	{
 		this->query_result_distance_list[0] = this->compute_distance_from_query (0);
 		this->query_result_index_list[0] = 0;
@@ -1137,7 +1137,7 @@ const int Sash::internal_find_all_in_range (const double limit, const int sample
 		return this->query_result_index_list.size();
 	}
 
-	this->query_result_sample_size = sampleSizeList[sampleRate];
+	this->query_result_sample_size = sample_size_list[sampleRate];
 
 	// Compute distances from the current query to all items.
 	for (int i = 0; i < this->query_result_sample_size; ++i)
@@ -1148,7 +1148,8 @@ const int Sash::internal_find_all_in_range (const double limit, const int sample
 
 	// Sort the items by distances, returning the number of
 	//   elements actually found.
-	this->query_result_index_list.size() = Sort::partial_sort<int, double>(this->query_result_index_list, this->query_result_distance_list, 0, this->query_result_sample_size);
+	int length = Sort::partial_sort<int, double>(this->query_result_index_list, this->query_result_distance_list, 0, this->query_result_sample_size);
+	this->query_result_index_list.resize(length);
 
 	// Report only those items whose distances fall within the limit.
 	int counter = 0;
@@ -1206,7 +1207,7 @@ const int Sash::internal_find_most_in_range (const double limit, const int sampl
 	}
 
 	// Compute the sample size for the operation.
-	this->query_result_sample_size = sampleSizeList[sampleRate];
+	this->query_result_sample_size = sample_size_list[sampleRate];
 
 	// Compute the minimum number of neighbours for each sample level.
 	int minNeighbours
@@ -1337,7 +1338,7 @@ int Sash::internal_find_near (int howMany, int sampleRate, double scaleFactor)
 	}
 
 	// Compute the sample size for the operation.
-	this->query_result_sample_size = sampleSizeList[sampleRate];
+	this->query_result_sample_size = sample_size_list[sampleRate];
 
 	// Compute the item quota for each sample level.
 	int minNeighbours
@@ -1367,7 +1368,7 @@ int Sash::internal_find_near (int howMany, int sampleRate, double scaleFactor)
 		if (levelQuota < minNeighbours)
 			levelQuota = minNeighbours;
 
-		levelQuotaList[lvl] = levelQuota;
+		level_quota_list[lvl] = levelQuota;
 
 		levelQuota = (int) ((reductionFactor * levelQuota) + 0.5);
 	}
@@ -1403,7 +1404,7 @@ int Sash::internal_find_near (int howMany, int sampleRate, double scaleFactor)
 		// Extract the closest nodes from the list of accumulated children,
 		//   and append them to the tentative query result.
 		int numFound = extract_best_edges
-			(levelQuotaList[lvl],
+			(level_quota_list[lvl],
 			 this->query_result_distance_list, this->query_result_index_list,
 			 activeLevelLast + 1, size,
 			 this->scratch_distance_list, this->scratch_index_list, 0);
@@ -1449,7 +1450,7 @@ int Sash::internal_find_nearest (int howMany, int sampleRate)
 		return 1;
 	}
 
-	this->query_result_sample_size = sampleSizeList[sampleRate];
+	this->query_result_sample_size = this->sample_size_list[sampleRate];
 
 	// Compute distances from the current query to all items.
 	for (int i = 0; i < this->query_result_sample_size; ++i)
@@ -1523,7 +1524,7 @@ int Sash::doFindParents (int howMany)
 
 	const int Sash::extract_best_edges
 (const int howMany,
- std::vector<double>& to_distance_list, std::vector<<int>& to_index_list, const int toFirst,
+ std::vector<double>& to_distance_list, std::vector<int>& to_index_list, const int toFirst,
  std::vector<double>& from_distance_list, std::vector<int>& from_index_list, const int fromFirst)
 	//
 	// Copies a requested number of directed edges having minimum distances
@@ -1574,7 +1575,7 @@ void Sash::print_stats ()
 {
 	Daemon::info("");
 	Daemon::info("SASH build statistics:");
-	Daemon::info("  size                  == %d", size);
+	Daemon::info("  size                  == %d", this->data->size());
 	Daemon::info("  levels                == %d", levels);
 	Daemon::info("  max parents per node  == %d", maxParents);
 	Daemon::info("  max children per node == %d", maxChildren);
@@ -1597,7 +1598,7 @@ void Sash::reserve_storage (const int number_of_items, const int numParents)
 {
 	int sampleSize = 0;
 
-	size = number_of_items;
+	int size = number_of_items;
 
 	if (numParents <= 3)
 		maxParents = 3;
@@ -1629,12 +1630,12 @@ void Sash::reserve_storage (const int number_of_items, const int numParents)
 
 	for (int i = 0; i < levels; ++i)
 	{
-		levelQuotaList[i] = 0;
-		sampleSizeList[i] = sampleSize;
+		level_quota_list[i] = 0;
+		sample_size_list[i] = sampleSize;
 		sampleSize = (sampleSize + 1) / 2;
 	}
 
-	sampleSizeList[levels] = 1;
+	sample_size_list[levels] = 1;
 
 	// Reserve storage for the mapping between internal and external
 	//   data indices.
@@ -1667,9 +1668,9 @@ void Sash::reserve_storage (const int number_of_items, const int numParents)
 	this->distance_from_query_list.resize(size);
 	this->stored_distance_index_list.clear();
 
-	query_result_distance_list.resize(size);
-	query_result_index_list.clear();
-	query_result_sample_size = 0;
+	this->query_result_distance_list.resize(size);
+	this->query_result_index_list.clear();
+	this->query_result_sample_size = 0;
 }
 
 

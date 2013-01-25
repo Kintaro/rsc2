@@ -319,7 +319,7 @@ public:
      *   to the query.
      */
 
-    virtual const int find_all_in_range(const DistanceData& query, const double limit, const boost::optional<int>& sample_rate = 0);
+    virtual const int find_all_in_range(const DistanceData* query, const double limit, const boost::optional<int>& sample_rate = 0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -349,7 +349,7 @@ public:
      *   to the query.
      */
 
-    virtual const int find_most_in_range(const DistanceData& query, const double limit, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
+    virtual const int find_most_in_range(const DistanceData* query, const double limit, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -380,7 +380,7 @@ public:
      *   to the query.
      */
 
-    virtual const int find_near(const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
+    virtual const int find_near(const DistanceData* query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -406,7 +406,7 @@ public:
      *   to the query.
      */
 
-    virtual const int find_nearest(const DistanceData& query, const int howMany, const boost::optional<int>& sampleRate = 0);
+    virtual const int find_nearest(const DistanceData* query, const int howMany, const boost::optional<int>& sampleRate = 0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
