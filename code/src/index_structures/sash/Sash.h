@@ -143,6 +143,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <iostream>
+#include <functional>
 #include <math.h>
 #include "mtrand.h"
 #include "../../IndexStructure.h"
@@ -155,7 +156,7 @@ class Sash : IndexStructure<DistanceData>
 {
 public:
 
-    std::vector<DistanceData>& data;
+    std::reference_wrapper<std::vector<DistanceData>> data;
 
     int maxParents;               // Upper limits on the maximum number of
     int maxChildren;              //   parent and child pointers per node.
@@ -280,7 +281,7 @@ public:
      *   can be obtained via a call to getResultDistComps.
      */
 
-    const int build(std::vector<DistanceData>& inputData, const boost::optional<int>& numParents = 4);
+    const int build(std::reference_wrapper<std::vector<DistanceData>>& inputData, const boost::optional<int>& numParents = 4);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -295,7 +296,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    const int build(const std::string& filename, std::vector<DistanceData>& inputData);
+    const int build(const std::string& filename, std::reference_wrapper<std::vector<DistanceData>>& inputData);
 
 
 /*-----------------------------------------------------------------------------------------------*/

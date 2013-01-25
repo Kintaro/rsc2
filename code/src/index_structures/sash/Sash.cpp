@@ -122,7 +122,7 @@ Sash::~Sash ()
  *   can be obtained via a call to getResultDistComps.
  */
 
-const int Sash::build (std::vector<DistanceData>& inputData, const boost::optional<int>& numParents)
+const int Sash::build (std::reference_wrapper<std::vector<DistanceData>>& inputData, const boost::optional<int>& numParents)
 {
 	// If the data set is empty, then abort.
 	if (inputData.size() <= 1)
@@ -171,7 +171,7 @@ const int Sash::build (std::vector<DistanceData>& inputData, const boost::option
  * If unsuccessful, zero is returned.
  */
 
-const int Sash::build (const std::string& filename, std::vector<DistanceData>& inputData)
+const int Sash::build (const std::string& filename, std::reference_wrapper<std::vector<DistanceData>>& inputData)
 {
 	// If the data set is empty, then abort.
 	if (fileName.empty() || (inputData.size() <= 0))
