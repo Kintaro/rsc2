@@ -47,6 +47,8 @@
 #include <boost/extension/shared_library.hpp>
 #include <boost/function.hpp>
 
+#include <iostream>
+
 template<typename T>
 class IndexStructure
 {
@@ -66,7 +68,8 @@ public:
 	static IndexStructure<T>* create_from_plugin(const std::string& plugin_name)
 	{
 		boost::extensions::shared_library lib("./lib" + plugin_name + ".extension");
-		lib.open();
+		if (!lib.open())
+			std::cout << "FUUUUUUU" << std::endl;
 		boost::function<IndexStructure<T>* (int)> l(lib.get<IndexStructure<T>*, int>("create_index_structure"));
 		return l(42);
 	}

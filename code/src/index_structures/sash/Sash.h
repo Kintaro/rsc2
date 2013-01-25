@@ -154,7 +154,7 @@
 #include <boost/serialization/optional.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 
-class Sash : IndexStructure<DistanceData> 
+class Sash : public IndexStructure<DistanceData> 
 {
 public:
 
@@ -197,7 +197,7 @@ public:
     std::vector<int> child_size_list;
 
     /* Storage supporting distance computation. */
-    boost::optional<DistanceData*> query; 
+    DistanceData* query; 
     
     /* The distance themselves are stored
        in the array "distFromQueryList". */
@@ -319,7 +319,7 @@ public:
      *   to the query.
      */
 
-    virtual const int find_all_in_range(const DistanceData* query, const double limit, const boost::optional<int>& sample_rate = 0);
+    virtual const int find_all_in_range(DistanceData* const query, const double limit, const boost::optional<int>& sample_rate = 0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -349,7 +349,7 @@ public:
      *   to the query.
      */
 
-    virtual const int find_most_in_range(const DistanceData* query, const double limit, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
+    virtual const int find_most_in_range(DistanceData* const query, const double limit, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -380,7 +380,7 @@ public:
      *   to the query.
      */
 
-    virtual const int find_near(const DistanceData* query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
+    virtual const int find_near(DistanceData* const query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -406,7 +406,7 @@ public:
      *   to the query.
      */
 
-    virtual const int find_nearest(const DistanceData* query, const int howMany, const boost::optional<int>& sampleRate = 0);
+    virtual const int find_nearest(DistanceData* const query, const int howMany, const boost::optional<int>& sampleRate = 0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -545,7 +545,7 @@ public:
      * Returns the number of items found in the most recent query.
      */
 
-    const int get_number_of_results_found();
+    const int get_number_of_results_found() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -555,7 +555,7 @@ public:
      * Returns the sample size used in the most recent query.
      */
 
-    const int get_result_sample_size();
+    const int get_result_sample_size() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -745,10 +745,10 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    int extract_best_edges
+    const int extract_best_edges
    (int howMany,
-     double* toDistList, int* toIndexList, int toFirst, int toCapacity,
-     double* fromDistList, int* fromIndexList, int fromFirst, int fromLast);
+ std::vector<double>& to_distance_list, std::vector<int>& to_index_list, int toFirst,
+ std::vector<double>& from_distance_list, std::vector<int>& from_index_list, int fromFirst);
     //
     // Copies a requested number of directed edges having minimum distances
     //   to their targets.
@@ -802,7 +802,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    void set_new_query(const boost::optional<const DistanceData*>& query);
+    void set_new_query(DistanceData* const query);
     //
     // Accepts a new item as the query object for future distance comparisons.
     // Any previously-stored distances are cleared by this operation,

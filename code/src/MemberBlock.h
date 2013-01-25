@@ -94,7 +94,7 @@ public:
 	const int build_approximate_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const double scale_factor, const size_t item_index);
 	const int build_exact_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const size_t item_index);
 
-	const int merge_members(MemberBlock<ScoreType>* block, const int max_list_size);
+	const int merge_members(const MemberBlock<ScoreType>& block, const int max_list_size);
 private:
 	const int internal_build_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const double scale_factor, const size_t item_index);
 	const int internal_build_neighbourhood_compute_query(IndexStructure<DistanceData>& data_index, const int offset, const double scale_factor, const int item_index);
@@ -489,7 +489,7 @@ const int MemberBlock<ScoreType>::internal_build_neighbourhood_store(IndexStruct
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-const int MemberBlock<ScoreType>::merge_members(MemberBlock<ScoreType>& block, const int max_list_size)
+const int MemberBlock<ScoreType>::merge_members(const MemberBlock<ScoreType>& block, const int max_list_size)
 {
 	struct sort_helper 
 	{
