@@ -1,16 +1,7 @@
-// C++ source file Sash.cpp
-// Implementation of the SASH index for approximate similarity search,
-// as described in
-//   Michael E. Houle (author),
-//   "SASH: a Spatial Approximation Sample Hierarchy for Similarity Search",
-//   IBM Tokyo Research Laboratory Technical Report RT-0517, 5 March 2003.
-// and
-//   Michael E. Houle and Jun Sakuma (authors),
-//   "Fast Approximate Search in Extremely High-Dimensional Data Sets",
-//   in Proc. 21st International Conference on Data Engineering (ICDE 2005),
-//   Tokyo, Japan, April 2005, pp. 619-630.
+// GreedyRSC (Greedy Relevant Set Correlation) Clustering Tool
 //
-// Copyright (C) 2004-2006, Michael E. Houle,
+// Copyright (C) 2008 Michael E. Houle,
+//               2012 Simon Wollwage
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -45,85 +36,32 @@
 //
 // Comments, bug fixes, etc welcome!
 // Contact e-mail address: meh@nii.ac.jp, meh@acm.org
-
-
-/**
- * Sash.cpp:    SASH index for approximate similarity search.
- *
- * Author:      Michael E. Houle
- * Date:        4 Jan 2006
- * Version:     1.0
- */
+//                         mail.wollwage@gmail.com
 
 #include "../../Daemon.h"
 #include "../../FileUtil.h"
 #include "../../Sort.h"
 #include "Sash.h"
 
-/*-----------------------------------------------------------------------------------------------*///
-//                                Sash                                //
-/*-----------------------------------------------------------------------------------------------*///
-
-
 /*-----------------------------------------------------------------------------------------------*/
-//                         Public Methods                           //
-/*-----------------------------------------------------------------------------------------------*/
-
 std::mt19937 Sash::genInt;
-/**
- * Constructor using default seed value for
- * random number generator initialization.
- */
-
-Sash::Sash ()
-: data(boost::none)
+/*-----------------------------------------------------------------------------------------------*/
+Sash::Sash () : data(boost::none)
 {
 	seed = 314159UL;
 	genInt.seed(seed);
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Constructor using seed for random number generator initialization.
- */
-
-
-Sash::Sash (unsigned long seed)
-: data(boost::none) 
+Sash::Sash (unsigned long seed) : data(boost::none) 
 {
 	genInt.seed (seed);
 	this->seed = seed;
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Destructor.
- */
-
 Sash::~Sash ()
-	//
 {
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Constructs the SASH from an array of data items.
- * The maximum number of parents per node must be specified.
- * If a value smaller than 3 is provided, 3 is used instead.
- * The number of items comprising the SASH is returned.
- * The number of pairwise distance computations performed
- *   can be obtained via a call to getResultDistComps.
- */
-
 const int Sash::build (std::vector<DistanceData*>& inputData, const boost::optional<int>& numParents)
 {
 	// If the data set is empty, then abort.
@@ -159,20 +97,7 @@ const int Sash::build (std::vector<DistanceData*>& inputData, const boost::optio
 
 	return inputData.size();
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Loads a previously-computed SASH from the specified file.
- * The original data set must also be provided (as well as the
- *   number of items in the data set).
- * The extension ".sash" is automatically appended to the file name.
- * If successful, the number of SASH items is returned.
- * If unsuccessful, zero is returned.
- */
-
 const int Sash::build (const std::string& filename, std::vector<DistanceData*>& inputData)
 {
 	// If the data set is empty, then abort.
@@ -257,30 +182,7 @@ const int Sash::build (const std::string& filename, std::vector<DistanceData*>& 
 
 	return inputData.size();
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Perform an approximate range query for the specified item.
- * The upper limit on the query-to-item distance must be supplied.
- * The number of elements actually found is returned.
- * The search is relative to a data sample of size N / 2^r,
- *   where N is the number of items in the set, and r is
- *   a non-negative integer ("sampleRate").
- * A "sampleRate" of zero indicates a search relative to the entire set.
- * The query result can be obtained via calls to the following methods:
- *         get_result_accuracy
- *         getResultDists
- *         getResultDistComps
- *         getResultIndices
- *         get_number_of_results_found
- *         getResultSampleSize
- * The result items are sorted in increasing order of their distances
- *   to the query.
- */
-
 const int Sash::find_all_in_range (DistanceData* const query, const double limit, const boost::optional<int>& sampleRate)
 {
 	this->query_result_index_list.clear();
@@ -301,35 +203,7 @@ const int Sash::find_all_in_range (DistanceData* const query, const double limit
 
 	return internal_find_all_in_range (limit, *sampleRate);
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Perform an approximate range query for the specified item.
- * The upper limit on the query-to-item distance must be supplied.
- * The number of elements actually found is returned.
- * The search is relative to a data sample of size N / 2^r,
- *   where N is the number of items in the set, and r is
- *   a non-negative integer ("sampleRate").
- * A "sampleRate" of zero indicates a search relative to the entire set.
- * The method also makes use of a parameter ("scaleFactor")
- *   that influences the trade-off between time and accuracy.
- * The default value of this parameter is 1.0 - increasing the value
- *   will increase running time (roughly proportionally) and increase
- *   the accuracy of the result.
- * The query result can be obtained via calls to the following methods:
- *         get_result_accuracy
- *         getResultDists
- *         getResultDistComps
- *         getResultIndices
- *         get_number_of_results_found
- *         getResultSampleSize
- * The result items are sorted in increasing order of their distances
- *   to the query.
- */
-
 const int Sash::find_most_in_range(DistanceData* const query, const double limit, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
 {
 	this->query_result_index_list.clear();
@@ -351,35 +225,7 @@ const int Sash::find_most_in_range(DistanceData* const query, const double limit
 
 	return internal_find_most_in_range(limit, *sampleRate, *scaleFactor);
 }
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Find a set of approximate nearest neighbours for the specified
- *   query item.
- * The search is relative to a data sample of size N / 2^r,
- *   where N is the number of items in the set, and r is
- *   a non-negative integer ("sampleRate").
- * A "sampleRate" of zero indicates a search relative to the entire set.
- * The desired number of elements must be given ("howMany").
- * The number of elements actually found is returned.
- * The method also makes use of a parameter ("scaleFactor")
- *   that influences the trade-off between time and accuracy.
- * The default value of this parameter is 1.0 - increasing the value
- *   will increase running time (roughly proportionally) and increase
- *   the accuracy of the result.
- * The query result can be obtained via calls to the following methods:
- *         get_result_accuracy
- *         getResultDists
- *         getResultDistComps
- *         getResultIndices
- *         get_number_of_results_found
- *         getResultSampleSize
- * The result items are sorted in increasing order of their distances
- *   to the query.
- */
-
 const int Sash::find_near(DistanceData* const query, const int howMany, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
 {
 	this->query_result_index_list.clear();
@@ -401,31 +247,7 @@ const int Sash::find_near(DistanceData* const query, const int howMany, const bo
 
 	return this->internal_find_near(howMany, *sampleRate, *scaleFactor);
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Find a set of exact nearest neighbours for the specified
- *   query item.
- * The search is relative to a data sample of size N / 2^r,
- *   where N is the number of items in the set, and r is
- *   a non-negative integer ("sampleRate").
- * A "sampleRate" of zero indicates a search relative to the entire set.
- * The desired number of elements must be given ("howMany").
- * The number of elements actually found is returned.
- * The query result can be obtained via calls to the following methods:
- *         get_result_accuracy
- *         getResultDists
- *         getResultDistComps
- *         getResultIndices
- *         get_number_of_results_found
- *         getResultSampleSize
- * The result items are sorted in increasing order of their distances
- *   to the query.
- */
-
 const int Sash::find_nearest (DistanceData* const query, const int howMany, const boost::optional<int>& sampleRate)
 {
 	this->query_result_index_list.clear();
@@ -446,31 +268,12 @@ const int Sash::find_nearest (DistanceData* const query, const int howMany, cons
 
 	return this->internal_find_nearest(howMany, *sampleRate);
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Returns direct access to the SASH input data list.
- */
-
 std::vector<DistanceData*>& Sash::get_data()
 {
 	return *data;
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Fills the supplied list with the mapping from external item
- *   indices to internal SASH indices.
- * If successful, the number of SASH items is returned.
- * If unsuccessful, zero is returned.
- */
-
 const std::vector<int> Sash::get_extern_to_intern_mapping() const
 {
 	std::vector<int> result;
@@ -481,91 +284,33 @@ const std::vector<int> Sash::get_extern_to_intern_mapping() const
 
 	return result;
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Fills the supplied list with the mapping from internal SASH item
- *   indices to external indices.
- * If successful, the number of SASH items is returned.
- * If unsuccessful, zero is returned.
- */
-
 const std::vector<int> Sash::get_intern_to_extern_mapping() const
 {
 	return this->intern_to_extern_mapping;
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Returns the upper limit on the number of parents per SASH node.
- */
-
 const int Sash::get_max_number_of_parents () const
 {
 	return maxParents;
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Returns the number of data items of the SASH.
- */
-
 const int Sash::get_number_of_items () const
 {
 	return this->data->size();
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Returns the number of sample levels of the SASH.
- */
-
 const int Sash::get_number_of_levels () const
 {
 	return levels;
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Returns the number of orphan nodes encountered during SASH construction.
- */
-
 const int Sash::get_number_of_orphans () const
 	//
 {
 	return number_of_orphans;
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Computes the recall accuracy of the most recent query result.
- * A list of the exact distances must be provided, sorted
- *   from smallest to largest.
- * The number of exact distances provided determines the size
- *   of the neighbourhood within which the accuracy is assessed.
- * The list must contain at least as many entries as the number of
- *   items found in the query result.
- * If unsuccessful, a negative value is returned.
- */
-
 const double Sash::get_result_accuracy (const std::vector<double>& exactDistList) const
 {
 	int loc = 0;
@@ -587,18 +332,7 @@ const double Sash::get_result_accuracy (const std::vector<double>& exactDistList
 
 	return ((double) loc) / exactDistList.size();
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Fills the supplied list with the query-to-neighbour
- *   distances found in the most recent SASH query.
- * If successful, the number of items found is returned.
- * If unsuccessful, zero is returned.
- */
-
 const std::vector<double> Sash::get_result_distances () const
 {
 	std::vector<double> result;
@@ -608,32 +342,12 @@ const std::vector<double> Sash::get_result_distances () const
 
 	return result;
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Returns the number of distance computations performed during
- *   the most recent SASH operation.
- */
-
 const int Sash::get_result_distance_comparisons () const
 {
 	return this->number_of_distance_comparisons;
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Fills the supplied list with the (external) indices of the
- *   items found in the most recent SASH query.
- * If successful, the number of items found is returned.
- * If unsuccessful, zero is returned.
- */
-
 const std::vector<int> Sash::get_result_indices () const
 {
 	std::vector<int> result;
@@ -643,57 +357,22 @@ const std::vector<int> Sash::get_result_indices () const
 
 	return result;
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Returns the number of items found in the most recent query.
- */
-
 const int Sash::get_number_of_results_found () const
 {
 	return this->query_result_index_list.size();
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Returns the sample size used in the most recent query.
- */
-
 const int Sash::get_result_sample_size () const
 {
 	return this->query_result_sample_size;
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Returns the seed value used for random number generator initialization.
- */
-
 unsigned long Sash::getRNGSeed ()
 {
 	return seed;
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Fills the supplied list with the mapping from external item
- *   indices to internal SASH sample levels.
- * If successful, the number of SASH items is returned.
- * If unsuccessful, zero is returned.
- */
-
 const std::vector<int> Sash::get_sample_assignment() const
 {
 	std::vector<int> result;
@@ -707,53 +386,17 @@ const std::vector<int> Sash::get_sample_assignment() const
 
 	return result;
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Fills the supplied list with the SASH sample level sizes,
- *   from smallest to largest.
- * The result does not include the "sample" consisting solely of the
- *   SASH root item.
- * If successful, the number of SASH sample levels is returned
- *   (excluding that of the root).
- * If unsuccessful, zero is returned.
- */
-
 const std::vector<int> Sash::get_sample_sizes () const
 {
 	return this->sample_size_list;
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Resets the current query object to NULL.
- * This has the effect of clearing any saved distances - subsequent
- *   findNear and findNearest operations would be forced to compute
- *   all needed distances from scratch.
- */
-
 void Sash::reset_query ()
 {
 	this->set_new_query(nullptr);
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-/**
- * Save the SASH to the specified file.
- * The extension ".sash" is automatically appended to the file name.
- * If successful, the number of SASH items is returned.
- * If unsuccessful, zero is returned.
- */
-
 const int Sash::save_to_file (const std::string& filename)
 {
 	// If the SASH has not yet been built, abort.
@@ -805,21 +448,8 @@ const int Sash::save_to_file (const std::string& filename)
 
 	return this->data->size();
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-//                         Private Methods                          //
-/*-----------------------------------------------------------------------------------------------*/
-
-
 const double Sash::compute_distance_from_query(const int item_index)
-	//
-	// Returns the distance from the current query object to the
-	//   specified data object.
-	// If the distance has already been computed and stored,
-	//   the stored distance is returned.
-	// Otherwise, the distance is computed and stored before returning it.
-	//
 {
 	if (this->distance_from_query_list[item_index] >= 0.0)
 		return this->distance_from_query_list[item_index];
@@ -830,15 +460,7 @@ const double Sash::compute_distance_from_query(const int item_index)
 
 	return this->distance_from_query_list[item_index];
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-/*
- * Recursively builds a SASH on items in the first locations of the
- *   scrambled data array.
- * The number of items to be incorporated into the SASH must be specified.
- */
 void Sash::internal_build (const int number_of_items)
 {
 	if (this->internal_build_explicitly(number_of_items))
@@ -1101,19 +723,8 @@ void Sash::internal_build_connect_orphan(const int number_of_items, const int ch
 		range *= 2;
 	}
 }
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
 const int Sash::internal_find_all_in_range (const double limit, const int sampleRate)
-	//
-	// Performs an exact range query from the current query object,
-	//   with respect to a subset of the items.
-	// The subset consists of all items at the indicated sample level and higher.
-	// The upper limit on the query-to-item distance is "limit";
-	//   the number of neighbours actually found is returned.
-	// The results are stored in the SASH query result lists.
-	//
 {
 	// Handle the singleton case separately.
 
@@ -1161,25 +772,8 @@ const int Sash::internal_find_all_in_range (const double limit, const int sample
 
 	return this->query_result_index_list.size();
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
 const int Sash::internal_find_most_in_range (const double limit, const int sampleRate, const double scaleFactor)
-	//
-	// Performs an approximate range query from the current query object,
-	//   with respect to a subset of the items.
-	// The subset consists of all items at the indicated sample level and higher.
-	// The upper limit on the query-to-item distance must be supplied.
-	// The number of elements actually found is returned.
-	// The results are stored in the SASH query result lists.
-	// The parameter "scaleFactor" influences the tradeoff between speed
-	//   and accuracy.
-	// The base setting is "scaleFactor=1.0"; queries with "scaleFactor=2.0"
-	//   would be expected to be more accurate than those with "scaleFactor=1.0",
-	//   but would take roughly twice as much time to process.
-	//
 {
 	int activeLevelFirst = 0;
 	int activeLevelLast = 0;
@@ -1301,25 +895,8 @@ const int Sash::internal_find_most_in_range (const double limit, const int sampl
 
 	return query_result_index_list.size();
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
 const int Sash::internal_find_near (const int howMany, const int sampleRate, const double scaleFactor)
-	//
-	// Computes approximate nearest neighbours of the current query object,
-	//   with respect to a subset of the items.
-	// The subset consists of all items at the indicated sample level and higher.
-	// The number of neighbours sought is "howMany"; the number of neighbours
-	//   actually found is returned.
-	// The results are stored in the SASH query result lists.
-	// The parameter "scaleFactor" influences the tradeoff between speed
-	//   and accuracy.
-	// The base setting is "scaleFactor=1.0"; queries with "scaleFactor=2.0"
-	//   would be expected to be more accurate than those with "scaleFactor=1.0",
-	//   but would take roughly twice as much time to process.
-	//
 {
 	int activeLevelFirst = 0;
 	int activeLevelLast = 0;
@@ -1419,20 +996,8 @@ const int Sash::internal_find_near (const int howMany, const int sampleRate, con
 
 	return query_result_index_list.size();
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
 const int Sash::internal_find_nearest (const int howMany, const int sampleRate)
-	//
-	// Computes exact nearest neighbours of the current query object,
-	//   with respect to a subset of the items.
-	// The subset consists of all items at the indicated sample level and higher.
-	// The number of neighbours sought is "howMany"; the number of neighbours
-	//   actually found is returned.
-	// The results are stored in the SASH query result lists.
-	//
 {
 	// Handle the singleton case separately.
 	if (this->data->size() == 1)
@@ -1462,17 +1027,8 @@ const int Sash::internal_find_nearest (const int howMany, const int sampleRate)
 
 	return query_result_index_list.size();
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
 const int Sash::internal_find_parents (const int howMany)
-	//
-	// Finds a set of parents for the current query item from among the
-	//   bottom-level items of the current SASH.
-	// The results are stored in the SASH query result lists.
-	//
 {
 	// Load the root as the tentative sole member of the query result list.
 	this->query_result_index_list.resize(1);
@@ -1510,27 +1066,11 @@ const int Sash::internal_find_parents (const int howMany)
 
 	return this->query_result_index_list.size();
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
-	const int Sash::extract_best_edges
+const int Sash::extract_best_edges
 (int howMany,
  std::vector<double>& to_distance_list, std::vector<int>& to_index_list, int toFirst,
  std::vector<double>& from_distance_list, std::vector<int>& from_index_list, int fromFirst)
-	//
-	// Copies a requested number of directed edges having minimum distances
-	//   to their targets.
-	// The input edges are stored in "from_index_list" and "from_distance_list", in the
-	//   range of locations beginning at "fromFirst" and ending at "fromLast".
-	// The extracted edges are stored in "to_index_list" and "to_distance_list",
-	//   in locations starting at "toFirst".
-	// If the requested number of edges "howMany" would exceed the
-	//   output list capacity "toCapacity" if copying were to start at
-	//   location "toFirst", then the number of extracted edges is reduced.
-	// WARNING: this operation destroys entries of the input list!
-	//
 {
 	// Make sure that we don't extract more edges than currently exist.
 	if (howMany > to_distance_list.size() - toFirst)
@@ -1555,16 +1095,8 @@ const int Sash::internal_find_parents (const int howMany)
 
 	return num_extracted;
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
 void Sash::print_stats ()
-	//
-	// Print statistics related to the SASH construction.
-	// Should only be called immediately after the construction.
-	//
 {
 	Daemon::info("");
 	Daemon::info("SASH build statistics:");
@@ -1577,17 +1109,8 @@ void Sash::print_stats ()
 	Daemon::info("  RNG seed              == %ld", seed);
 	Daemon::info("");
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
 void Sash::reserve_storage (const int number_of_items, const int numParents)
-	//
-	// Reserve storage for the SASH and its data->
-	// The number of SASH items and the maximum number of parents per node
-	//   must be given.
-	//
 {
 	int sampleSize = 0;
 
@@ -1665,18 +1188,8 @@ void Sash::reserve_storage (const int number_of_items, const int numParents)
 	this->query_result_index_list.clear();
 	this->query_result_sample_size = 0;
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-
-
 void Sash::set_new_query (DistanceData* const query)
-	//
-	// Accepts a new item as the query object for future distance comparisons.
-	// Any previously-stored distances are cleared by this operation,
-	//   except in the case where the previous query object is identical
-	//   to the current query object.
-	//
 {
 	if (query == this->query)
 		return;
@@ -1687,14 +1200,9 @@ void Sash::set_new_query (DistanceData* const query)
 	this->query = query;
 	this->stored_distance_index_list.clear();
 }
-
-
 /*-----------------------------------------------------------------------------------------------*/
-/*-----------------------------------------------------------------------------------------------*/
-/*-----------------------------------------------------------------------------------------------*/
-
 extern "C" IndexStructure<DistanceData>* create_index_structure(int x) 
 { 
 	return new Sash(x);
 }
-
+/*-----------------------------------------------------------------------------------------------*/

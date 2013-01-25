@@ -1,16 +1,7 @@
-// C++ header file Sash.h
-// Implementation of the SASH index for approximate similarity search,
-// as described in
-//   Michael E. Houle(author),
-//   "SASH: a Spatial Approximation Sample Hierarchy for Similarity Search",
-//   IBM Tokyo Research Laboratory Technical Report RT-0517, 5 March 2003.
-// and
-//   Michael E. Houle and Jun Sakuma(authors),
-//   "Fast Approximate Search in Extremely High-Dimensional Data Sets",
-//   in Proc. 21st International Conference on Data Engineering(ICDE 2005),
-//   Tokyo, Japan, April 2005, pp. 619-630.
+// GreedyRSC (Greedy Relevant Set Correlation) Clustering Tool
 //
-// Copyright(C) 2004-2006 Michael E. Houle,
+// Copyright (C) 2008 Michael E. Houle,
+//               2012 Simon Wollwage
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -36,108 +27,19 @@
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
 // A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
 // OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-// EXEMPLARY, OR CONSEQUENTIAL DAMAGES(INCLUDING, BUT NOT LIMITED TO,
+// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
 // PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
 // PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT(INCLUDING
+// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 // Comments, bug fixes, etc welcome!
 // Contact e-mail address: meh@nii.ac.jp, meh@acm.org
+//                         mail.wollwage@gmail.com
 
-
-/**
- * Sash.h:      SASH index for approximate similarity search.
- *
- * Author:      Michael E. Houle
- * Date:        4 Jan 2006
- * Version:     1.0
- */
-
-
-////////////////////////////////////////////////////////////////////////
-//                          EXAMPLE OF USAGE                          //
-////////////////////////////////////////////////////////////////////////
-//
-//
-//  Sash* dataSash;
-//  DistanceData** data;
-//  int size;
-//
-//  DistanceData* query;
-//  int resultSize;
-//  double accuracy;
-//  unsigned long numberOfDistanceComputations;
-//
-//  int exactListCapacity = 1000;
-//  double* exactDistList = new double [exactListCapacity];
-//
-//  int approxListCapacity = 1000;
-//  double* approxDistList = new double [approxListCapacity];
-//  int* approxIndexList = new double [approxListCapacity];
-//
-//  ...
-//
-//  // Building a SASH directly from a data array
-//
-//  dataSash = new Sash(12345UL);
-//  dataSash->setVerbosity(2);
-//  dataSash->build(data, size, 4);
-//  dataSash->save_to_file("example");
-//
-//  ...
-//
-//  // Loading a previously-computed SASH from the file "example.sash"
-//
-//  dataSash = new Sash();
-//  dataSash->setVerbosity(2);
-//  dataSash->build("example", data, size);
-//
-//  ...
-//
-//  // Exact similarity query for 100 items
-//
-//  dataSash->findNearest(query, 100);
-//  dataSash->getResultDists(exactDistList, exactListCapacity);
-//
-//  // Approx similarity query for 100 items, and verifying its accuracy
-//  // Time-accuracy trade-off parameter is 2.0
-//
-//  dataSash->findNear(query, 100, 2.0F);
-//  dataSash->getResultDists(approxDistList, approxListCapacity);
-//  dataSash->getResultIndices(approxIndexList, approxListCapacity);
-//  resultSize = dataSash->getResultNumFound();
-//  numberOfDistanceComputations = dataSash->getResultDistComps();
-//  accuracy = dataSash->get_result_accuracy(exactDistList, 100);
-//
-//  // Exact range query for distance limit 0.1
-//  // Approx range query for distance limit 0.1, and verifying its accuracy
-//  // Time-accuracy trade-off parameter is 2.0
-//
-//  dataSash->find_all_in_range(query, 0.1F);
-//  resultSize = dataSash->getResultNumFound();
-//  if(resultSize <= exactListCapacity)
-//  {
-//    dataSash->getResultDists(exactDistList, exactListCapacity);
-//    dataSash->findMostInRange(query, 0.1F, 2.0F);
-//    resultSize = dataSash->getResultNumFound();
-//    if(resultSize <= approxListCapacity)
-//    {
-//      dataSash->getResultDists(approxDistList, approxListCapacity);
-//      dataSash->getResultIndices(approxIndexList, approxListCapacity);
-//      numberOfDistanceComputations = dataSash->getResultDistComps();
-//      accuracy = dataSash->get_result_accuracy(exactDistList, 100);
-//    }
-//  }
-//
-//
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-
-
-#ifndef SASH_H_
-#define SASH_H_
+#ifndef __SASH_H__
+#define __SASH_H__
 
 #include <stdio.h>
 #include <stdlib.h>
