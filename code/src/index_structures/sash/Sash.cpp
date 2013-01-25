@@ -1693,11 +1693,8 @@ void Sash::set_new_query (DistanceData* const query)
 /*-----------------------------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------------------*/
 
-extern "C" 
-{
-	IndexStructure<DistanceData>* BOOST_EXTENSION_EXPORT_DECL create_index_structure(int x) 
-	{ 
-		return new Sash(x);
-	}
+extern "C" IndexStructure<DistanceData>* create_index_structure(int x) 
+{ 
+	return new Sash(x);
 }
 

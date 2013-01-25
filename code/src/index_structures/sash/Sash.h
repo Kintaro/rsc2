@@ -146,7 +146,6 @@
 #include <functional>
 #include <vector>
 #include <math.h>
-#include "mtrand.h"
 #include "../../IndexStructure.h"
 #include "../../DistanceData.h"
 
@@ -816,9 +815,6 @@ private:
 
 };
 
-extern "C" 
-{
-    IndexStructure<DistanceData>* BOOST_EXTENSION_EXPORT_DECL create_index_structure(int x);
-}
+extern "C" IndexStructure<DistanceData>* BOOST_EXTENSION_EXPORT_DECL create_index_structure(int x);
 
 #endif

@@ -5,10 +5,10 @@ ODIR = ../../../obj
 SDIR = .
 INC = 
 LIBS =
-CFLAGS = -std=c++0x -g -Wall -shared -fPIC -I../../ -Wno-c++11-extensions -Wno-overloaded-virtual
-LFLAGS = -lboost_serialization -lboost_mpi
+CFLAGS = -std=c++0x -g -Wall -fPIC -I../../ -Wno-c++11-extensions -Wno-overloaded-virtual -rdynamic
+LFLAGS = -lboost_serialization -lboost_mpi -shared
 
-_OBJS = Sash.o mtrand.o
+_OBJS = Sash.o 
 
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
@@ -20,7 +20,7 @@ $(ODIR)/%.o: $(SDIR)/%.cpp
 
 $(OUT): $(OBJS)	
 	$(CC) -o $@ $^ $(CFLAGS) $(LFLAGS) $(LIBS)
-	strip $(OUT)
+	#strip $(OUT)
 
 clean:
 	rm -rf $(ODIR)/*
