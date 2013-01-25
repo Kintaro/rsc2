@@ -848,60 +848,78 @@ const double Sash::compute_distance_from_query(const int item_index)
 
 /*-----------------------------------------------------------------------------------------------*/
 
-
+/*
+ * Recursively builds a SASH on items in the first locations of the
+ *   scrambled data array.
+ * The number of items to be incorporated into the SASH must be specified.
+ */
 void Sash::internal_build (const int number_of_items)
-//
-// Recursively builds a SASH on items in the first locations of the
-//   scrambled data array.
-// The number of items to be incorporated into the SASH must be specified.
-//
 {
-    int quarterSize = 0;
-    bool not_found = true;
-    int range = 0;
 	std::vector<double> temp_distance_list;
 	std::vector<int> temp_index_list;
 
-    if (number_of_items <= maxChildren + 1)
-    {
-        // We have only a small number of items.
-        // Build the SASH explicitly, without recursion.
-        // Treat the first array item as the root.
+	if (internal_build_explicitly(number_of_items))
+		return;
+	int halfSize = internal_build_recursively(number_of_items);
+	internal_build_reserve_tentative_storage(halfSize);
+	internal_build_construct_child_lists(number_of_items, halfSize); 
+	internal_build_trim_child_lists();
+	internal_build_connect_orphans(number_of_items, halfSize);
 
-        parentLSizeList[0] = 0;
-        parent_index_list[0] = NULL;
+    // All orphans have now found foster parents.
+    // The SASH has grown by one level.
+    // Clean up and return.
+    for (int parent = quarterSize; parent < halfSize; ++parent)
+      	this->child_distance_list[parent].clear();
 
-        // Explicitly connect all other items as children of the root,
-        //   if they exist.
-        // Don't bother sorting the children according to distance from
-        //   the root.
+    ++levels;
 
-        if (number_of_items == 1)
-        {
-            levels = 0;
-            childLSizeList[0] = 0;
-            child_index_list[0] = NULL;
-        }
-        else
-        {
-            // Establish connections from root to children.
+    Daemon::debug("Number of SASH levels constructed: %d", levels);
+}
 
-            levels = 1;
-            childLSizeList[0] = number_of_items - 1;
-            child_index_list[0] = new int [number_of_items-1];
+const bool Sash::internal_build_explicitly(const int number_of_items)
+{
+	if (number_of_items > maxChildren + 1)
+		return false;
 
-            for (int i = 1; i < number_of_items; ++i)
-                child_index_list[0][i-1] = i;
-        }
+	// We have only a small number of items.
+	// Build the SASH explicitly, without recursion.
+	// Treat the first array item as the root.
+	this->parent_index_list.clear();
+	this->parent_distance_list.clear();
 
-        Daemon::debug("Number of SASH levels constructed: %d", levels);
+	// Explicitly connect all other items as children of the root,
+	//   if they exist.
+	// Don't bother sorting the children according to distance from
+	//   the root.
+	if (number_of_items == 1)
+	{
+		levels = 0;
+		this->child_index_list.clear();
+		this->child_distance_list.clear();
+	}
+	else
+	{
+		// Establish connections from root to children.
+		levels = 1;
+		this->child_index_list.resize(1);
+		this->child_distance_list.resize(1);
+		this->child_index_list[0].resize(number_of_items - 1);
+		this->child_distance_list[0].resize(number_of_items - 1);
 
-        return;
-    }
+		for (int i = 1; i < number_of_items; ++i)
+			this->child_index_list[0][i - 1] = i;
+	}
 
-    // The number of items is large.
+	Daemon::debug("Number of SASH levels constructed: %d", levels);
+
+	return true;
+}
+
+const int Sash::internal_build_recursively(const int number_of_items)
+{
+	// The number of items is large.
     // Build the SASH recursively on half the items.
-
     int halfSize = (number_of_items + 1) / 2;
     this->internal_build (halfSize);
 
@@ -912,14 +930,13 @@ void Sash::internal_build (const int number_of_items)
     //   parents from the bottom level of the current SASH.
     // Also, temporarily store (in "childLSizeList") the number of times
     //   each node is requested as a parent.
-
     for (int child = halfSize; child < number_of_items; ++child)
     {
         if (child % 5000 == 4999)
             Daemon::debug("Inserting item %d (out of %d)...", child + 1, size);
 
-        this->set_new_query (this->data[this->internToExternMapping[child]]);
-        internal_find_parents (maxParents);
+        this->set_new_query(this->data[this->internToExternMapping[child]]);
+        this->internal_find_parents(maxParents);
 
         parentLSizeList[child] = queryResultSize;
         parent_index_list[child] = new int [maxParents];
@@ -927,13 +944,20 @@ void Sash::internal_build (const int number_of_items)
 
         for (int i = 0; i < queryResultSize; ++i)
         {
-            parent_index_list[child][i] = query_result_index_list[i];
-            parent_distance_list[child][i] = query_result_distance_list[i];
-            childLSizeList[query_result_index_list[i]]++;
+            this->parent_index_list[child][i] = this->query_result_index_list[i];
+            this->parent_distance_list[child][i] = this->query_result_distance_list[i];
+            int size = this->child_index_list[this->query_result_index_list[i]];
+            this->child_index_list.resize(size);
+            this->child_distance_list.resize(size);
+            childLSizeList[this->query_result_index_list[i]]++;
         }
     }
+}
 
-    // For each parent, reserve tentative storage for its child lists.
+void Sash::internal_build_reserve_tentative_storage(const int halfSize)
+{
+	int quarterSize;
+	// For each parent, reserve tentative storage for its child lists.
     if (halfSize <= maxChildren + 1)
         quarterSize = 1;
     else
@@ -947,30 +971,37 @@ void Sash::internal_build (const int number_of_items)
             this->child_distance_list[parent].clear();
         }
     }
+}
 
-    // Construct tentative child lists for each of the parents,
+void Sash::internal_build_construct_child_lists(const int number_of_items, const int halfSize)
+{
+	// Construct tentative child lists for each of the parents,
     //   by reversing the child-to-parent edges.
     // Since the child-to-parent edges are no longer needed,
     //   delete them.
     for (int child = halfSize; child < number_of_items; ++child)
     {
-        for (int i = parentLSizeList[child] - 1; i >= 0; --i)
+        for (int i = this->parent_index_list[child].size() - 1; i >= 0; --i)
         {
-            parent = parent_index_list[child][i];
-            int j = childLSizeList[parent];
-            child_index_list[parent][j] = child;
-            child_distance_list[parent][j] = parent_distance_list[child][i];
-            childLSizeList[parent]++;
+            parent = this->parent_index_list[child][i];
+            int j = this->child_index_list[parent].size();
+            this->child_index_list[parent].resize(j);
+            this->child_distance_list[parent].resize(j);
+            this->child_index_list[parent][j] = child;
+            this->child_distance_list[parent][j] = this->parent_distance_list[child][i];
         }
 
         if (parentLSizeList[child] > 0)
         {
-        	parent_index_list[child].clear();
-        	parent_distance_list[child].clear();
+        	this->parent_index_list[child].clear();
+        	this->parent_distance_list[child].clear();
         }
     }
+}
 
-    // If a child list exceeds the length quota, then trim it.
+void Sash::internal_build_trim_child_lists()
+{
+	// If a child list exceeds the length quota, then trim it.
     // The smallest edges are selected, and the distances are cleared.
     // Simultaneously, inform all children of the number of times
     //   their requests have been granted.
@@ -1006,95 +1037,86 @@ void Sash::internal_build (const int number_of_items)
         {
             // Inform the children that another request has been granted.
             for (int i = childLSizeList[parent] - 1; i >= 0; --i)
-                parentLSizeList[child_index_list[parent][i]]++;
+                parentLSizeList[this->child_index_list[parent][i]]++;
         }
 
         // Eliminate the edge distance information.
        	this->child_distance_list[parent].clear();
     }
+}
 
-    // For each child, check to see if at least one parent granted
+void internal_build_connect_orphans(const int number_of_items, const int halfSize)
+{
+	// For each child, check to see if at least one parent granted
     //   its connection request.
     // (The number of connections granted is stored in "parentLSizeList".)
     // Any "orphans" discovered must be connected to a "foster parent".
     for (int child = halfSize; child < number_of_items; ++child)
     {
-        if (parentLSizeList[child] == 0)
-        {
-            // The current child is an orphan.
-            // Look for eligible parents by successively widening the range.
-            // Eventually a foster parent must be found.
-            // But just to be sure, we test to make sure that the range is
-            //   not bigger than the number of items in the SASH.
-            ++numOrphans;
-            not_found = true;
-            range = 2 * maxParents;
+    	if (parentLSizeList[child] != 0)
+    		continue;
+            
+		// The current child is an orphan.
+		// Look for eligible parents by successively widening the range.
+		// Eventually a foster parent must be found.
+		// But just to be sure, we test to make sure that the range is
+		//   not bigger than the number of items in the SASH.
+		++numOrphans;
+		not_found = true;
+		int range = 2 * maxParents;
 
-            while (not_found && (range <= number_of_items))
-            {
-                this->set_new_query(this->data[this->internToExternMapping[child]]);
-                this->internal_find_parents(range);
+		while (not_found && (range <= number_of_items))
+		{
+			this->set_new_query(this->data[this->internToExternMapping[child]]);
+			this->internal_find_parents(range);
 
-                for (int i = 0; i < queryResultSize; ++i)
-                {
-                    // Fetch a new candidate foster parent from the query result.
-                    parent = query_result_index_list[i];
+			for (int i = 0; i < queryResultSize; ++i)
+			{
+				// Fetch a new candidate foster parent from the query result.
+				parent = this->query_result_index_list[i];
 
-                    // Does this parent have room for another child?
-                    // If so, then accept the child immediately.
-                    if (childLSizeList[parent] < maxChildren)
-                    {
-                        // Since "child_distance_list" is not being used to hold
-                        //   edge distances any more, we can reuse it to
-                        //   indicate whether parents are fostering any orphans.
-                        // If "child_distance_list[parent]!=NULL", then "parent" is
-                        //   assumed to be fostering at least one orphan.
-                        if (this->child_distance_list[parent] == NULL)
-                        {
-                            // This parent is fostering an orphan for the first time.
-                            // Expand the size of its child list to the maximum
-                            //   possible, to accommodate the current orphan
-                            //   and any future orphans.
-                            temp_index_list = child_index_list[parent];
-                            this->child_index_list[parent] = new int [maxChildren];
+				// Does this parent have room for another child?
+				// If so, then accept the child immediately.
+				if (this->child_index_list[parent].size() < maxChildren)
+				{
+					// Since "child_distance_list" is not being used to hold
+					//   edge distances any more, we can reuse it to
+					//   indicate whether parents are fostering any orphans.
+					// If "child_distance_list[parent]!=NULL", then "parent" is
+					//   assumed to be fostering at least one orphan.
+					if (this->child_distance_list[parent] == NULL)
+					{
+						// This parent is fostering an orphan for the first time.
+						// Expand the size of its child list to the maximum
+						//   possible, to accommodate the current orphan
+						//   and any future orphans.
+						temp_index_list = this->child_index_list[parent];
+						this->child_index_list[parent] = new int [maxChildren];
 
-                            for (int j = childLSizeList[parent] - 1; j >= 0; --j)
-                                this->child_index_list[parent][j] = temp_index_list[j];
+						for (int j = this->child_index_list[parent].size() - 1; j >= 0; --j)
+							this->child_index_list[parent][j] = temp_index_list[j];
 
-                            delete [] temp_index_list;
-                            temp_index_list.clear();
-                        }
+						delete [] temp_index_list;
+						temp_index_list.clear();
+					}
 
-                        // Add the child to the parent's list.
-                        // To indicate that the parent is now fostering orphans,
-                        //   set its child edge distance list to anything non-null
-                        //   (the list "distFromQueryList").
-                        this->child_distance_list[parent] = distance_from_query_list;
-                        this->child_index_list[parent][childLSizeList[parent]] = child;
-                        childLSizeList[parent]++;
-                        not_found = false;
+					// Add the child to the parent's list.
+					// To indicate that the parent is now fostering orphans,
+					//   set its child edge distance list to anything non-null
+					//   (the list "distFromQueryList").
+					this->child_distance_list[parent] = this->distance_from_query_list;
+					this->child_index_list[parent][childLSizeList[parent]] = child;
+					childLSizeList[parent]++;
+					not_found = false;
 
-                        break;
-                    }
-                }
+					break;
+				}
+			}
 
-                range *= 2;
-            }
-        }
+			range *= 2;
+		}
 	}
-
-    // All orphans have now found foster parents.
-    // The SASH has grown by one level.
-    // Clean up and return.
-
-    for (int parent = quarterSize; parent < halfSize; ++parent)
-      	this->child_distance_list[parent].clear();
-
-    levels++;
-
-    Daemon::debug("Number of SASH levels constructed: %d", levels);
 }
-
 
 /*-----------------------------------------------------------------------------------------------*/
 

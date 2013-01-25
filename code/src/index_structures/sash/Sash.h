@@ -151,14 +151,11 @@
 #include <boost/extension/extension.hpp>
 #include <boost/serialization/optional.hpp>
 
-
-static MTRand_int32 genInt;     // Random number generator object.
-
 class Sash : IndexStructure<DistanceData> 
 {
 public:
 
-    std::vector<DistanceData> data;
+    std::vector<DistanceData>& data;
 
     int maxParents;               // Upper limits on the maximum number of
     int maxChildren;              //   parent and child pointers per node.
@@ -235,7 +232,8 @@ public:
     int number_of_orphans;               
 
     unsigned long seed;           // Random number generator seed.
-
+private:
+	static std::mt19937 genInt;
 public:
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -659,7 +657,14 @@ private:
     // Recursively builds a SASH on items in the first locations of the
     //   scrambled data array.
     // The number of items to be incorporated into the SASH must be specified.
+    
 
+	const bool internal_build_explicitly(const int number_of_items);
+	const int internal_build_recursively(const int number_of_items);
+	void internal_build_reserve_tentative_storage(const int halfSize);
+	void internal_build_construct_child_lists(const int number_of_items, const int halfSize);
+	void internal_build_trim_child_lists();
+	void internal_build_connect_orphans(const int number_of_items, const int halfSize);
 
 /*-----------------------------------------------------------------------------------------------*/
 
