@@ -152,12 +152,13 @@
 
 #include <boost/extension/extension.hpp>
 #include <boost/serialization/optional.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
 
 class Sash : IndexStructure<DistanceData> 
 {
 public:
 
-    std::reference_wrapper<std::vector<DistanceData>> data;
+    boost::optional<std::vector<DistanceData*>> data;
 
     int maxParents;               // Upper limits on the maximum number of
     int maxChildren;              //   parent and child pointers per node.
@@ -196,7 +197,7 @@ public:
     std::vector<int> child_size_list;
 
     /* Storage supporting distance computation. */
-    boost::optional<DistanceData> query; 
+    boost::optional<DistanceData*> query; 
     
     /* The distance themselves are stored
        in the array "distFromQueryList". */
@@ -282,7 +283,7 @@ public:
      *   can be obtained via a call to getResultDistComps.
      */
 
-    const int build(std::reference_wrapper<std::vector<DistanceData>>& inputData, const boost::optional<int>& numParents = 4);
+    const int build(std::vector<DistanceData*>& inputData, const boost::optional<int>& numParents = 4);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -297,7 +298,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    const int build(const std::string& filename, std::reference_wrapper<std::vector<DistanceData>>& inputData);
+    const int build(const std::string& filename, std::vector<DistanceData*>& inputData);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -415,7 +416,7 @@ public:
      * Returns direct access to the SASH input data list.
      */
 
-	std::vector<DistanceData>& get_data();
+	std::vector<DistanceData*>& get_data();
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -481,7 +482,7 @@ public:
      * Returns the number of orphan nodes encountered during SASH construction.
      */
 
-    const int get_number_of_orphans();
+    const int get_number_of_orphans() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -665,11 +666,11 @@ private:
 
 	const bool internal_build_explicitly(const int number_of_items);
 	const int internal_build_recursively(const int number_of_items);
-	void internal_build_reserve_tentative_storage(const int halfSize);
+	const int internal_build_reserve_tentative_storage(const int halfSize);
 	void internal_build_construct_child_lists(const int number_of_items, const int halfSize);
 	void internal_build_trim_child_lists(const int quarterSize, const int halfSize);
 	void internal_build_connect_orphans(const int number_of_items, const int halfSize);
-	void internal_build_connect_orphan(const int number_of_items);
+	void internal_build_connect_orphan(const int number_of_items, const int child);
 
 /*-----------------------------------------------------------------------------------------------*/
 
@@ -782,7 +783,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    void printStats();
+    void print_stats();
     //
     // Print statistics related to the SASH construction.
     // Should only be called immediately after the construction.
@@ -791,7 +792,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    void reserve_storage(int numItems, int numParents);
+    void reserve_storage(const int numItems, const int numParents);
     //
     // Reserve storage for the SASH and its data.
     // The number of SASH items and the maximum number of parents per node
@@ -801,7 +802,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    void set_new_query(const boost::optional<DistanceData>& query);
+    void set_new_query(const boost::optional<DistanceData*>& query);
     //
     // Accepts a new item as the query object for future distance comparisons.
     // Any previously-stored distances are cleared by this operation,

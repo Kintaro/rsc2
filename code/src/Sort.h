@@ -58,7 +58,7 @@ private:
 	};
 public:
 	template<typename K, typename V>
-	static void partial_sort(std::vector<K>& a, std::vector<V>& b, const int from, const int to)
+	static const unsigned int partial_sort(std::vector<K>& a, std::vector<V>& b, const unsigned int from, const unsigned int to)
 	{
 		if (a.size() != b.size())
 			throw new std::exception();
@@ -73,8 +73,8 @@ public:
 
 		for (auto i = 0; i < temp.size(); ++i)
 		{
-			a[i] = temp.first;
-			b[i] = temp.second;
+			a[i] = temp[i].first;
+			b[i] = temp[i].second;
 		}
 
 		return std::min(a.size(), to - from);
