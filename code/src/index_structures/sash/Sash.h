@@ -800,7 +800,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    void set_new_query(DistanceData* query);
+    void set_new_query(const boost::optional<DistanceData>& query);
     //
     // Accepts a new item as the query object for future distance comparisons.
     // Any previously-stored distances are cleared by this operation,
