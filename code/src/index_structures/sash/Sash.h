@@ -181,6 +181,7 @@ public:
        This storage is deallocated after the SASH construction
        is complete */
     std::vector<std::vector<double> > parent_distance_list; 
+    std::vector<int> parent_size_list;
 
     /* For each SASH item, lists of indices to children.
        This storage is deallocated after the SASH construction
@@ -190,6 +191,7 @@ public:
        This storage is deallocated after the SASH construction
        is complete */
     std::vector<std::vector<double> > child_distance_list;
+    std::vector<int> child_size_list;
 
     /* Storage supporting distance computation. */
     boost::optional<DistanceData> query; 
@@ -665,6 +667,7 @@ private:
 	void internal_build_construct_child_lists(const int number_of_items, const int halfSize);
 	void internal_build_trim_child_lists();
 	void internal_build_connect_orphans(const int number_of_items, const int halfSize);
+	void internal_build_connect_orphan(const int number_of_items);
 
 /*-----------------------------------------------------------------------------------------------*/
 
