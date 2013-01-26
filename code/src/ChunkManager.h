@@ -70,6 +70,8 @@ public:
 private:
 	const int internal_build_exact_neighbourhoods_send_mode(const int degree, const double scale_factor, const bool load_flag, const bool save_flag, const int sender_id);
 	const int internal_build_exact_neighbourhoods_receive_mode(const int degree, const double scale_factor, const bool load_flag, const bool save_flag, const int sender_id);
+
+	const int internal_build_inverted_members_stage_1_send_mode(const int sender_id);
 };
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
@@ -366,6 +368,80 @@ const int ChunkManager::internal_build_exact_neighbourhoods_receive_mode(const i
 	data_block.clear_data();
 
 	Daemon::comm().barrier();
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+const int ChunkManager::internal_build_inverted_members_stage_1_send_mode(const int sender_id)
+{
+	for (auto sample = -this->number_of_tiny_samples; sample < this->number_of_samples; ++sample)
+	{
+		for (auto block = 0; block < this->number_of_blocks; ++block)
+		{
+			for (auto target_processor = 0; target_processor < Daemon::comm().size(); ++target_processor)
+			{
+				auto s = sample + this->number_of_tiny_samples;
+
+				if (target_processor == Daemon::comm().rank())
+				{
+					if (this->sampling_flag)
+						member_block = this->access_member_block(block);
+					else
+						member_block = this->access_member_block(block, sample);
+				}
+				else
+				{
+					member_block = new MemberBlock<ScoreType>(this->data_block_list[block]);
+					Daemon::comm().recv(target_processor, 0, *member_block);
+				}
+
+				member_block->load_members();
+				auto member_block_size = member_block->get_number_of_items();
+				auto member_offset = member_block->get_offset();
+
+				for (auto i = member_offset + member_block_size - 1; i >= member_offset; --i)
+				{
+					auto member_index_list = member_block->extract_member_indices(i);
+					auto number_of_members = member_block->get_number_of_members(i);
+
+					for (auto j = 0u; j < number_of_members; ++j)
+					{
+						auto member = member_index_list[j];
+						auto target_block = this->find_block_for_item(member);
+
+						this->inverted_member_block_list[target_block][s]->add_to_inverted_members(member, i, j);
+					}
+				}
+
+				auto combo = block * Daemon::comm().size() + target_processor;
+
+				for (auto blck = 0; blck < this->number_of_blocks; ++blck)
+				{
+					this->inverted_member_block_list[blck][s]->finalize_inverted_members();
+					this->inverted_member_block_list[blck][s]->save_inverted_members(combo);
+				}
+
+				this->clear_inverted_member_blocks();
+			}			
+
+			for (auto blck = 0; blck < this->number_of_blocks; ++blck)
+			{
+				for (auto i = block * Daemon::comm().size(); i < block * Daemon::comm().size() + Daemon::comm().size(); ++i)
+				{
+					if (i == 0)
+						continue;
+
+					std::shared_ptr<InvertedMemberBlock<ScoreType>> inverted_member_block = new InvertedMemberBlock<ScoreType>(this->inverted_member_block_list[blck][s]);
+
+					this->inverted_member_block_list[blck][s]->load_inverted_members(0);
+					inverted_member_block->load_inverted_members(i);
+					this->inverted_member_block_list[blck][s]->merge_inverted_members(*inverted_member_block);
+					this->inverted_member_block_list[blck][s]->save_inverted_members(0);
+					this->inverted_member_block_list[blck][s]->clear_inverted_members(0);
+					inverted_member_block->clear_inverted_members(0);
+				}
+			}
+		}
+	}
 }
 /*-----------------------------------------------------------------------------------------------*/
 #endif
