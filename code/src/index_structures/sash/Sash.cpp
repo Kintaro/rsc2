@@ -62,7 +62,7 @@ Sash::~Sash ()
 {
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::build (std::vector<DistanceData*>& inputData, const boost::optional<int>& numParents)
+const int Sash::build (std::vector<std::shared_ptr<DistanceData>>& inputData, const boost::optional<int>& numParents)
 {
 	// If the data set is empty, then abort.
 	if (inputData.size() <= 1)
@@ -98,7 +98,7 @@ const int Sash::build (std::vector<DistanceData*>& inputData, const boost::optio
 	return inputData.size();
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::build (const std::string& filename, std::vector<DistanceData*>& inputData)
+const int Sash::build (const std::string& filename, std::vector<std::shared_ptr<DistanceData>>& inputData)
 {
 	// If the data set is empty, then abort.
 	if (filename.empty() || (inputData.size() <= 0))
@@ -183,7 +183,7 @@ const int Sash::build (const std::string& filename, std::vector<DistanceData*>& 
 	return inputData.size();
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::find_all_in_range (DistanceData* const query, const double limit, const boost::optional<int>& sampleRate)
+const int Sash::find_all_in_range (const std::shared_ptr<DistanceData> query, const double limit, const boost::optional<int>& sampleRate)
 {
 	this->query_result_index_list.clear();
 	this->query_result_distance_list.clear();
@@ -204,7 +204,7 @@ const int Sash::find_all_in_range (DistanceData* const query, const double limit
 	return internal_find_all_in_range (limit, *sampleRate);
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::find_most_in_range(DistanceData* const query, const double limit, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
+const int Sash::find_most_in_range(const std::shared_ptr<DistanceData> query, const double limit, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
 {
 	this->query_result_index_list.clear();
 	this->query_result_distance_list.clear();
@@ -226,7 +226,7 @@ const int Sash::find_most_in_range(DistanceData* const query, const double limit
 	return internal_find_most_in_range(limit, *sampleRate, *scaleFactor);
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::find_near(DistanceData* const query, const int howMany, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
+const int Sash::find_near(const std::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
 {
 	this->query_result_index_list.clear();
 	this->query_result_distance_list.clear();
@@ -248,7 +248,7 @@ const int Sash::find_near(DistanceData* const query, const int howMany, const bo
 	return this->internal_find_near(howMany, *sampleRate, *scaleFactor);
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::find_nearest (DistanceData* const query, const int howMany, const boost::optional<int>& sampleRate)
+const int Sash::find_nearest (const std::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate)
 {
 	this->query_result_index_list.clear();
 	this->query_result_distance_list.clear();
@@ -269,7 +269,7 @@ const int Sash::find_nearest (DistanceData* const query, const int howMany, cons
 	return this->internal_find_nearest(howMany, *sampleRate);
 }
 /*-----------------------------------------------------------------------------------------------*/
-std::vector<DistanceData*>& Sash::get_data()
+std::vector<std::shared_ptr<DistanceData>>& Sash::get_data()
 {
 	return *data;
 }
@@ -1185,7 +1185,7 @@ void Sash::reserve_storage (const int number_of_items, const int numParents)
 	this->query_result_sample_size = 0;
 }
 /*-----------------------------------------------------------------------------------------------*/
-void Sash::set_new_query (DistanceData* const query)
+void Sash::set_new_query (const std::shared_ptr<DistanceData> query)
 {
 	if (query == this->query)
 		return;

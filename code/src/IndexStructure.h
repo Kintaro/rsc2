@@ -60,10 +60,10 @@ public:
 	virtual const std::vector<int> get_result_indices() const = 0;
 	virtual const std::vector<double> get_result_distances() const = 0;
 	virtual const int get_result_distance_comparisons() const = 0;
-	virtual const int find_all_in_range(T* const query, const double limit, const boost::optional<int>& sample_rate = 0) = 0;
-	virtual const int find_most_in_range(T* const query, const double limit, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0) = 0;
-	virtual const int find_near(T* const query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0) = 0;
-	virtual const int find_nearest(T* const query, const int howMany, const boost::optional<int>& sampleRate = 0) = 0;
+	virtual const int find_all_in_range(const std::shared_ptr<T> query, const double limit, const boost::optional<int>& sample_rate = 0) = 0;
+	virtual const int find_most_in_range(const std::shared_ptr<T> query, const double limit, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0) = 0;
+	virtual const int find_near(const std::shared_ptr<T> query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0) = 0;
+	virtual const int find_nearest(const std::shared_ptr<T> query, const int howMany, const boost::optional<int>& sampleRate = 0) = 0;
 
 	static IndexStructure<T>* create_from_plugin(const std::string& plugin_name)
 	{
