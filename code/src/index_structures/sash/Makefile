@@ -5,7 +5,7 @@ ODIR = ../../../obj
 SDIR = .
 INC = 
 LIBS =
-CFLAGS = -std=c++0x -g -Wall -fPIC -I../../ -Wno-c++11-extensions -Wno-overloaded-virtual -rdynamic
+CFLAGS = -std=c++0x -g -Wall -fPIC -I../../ -Wno-overloaded-virtual -rdynamic -Wno-attributes
 LFLAGS = -lboost_serialization -lboost_mpi -shared
 
 _OBJS = Sash.o 
@@ -20,7 +20,6 @@ $(ODIR)/%.o: $(SDIR)/%.cpp
 
 $(OUT): $(OBJS)	
 	$(CC) -o $@ $^ $(CFLAGS) $(LFLAGS) $(LIBS)
-	#strip $(OUT)
 
 clean:
 	rm -rf $(ODIR)/*

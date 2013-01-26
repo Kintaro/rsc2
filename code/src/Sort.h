@@ -66,12 +66,12 @@ public:
 		std::vector<std::pair<K, V> > temp;
 		temp.resize(a.size());
 
-		for (auto i = 0; i < a.size(); ++i)
+		for (auto i = 0u; i < a.size(); ++i)
 			temp[i] = std::make_pair(a[i], b[i]);
 
 		std::partial_sort(temp.begin() + from, temp.begin() + to, temp.end(), sort_helper<K, V>::sort);
 
-		for (auto i = 0; i < temp.size(); ++i)
+		for (auto i = 0u; i < temp.size(); ++i)
 		{
 			a[i] = temp[i].first;
 			b[i] = temp[i].second;

@@ -647,7 +647,7 @@ private:
 
 
     const int extract_best_edges
-   (int howMany,
+   (unsigned int howMany,
  std::vector<double>& to_distance_list, std::vector<int>& to_index_list, int toFirst,
  std::vector<double>& from_distance_list, std::vector<int>& from_index_list, int fromFirst);
     //

@@ -5,7 +5,7 @@ ODIR = obj
 SDIR = src
 INC = 
 LIBS =
-CFLAGS = -std=c++0x -g -Wall -Isrc/ -Wno-c++11-extensions -Wno-overloaded-virtual -rdynamic
+CFLAGS = -std=c++0x -g -Wall -Isrc/ -Wno-overloaded-virtual -rdynamic
 LFLAGS = -lboost_serialization -lboost_mpi
 
 _OBJS = Daemon.o Options.o FileUtil.o VecDataBlock.o rsc2.o
@@ -21,7 +21,6 @@ $(ODIR)/%.o: $(SDIR)/%.cpp
 $(OUT): $(OBJS)
 	$(MAKE) -C src/index_structures/sash
 	$(CC) -o $@ $^ $(CFLAGS) $(LFLAGS) $(LIBS)
-	#strip $(OUT)
 
 clean:
 	rm -rf $(ODIR)/*

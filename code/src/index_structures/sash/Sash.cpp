@@ -84,10 +84,10 @@ const int Sash::build (std::vector<std::shared_ptr<DistanceData>>& inputData, co
 	this->reserve_storage (inputData.size(), *numParents);
 
 	// Randomly assign data items to SASH nodes.
-	for (int i = 0; i < inputData.size(); ++i)
+	for (auto i = 0u; i < inputData.size(); ++i)
 		this->intern_to_extern_mapping[i] = i;
 
-	for (int i = inputData.size() - 1; i >= 0; --i)
+	for (auto i = inputData.size() - 1; i >= 0u; --i)
 		std::swap(this->intern_to_extern_mapping[genInt() % (i + 1)], this->intern_to_extern_mapping[i]);
 
 	// Recursively build the SASH structure.
@@ -125,9 +125,10 @@ const int Sash::build (const std::string& filename, std::vector<std::shared_ptr<
 		return 0;
 	}
 
-	int inSize       = FileUtil::read_from_file<int>(in_file);
-	int inLevels     = FileUtil::read_from_file<int>(in_file);
-	int inMaxParents = FileUtil::read_from_file<int>(in_file);
+	// The second parameter is omitted and just read
+	unsigned int inSize       = FileUtil::read_from_file<unsigned >(in_file);
+	                            FileUtil::read_from_file<unsigned >(in_file);
+	unsigned int inMaxParents = FileUtil::read_from_file<unsigned >(in_file);
 	this->number_of_orphans = FileUtil::read_from_file<int>(in_file);
 	this->seed       = FileUtil::read_from_file<int>(in_file);
 
@@ -152,9 +153,9 @@ const int Sash::build (const std::string& filename, std::vector<std::shared_ptr<
 	//   number of children,
 	//   and indices of children.
 	// Build the list of children, if any exist.
-	for (int i = 0; i < inputData.size(); ++i)
+	for (auto i = 0u; i < inputData.size(); ++i)
 	{
-		int loc = FileUtil::read_from_file<int>(in_file);
+		unsigned int loc = FileUtil::read_from_file<unsigned int>(in_file);
 
 		if (loc != i)
 		{
@@ -279,7 +280,7 @@ const std::vector<int> Sash::get_extern_to_intern_mapping() const
 	std::vector<int> result;
 	result.resize(this->intern_to_extern_mapping.size());
 
-	for (auto i = 0; i < result.size(); ++i)
+	for (auto i = 0u; i < result.size(); ++i)
 		result[this->intern_to_extern_mapping[i]] = i;
 
 	return result;
@@ -312,7 +313,7 @@ const int Sash::get_number_of_orphans () const
 /*-----------------------------------------------------------------------------------------------*/
 const double Sash::get_result_accuracy (const std::vector<double>& exactDistList) const
 {
-	int loc = 0;
+	unsigned int loc = 0u;
 
 	if (exactDistList.size() < this->query_result_index_list.size())
 	{
@@ -322,7 +323,7 @@ const double Sash::get_result_accuracy (const std::vector<double>& exactDistList
 		throw new std::exception();
 	}
 
-	for (auto i = 0; i < exactDistList.size(); i++)
+	for (auto i = 0u; i < exactDistList.size(); i++)
 	{
 		if ((loc < this->query_result_index_list.size())
 				&& (this->query_result_distance_list[loc] <= exactDistList[i]))
@@ -336,7 +337,7 @@ const std::vector<double> Sash::get_result_distances () const
 {
 	std::vector<double> result;
 
-	for (int i = 0; i < this->query_result_distance_list.size(); ++i)
+	for (auto i = 0u; i < this->query_result_distance_list.size(); ++i)
 		result.push_back(this->query_result_distance_list[i]);
 
 	return result;
@@ -351,7 +352,7 @@ const std::vector<int> Sash::get_result_indices () const
 {
 	std::vector<int> result;
 
-	for (int i = 0; i < this->query_result_index_list.size(); ++i)
+	for (auto i = 0u; i < this->query_result_index_list.size(); ++i)
 		result.push_back(this->intern_to_extern_mapping[this->query_result_index_list[i]]);
 
 	return result;
@@ -425,7 +426,7 @@ const int Sash::save_to_file (const std::string& filename)
 	//   the index of the item in the original input list,
 	//   the number of children of the item,
 	//   and a list of the indices of the children.
-	for (int i = 0; i < this->data->size(); ++i)
+	for (auto i = 0u; i < this->data->size(); ++i)
 	{
 		int numChildren = child_size_list[i];
 		std::vector<int> childList = child_index_list[i];
@@ -549,13 +550,15 @@ const int Sash::internal_build_recursively(const int number_of_items)
 		this->parent_index_list[child].resize(maxParents);
 		this->parent_distance_list[child].resize(maxParents);
 
-		for (int i = 0; i < this->query_result_index_list.size(); ++i)
+		for (auto i = 0u; i < this->query_result_index_list.size(); ++i)
 		{
 			this->parent_index_list[child][i] = this->query_result_index_list[i];
 			this->parent_distance_list[child][i] = this->query_result_distance_list[i];
 			++this->child_size_list[this->query_result_index_list[i]];
 		}
 	}
+
+	return halfSize;
 }
 /*-----------------------------------------------------------------------------------------------*/
 const int Sash::internal_build_reserve_tentative_storage(const int halfSize)
@@ -680,7 +683,7 @@ void Sash::internal_build_connect_orphan(const int number_of_items, const int ch
 		this->set_new_query((*this->data)[this->intern_to_extern_mapping[child]]);
 		this->internal_find_parents(range);
 
-		for (int i = 0; i < this->query_result_index_list.size(); ++i)
+		for (auto i = 0u; i < this->query_result_index_list.size(); ++i)
 		{
 			// Fetch a new candidate foster parent from the query result.
 			int parent = this->query_result_index_list[i];
@@ -762,7 +765,7 @@ const int Sash::internal_find_all_in_range (const double limit, const int sample
 	this->query_result_index_list.resize(length);
 
 	// Report only those items whose distances fall within the limit.
-	int counter = 0;
+	unsigned int counter = 0;
 
 	while ((counter < this->query_result_index_list.size()) && (this->query_result_distance_list[counter] <= limit))
 		++counter;
@@ -1043,7 +1046,7 @@ const int Sash::internal_find_parents (const int howMany)
 		this->scratch_index_list.clear();
 		this->scratch_distance_list.clear();
 
-		for (int i = 0; i < this->query_result_index_list.size(); ++i)
+		for (auto i = 0u; i < this->query_result_index_list.size(); ++i)
 		{
 			int nodeIndex = this->query_result_index_list[i];
 			int numChildren = this->child_size_list[nodeIndex];
@@ -1067,7 +1070,7 @@ const int Sash::internal_find_parents (const int howMany)
 }
 /*-----------------------------------------------------------------------------------------------*/
 const int Sash::extract_best_edges
-(int howMany,
+(unsigned int howMany,
  std::vector<double>& to_distance_list, std::vector<int>& to_index_list, int toFirst,
  std::vector<double>& from_distance_list, std::vector<int>& from_index_list, int fromFirst)
 {
