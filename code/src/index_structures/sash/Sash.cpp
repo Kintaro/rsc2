@@ -306,7 +306,6 @@ const int Sash::get_number_of_levels () const
 }
 /*-----------------------------------------------------------------------------------------------*/
 const int Sash::get_number_of_orphans () const
-	//
 {
 	return number_of_orphans;
 }
@@ -1125,7 +1124,6 @@ void Sash::reserve_storage (const int number_of_items, const int numParents)
 
 	// Determine the number of SASH levels, and
 	//   the level sample sizes.
-
 	levels = 0;
 
 	if (size > 1)
@@ -1155,14 +1153,12 @@ void Sash::reserve_storage (const int number_of_items, const int numParents)
 
 	// Reserve storage for the mapping between internal and external
 	//   data indices.
-
 	this->intern_to_extern_mapping.resize(size);
 
 	for (int i = 0; i < size; ++i)
 		this->intern_to_extern_mapping[i] = i;
 
 	// Set up storage for child-to-parent edges and parent-to-child edges.
-
 	this->parent_index_list.resize(size);
 	this->parent_distance_list.resize(size);
 	this->parent_size_list.resize(size);

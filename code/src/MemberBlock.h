@@ -114,7 +114,6 @@ private:
 		ar &this->member_score_llist;
 	}
 };
-
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
 MemberBlock<ScoreType>::MemberBlock(VecDataBlock& block, const int member_list_buffer_size, const boost::optional<int>& sample_level)
