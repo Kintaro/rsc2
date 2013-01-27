@@ -71,7 +71,8 @@ private:
 	const int internal_build_exact_neighbourhoods_send_mode(const int degree, const double scale_factor, const bool load_flag, const bool save_flag, const int sender_id);
 	const int internal_build_exact_neighbourhoods_receive_mode(const int degree, const double scale_factor, const bool load_flag, const bool save_flag, const int sender_id);
 
-	const int internal_build_inverted_members_stage_1_send_mode(const int sender_id);
+	const int internal_build_inverted_members_send_mode(const int sender_id);
+	const int internal_build_inverted_members_receive_mode(const int sender_id);
 };
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
@@ -371,16 +372,16 @@ const int ChunkManager::internal_build_exact_neighbourhoods_receive_mode(const i
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
-const int ChunkManager::internal_build_inverted_members_stage_1_send_mode(const int sender_id)
+const int ChunkManager::internal_build_inverted_members_send_mode(const int sender_id)
 {
 	for (auto sample = -this->number_of_tiny_samples; sample < this->number_of_samples; ++sample)
 	{
+		auto s = sample + this->number_of_tiny_samples;
+
 		for (auto block = 0; block < this->number_of_blocks; ++block)
 		{
 			for (auto target_processor = 0; target_processor < Daemon::comm().size(); ++target_processor)
 			{
-				auto s = sample + this->number_of_tiny_samples;
-
 				if (target_processor == Daemon::comm().rank())
 				{
 					if (this->sampling_flag)
@@ -392,6 +393,7 @@ const int ChunkManager::internal_build_inverted_members_stage_1_send_mode(const 
 				{
 					member_block = new MemberBlock<ScoreType>(this->data_block_list[block]);
 					Daemon::comm().recv(target_processor, 0, *member_block);
+					Daemon::comm().send(target_processor, 0, 1);
 				}
 
 				member_block->load_members();
@@ -436,10 +438,42 @@ const int ChunkManager::internal_build_inverted_members_stage_1_send_mode(const 
 					inverted_member_block->load_inverted_members(i);
 					this->inverted_member_block_list[blck][s]->merge_inverted_members(*inverted_member_block);
 					this->inverted_member_block_list[blck][s]->save_inverted_members(0);
-					this->inverted_member_block_list[blck][s]->clear_inverted_members(0);
+					this->inverted_member_block_list[blck][s]->clear_inverted_members();
 					inverted_member_block->clear_inverted_members(0);
+					inverted_member_block->purge_inverted_members_from_disk(0);
 				}
 			}
+		}
+
+		for (auto block = 0; block < this->number_of_blocks; ++block)
+		{
+			this->inverted_member_block_list[block][s]->load_inverted_members(0);
+			this->inverted_member_block_list[block][s]->finalize_inverted_members();
+			this->inverted_member_block_list[block][s]->save_inverted_members(0);
+			this->inverted_member_block_list[block][s]->purge_inverted_members_from_disk(0);
+		}
+	}
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+const int ChunkManager::internal_build_inverted_members_receive_mode(const int sender_id)
+{
+	for (auto sample = -this->number_of_tiny_samples; sample < this->number_of_samples; ++sample)
+	{
+		auto s = sample + this->number_of_tiny_samples;
+
+		for (auto block = 0; block < this->number_of_blocks; ++block)
+		{
+			if (this->sampling_flag)
+				member_block = this->access_member_block(block);
+			else
+				member_block = this->access_member_block(block, sample);
+
+			int ack_flag;
+			member_block->load_members();
+			Daemon::comm().send(sender_id, 0, *member_block);
+			Daemon::comm().recv(sender_id, 0, ack_flag);
+			member_block->clear_members();
 		}
 	}
 }
