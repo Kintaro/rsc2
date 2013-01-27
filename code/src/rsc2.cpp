@@ -47,6 +47,7 @@
 #include "Daemon.h"
 #include "Options.h"
 #include "MemberBlock.h"
+#include "IndexStructure.h"
 
 #include <fstream>
 
@@ -102,18 +103,18 @@ int main(int argc, char** argv)
 
 	if (world.rank() == 1)
 	{
-		std::fstream f("../data/sample_data.mem", std::ios_base::in);
+		std::fstream f("../../data/sample_data.mem", std::ios_base::in);
 		b.internal_load_members(f);
 		f.close();
 
 		b.set_global_offset((size_t)17);
 		Daemon::comm().recv(1, 0, b2);
-		b.merge_members(&b2, 0);
+		b.merge_members(b2, 0);
 		Daemon::comm().barrier();
 	}
 	else if (world.rank() == 2)
 	{
-		std::fstream f2("../data/sample_data.mem", std::ios_base::in);
+		std::fstream f2("../../data/sample_data.mem", std::ios_base::in);
 		b2.internal_load_members(f2);
 		f2.close();
 
