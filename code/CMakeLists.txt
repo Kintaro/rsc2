@@ -7,7 +7,6 @@ CMAKE_FORCE_CXX_COMPILER(mpic++ "MPI C++ Compiler")
 project(rsc2 CXX)
 
 find_package(Boost 1.4 COMPONENTS mpi serialization REQUIRED)
-find_package(MPI REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(src)
 
