@@ -40,6 +40,71 @@
 
 #include "RscClusterer.h"
 
+/*-----------------------------------------------------------------------------------------------*/
+const bool RscClusterer::initialize_soft_rsc()
+{
+	this->set_manager->setup_samples();
+	this->set_manager->get_rsc_list_style();
+	this->set_manager->setup_list_ranges();
+
+	this->set_manager->build_trim_set(false);
+	this->set_manager->build_trim_set(true);
+
+	for (auto i = 0; i < Daemon::comm().size(); ++i)
+	{
+		if (i == Daemon::comm().rank())
+		{
+			for (auto j = 0; j < Daemon::comm().size(); ++j)
+			{
+				if (i == j)
+					continue;
+
+				auto chunk_size = this->set_manager->get_number_of_items();
+				auto number_of_blocks = this->set_manager->get_number_of_blocks();
+
+				this->maximum_chunk_size = std::max(chunk_size, this->maximum_chunk_size);
+
+				for (auto block = 0; block < number_of_blocks; ++block)
+				{
+					auto block_size = this->set_manager->get_number_of_items_in_block(block);
+					this->maximum_block_size = std::max(block_size, this->maximum_block_size);
+				}
+
+				Daemon::comm().send(j, 0, &this->maximum_chunk_size);
+				Daemon::comm().send(j, 0, &this->maximum_block_size);
+			}
+		}
+		else
+		{
+			int temp_chunk_size, temp_block_size;
+			Daemon::comm().recv(boost::mpi::any_source, 0, &temp_chunk_size);
+			Daemon::comm().recv(boost::mpi::any_source, 0, &temp_block_size);
+
+			this->maximum_chunk_size = std::max(temp_chunk_size, this->maximum_chunk_size);
+			this->maximum_block_size = std::max(temp_block_size, this->maximum_block_size);
+		}
+	}
+
+	Daemon::comm().barrier();
+
+	Daemon::info("Number of items:    %i", this->maximum_chunk_size);
+	Daemon::info("Number of samples:  %i", this->maximum_chunk_size);
+	Daemon::info("Number of chunks:   %i", Daemon::comm().size());
+	Daemon::info("Maximum chunk size: %i", this->maximum_chunk_size);
+
+	this->squared_significance_accumulation_list.resize(this->maximum_chunk_size);
+	this->intersection_accumulation_list.resize(this->maximum_chunk_size);
+
+	for (auto &x : this->squared_significance_accumulation_list)
+		x.clear();
+	for (auto &x : this->intersection_accumulation_list)
+		x.clear();
+
+	this->setup_cluster_storage();
+
+	return true;
+}
+/*-----------------------------------------------------------------------------------------------*/
 void RscClusterer::cluster_soft_rsc(const std::string& temp_directory_path, const std::string& cluster_directory_path)
 {
 	for (auto sample = -this->number_of_tiny_samples; sample < this->number_of_samples; ++sample)
@@ -67,7 +132,7 @@ void RscClusterer::cluster_soft_rsc(const std::string& temp_directory_path, cons
 
 	this->finalize_clusters_and_build_graph();
 }
-
+/*-----------------------------------------------------------------------------------------------*/
 void RscClusterer::generate_patterns_for_sample(const int sample_id, const TransmissionMode& transmission_mode, const boost::optional<unsigned int>& sender)
 {
 	if (transmission_mode == TransmissionSend && sender)
@@ -110,7 +175,7 @@ void RscClusterer::generate_patterns_for_sample(const int sample_id, const Trans
 		Daemon::comm().recv(0, 0, pattern_index_to_rank_list);
 	}
 }
-
+/*-----------------------------------------------------------------------------------------------*/
 void RscClusterer::generate_patterns_for_sample_send(const int sample_id, const TransmissionMode& transmission_mode, const boost::optional<unsigned int>& sender)
 {
 	std::vector<std::vector<int>> member_index_list;
@@ -179,8 +244,9 @@ void RscClusterer::generate_patterns_for_sample_send(const int sample_id, const 
 		}
 	}
 }
-
+/*-----------------------------------------------------------------------------------------------*/
 void RscClusterer::generate_patterns_for_sample_receive(const int sample_id, const TransmissionMode& transmission_mode, const boost::optional<unsigned int>& sender)
 {
 
 }
+/*-----------------------------------------------------------------------------------------------*/
