@@ -23,4 +23,8 @@
 
 	<!-- Clustering result options -->
 	<cluster-style>soft+rsc</cluster-style>
+
+	<!-- Index structure options -->
+	<index-structure>sash</index-structure>
+	<sash-degree>4</sash-degree>
 </options>

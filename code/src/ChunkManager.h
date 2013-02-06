@@ -312,10 +312,8 @@ const int ChunkManager::internal_build_exact_neighbourhoods_send_mode(const int 
 
 				Daemon::debug("Saved member lists.");
 			}
-			else
-			{
-				Daemon::debug("Member lists already saved.");	
-			}
+			
+			Daemon::debug("Member lists already saved.");	
 		}
 	}
 
