@@ -161,6 +161,8 @@ void RscClusterer::generate_patterns_for_sample(const int sample_id, const Trans
 			pattern_rank_to_index_list[item] = item;
 		}
 
+		Sort::sort(squared_significance_list, pattern_rank_to_index_list, 0, number_of_items - 1);
+
 		for (auto item = 0; item < number_of_items; ++item)
 			pattern_index_to_rank_list[pattern_rank_to_index_list[item]] = item;
 
@@ -196,7 +198,11 @@ void RscClusterer::generate_patterns_for_sample_send(const int sample_id, const 
 		Daemon::comm().recv(Daemon::comm().rank() - 1, 0, member_index_list);
 		Daemon::comm().recv(Daemon::comm().rank() - 1, 0, inverted_member_index_list);
 		Daemon::comm().recv(Daemon::comm().rank() - 1, 0, inverted_member_rank_list);
+		Daemon::comm().recv(Daemon::comm().rank() - 1, 0, pattern_squared_significance_list);
+		Daemon::comm().recv(Daemon::comm().rank() - 1, 0, pattern_sconfidence_list);
 	}
+
+	this->trim_manager->extract_members(member_index_list, number_of_items, sample_id);
 
 	for (auto target_processor = 0; target_processor < Daemon::comm().size(); ++target_processor)
 	{
@@ -253,6 +259,33 @@ void RscClusterer::generate_patterns_for_sample_send(const int sample_id, const 
 /*-----------------------------------------------------------------------------------------------*/
 void RscClusterer::generate_patterns_for_sample_receive(const int sample_id, const TransmissionMode& transmission_mode, const boost::optional<unsigned int>& sender)
 {
+	int number_of_blocks_in_chunk = this->trim_manager->get_number_of_blocks();
+	Daemon::comm().send(sender, 0, &number_of_blocks_in_chunk);
 
+	start = this->trim_manager->get_offset();
+	finish = start - 1 + this->trim_manager->get_number_of_items();
+
+	for (auto alt_block = 0; alt_block < this->trim_manager->get_number_of_blocks(); ++alt_block)
+	{
+		auto alt_start = this->trim_manager->get_block_offset(alt_block);
+		auto alt_finish = alt_start - 1 + this->trim_manager->get_number_of_items_in_block(alt_block);
+
+		Daemon::comm().send(sender, 0, &alt_start);
+		Daemon::comm().send(sender, 0, &alt_finish);
+
+		Daemon::comm().recv(sender, 0, member_index_list);
+		Daemon::comm().recv(sender, 0, inverted_member_index_list);
+		Daemon::comm().recv(sender, 0, inverted_member_rank_list);
+
+		this->trim_manager->extract_members_from_block(member_index_list, number_of_items, sample_id, alt_block);
+		Daemon::comm().send(sender, 0, member_index_list);
+
+		this->trim_manager->extract_inverted_members_from_block(inverted_member_index_list, inverted_member_rank_list, sample_id, alt_block);
+		Daemon::comm().send(sender, inverted_member_index_list);
+		Daemon::comm().send(sender, inverted_member_rank_list);
+	}
+
+	int tmp = this->trim_manager->get_single_sample_size(sample_id);
+	Daemon::comm().send(sender, 0, &tmp);
 }
 /*-----------------------------------------------------------------------------------------------*/
