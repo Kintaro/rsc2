@@ -139,7 +139,7 @@ public:
 
     unsigned long seed;           // Random number generator seed.
 private:
-	static std::mt19937 genInt;
+	static std::mt19937 random_generator;
 public:
 
 /*-----------------------------------------------------------------------------------------------*/

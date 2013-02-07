@@ -44,17 +44,17 @@
 #include "Sash.h"
 
 /*-----------------------------------------------------------------------------------------------*/
-std::mt19937 Sash::genInt;
+std::mt19937 Sash::random_generator;
 /*-----------------------------------------------------------------------------------------------*/
 Sash::Sash () : data(boost::none)
 {
 	seed = 314159UL;
-	genInt.seed(seed);
+	random_generator.seed(seed);
 }
 /*-----------------------------------------------------------------------------------------------*/
 Sash::Sash (unsigned long seed) : data(boost::none) 
 {
-	genInt.seed (seed);
+	random_generator.seed (seed);
 	this->seed = seed;
 }
 /*-----------------------------------------------------------------------------------------------*/
@@ -88,7 +88,7 @@ const int Sash::build (std::vector<std::shared_ptr<DistanceData>>& inputData, co
 		this->intern_to_extern_mapping[i] = i;
 
 	for (auto i = inputData.size() - 1; i >= 0u; --i)
-		std::swap(this->intern_to_extern_mapping[genInt() % (i + 1)], this->intern_to_extern_mapping[i]);
+		std::swap(this->intern_to_extern_mapping[random_generator() % (i + 1)], this->intern_to_extern_mapping[i]);
 
 	// Recursively build the SASH structure.
 	this->number_of_distance_comparisons = 0UL;
