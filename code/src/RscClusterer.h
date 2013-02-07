@@ -49,6 +49,24 @@ class RscClusterer
 private:
 	unsigned int number_of_tiny_samples;
 	unsigned int number_of_samples;
+	unsigned int number_of_items;
+	unsigned int maximum_chunk_size;
+	unsigned int maximum_block_size;
+
+	std::vector<std::vector<int>> member_index_list;
+	std::vector<std::vector<int>> member_rank_list;
+
+	std::vector<std::vector<int>> inverted_member_index_list;
+	std::vector<std::vector<int>> inverted_member_rank_list;
+
+	std::vector<std::vector<double>> squared_significance_accumulation_list;
+	std::vector<std::vector<int>> intersection_accumulation_list;
+
+	std::vector<double> pattern_squared_significance_list;
+	std::vector<double> pattern_sconfidence_significance_list;
+
+	std::vector<std::vector<int>> pattern_index_to_rank_list;
+	std::vector<std::vector<int>> pattern_rank_to_index_list;
 public:
 	const bool initialize_soft_rsc();
 	void cluster_soft_rsc(const std::string& temp_directory_path, const std::string& cluster_directory_path);

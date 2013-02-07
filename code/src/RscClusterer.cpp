@@ -107,6 +107,13 @@ const bool RscClusterer::initialize_soft_rsc()
 /*-----------------------------------------------------------------------------------------------*/
 void RscClusterer::cluster_soft_rsc(const std::string& temp_directory_path, const std::string& cluster_directory_path)
 {
+	if (!this->initialize_soft_rsc())
+	{
+		this->clear_non_parameters();
+		this->initialize_non_parameters();
+		return;
+	}
+
 	for (auto sample = -this->number_of_tiny_samples; sample < this->number_of_samples; ++sample)
 	{
 		for (auto sender = 0; sender < Daemon::comm().size(); ++sender)
@@ -131,6 +138,9 @@ void RscClusterer::cluster_soft_rsc(const std::string& temp_directory_path, cons
 	}
 
 	this->finalize_clusters_and_build_graph();
+
+	this->clear_non_parameters();
+	this->initialize_non_parameters();
 }
 /*-----------------------------------------------------------------------------------------------*/
 void RscClusterer::generate_patterns_for_sample(const int sample_id, const TransmissionMode& transmission_mode, const boost::optional<unsigned int>& sender)
@@ -178,10 +188,6 @@ void RscClusterer::generate_patterns_for_sample(const int sample_id, const Trans
 /*-----------------------------------------------------------------------------------------------*/
 void RscClusterer::generate_patterns_for_sample_send(const int sample_id, const TransmissionMode& transmission_mode, const boost::optional<unsigned int>& sender)
 {
-	std::vector<std::vector<int>> member_index_list;
-	std::vector<std::vector<int>> inverted_member_index_list;
-	std::vector<std::vector<int>> inverted_member_rank_list;
-
 	int start = trim_manager->get_offset();
 	int finish = start - 1 + trim_manager->get_number_of_items();
 
