@@ -42,43 +42,169 @@
 #define __CHUNKMANAGER_H__
 
 #include <vector>
+#include <memory>
 
+#include "TransmissionMode.h"
 #include "MemberBlock.h"
+#include "InvertedMemberBlock.h"
+#include "Daemon.h"
 
+/*-----------------------------------------------------------------------------------------------*/
+enum class Stage
+{
+	First,
+	Second
+};
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
 class ChunkManager
 {
 private:
-	std::shared_ptr<IndexStructure<DistanceData> index_structure;
-	std::vector<VecDataBlock> data_block_list;
+	bool sampling_flag;
+	unsigned int global_offset;
+	unsigned int number_of_items;
+	unsigned int number_of_tiny_samples;
+	unsigned int number_of_samples;
+	std::vector<unsigned int> sample_size_list;
+	std::shared_ptr<IndexStructure<DistanceData>> index_structure;
+	std::vector<std::shared_ptr<DataBlock>> data_block_list;
 	std::vector<std::vector<std::shared_ptr<MemberBlock<ScoreType>>>> member_block_list;
-	std::vector<int> offset_list;
-	std::vector<int> block_size_list;
+	std::vector<std::vector<std::shared_ptr<InvertedMemberBlock<ScoreType>>>> inverted_member_block_list;
+	std::vector<unsigned int> offset_list;
+	std::vector<unsigned int> block_size_list;
 	std::vector<std::shared_ptr<DistanceData>> data_item_list;
+	unsigned int maximum_number_of_members;
+	unsigned int maximum_number_of_micro_members;
+	unsigned int maximum_number_of_mini_members;
 public:
-	const unsigned int load_member_blocks() const;
-	const unsigned int load_inverted_member_blocks() const;
-	const unsigned int save_member_blocks() const;
-	const unsigned int save_inverted_member_blocks() const;
-	const bool load_index_structure(const int sash_degree);
-	const int build_exact_neighbourhoods(const bool load_flag, const bool save_flag, const int sender_id);
+	ChunkManager();
+	unsigned int load_chunk_data();
+	unsigned int load_member_blocks() const;
+	unsigned int load_inverted_member_blocks() const;
+	unsigned int save_member_blocks() const;
+	unsigned int save_inverted_member_blocks() const;
+	bool load_index_structure(const int sash_degree);
+	bool save_index_structure();
 
-	const std::shared_ptr<MemberBlock<ScoreType>> access_member_block(const unsigned int index, const unsigned int sample_level) const;
+	unsigned int get_offset() const { return this->global_offset; }
+	unsigned int get_block_offset(const unsigned int block) const;
+	unsigned int get_number_of_blocks() const;
+	unsigned int get_sample_size(const int sample_level);
+	
+	const std::shared_ptr<MemberBlock<ScoreType>> access_member_block(const unsigned int index);
+	const std::shared_ptr<MemberBlock<ScoreType>> access_member_block(const unsigned int index, const unsigned int sample_level);
 	const std::shared_ptr<DistanceData> access_item(const unsigned int index) const;
-	const unsigned int find_block_for_item(const unsigned int item_index) const;
+	std::vector<std::shared_ptr<DistanceData>>& access_items() { return this->data_item_list; }
+	
+	unsigned int find_block_for_item(const unsigned int item_index) const;
+	unsigned int setup_samples(const unsigned int sample_limit, const unsigned int maximum_number_of_members, const boost::optional<unsigned int> maximum_number_of_mini_members = boost::none, const boost::optional<unsigned int> maximum_number_of_micro_members = boost::none);
+	
+	bool build_members_from_disk() { return true; }
+	bool build_approximate_neighborhoods(const boost::optional<unsigned int> sash_degree, 
+										 const boost::optional<double> scale_factor, 
+									  const bool load_flag, 
+									  const bool save_flag, 
+									  const TransmissionMode transmission_mode, 
+									  const unsigned int sender_id);
+	void clear_member_blocks() {};
+	void clear_inverted_member_blocks() {};
+	bool build_inverted_members_from_disk() { return true; }
+	bool build_inverted_members(std::shared_ptr<ChunkManager> chunk_ptr, const TransmissionMode transmission_mode, const unsigned int i, const Stage stage) { return false; }
 private:
-	const int internal_build_exact_neighbourhoods_send_mode(const int degree, const double scale_factor, const bool load_flag, const bool save_flag, const int sender_id);
-	const int internal_build_exact_neighbourhoods_receive_mode(const int degree, const double scale_factor, const bool load_flag, const bool save_flag, const int sender_id);
+	int internal_setup_samples(const unsigned int sample_limit);
+	
+	bool internal_build_neighborhood(const boost::optional<unsigned int>& sash_degree, 
+									 const boost::optional<double>& scale_factor, 
+								  const bool load_flag, const bool save_flag, 
+								  const TransmissionMode transmission_mode, unsigned int sender_id);
+	bool internal_build_neighborhood_send_stage1(const boost::optional<unsigned int>& sash_degree, 
+										  const boost::optional<double>& scale_factor, 
+									   const bool load_flag, const bool save_flag, const unsigned int sender_id);
 
-	const int internal_build_inverted_members_send_mode(const int sender_id);
-	const int internal_build_inverted_members_receive_mode(const int sender_id);
+	bool internal_build_neighborhood_receive_stage1(const boost::optional<unsigned int>& sash_degree, 
+											 const boost::optional<double>& scale_factor, 
+									   const bool load_flag, const bool save_flag, const unsigned int sender_id);
+	
+	void internal_build_neighborhood_send_stage2(const boost::optional<unsigned int>& sash_degree, 
+												 const boost::optional<double>& scale_factor, 
+											  const bool load_flag, const bool save_flag, 
+											  const unsigned int sender_id, 
+											  std::vector<bool>& pending_sample_list, 
+											  bool& at_least_one_sample_pending,
+											  const std::shared_ptr<VecDataBlock>& data_block,
+											  const unsigned int block,
+											  const unsigned int index_structure_offset);
+	void internal_build_neighborhood_receive_stage2(const boost::optional<unsigned int>& sash_degree, 
+												 const boost::optional<double>& scale_factor, 
+											  const bool load_flag, const bool save_flag, 
+											  const unsigned int sender_id, 
+											  std::vector<bool>& pending_sample_list, 
+											  bool& at_least_one_sample_pending,
+											  const std::shared_ptr<VecDataBlock>& data_block,
+											  const unsigned int block,
+											  const unsigned int index_structure_offset);
+	
+	bool internal_build_neighborhood_send_stage3(const boost::optional<unsigned int>& sash_degree, 
+										  const boost::optional<double>& scale_factor, 
+									   const bool load_flag, const bool save_flag, const unsigned int sender_id);
+	bool internal_build_neighborhood_receive_stage3(boost::optional<unsigned int>& sash_degree, 
+											 const boost::optional<double>& scale_factor, 
+									   const bool load_flag, const bool save_flag, const unsigned int sender_id);
+	
+	void is_resident_sash();
 };
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
-const unsigned int ChunkManager::load_member_blocks() const
+ChunkManager<DataBlock, ScoreType>::ChunkManager()
 {
-	unsigned int number_loaded = 0;
+	Daemon::debug("creating chunk manager");
+	auto number_of_blocks = 0u;
+	this->number_of_items = 0u;
+	auto offset = 0u;
+	
+	while (true)
+	{
+		auto data_block = std::shared_ptr<DataBlock>(new DataBlock(number_of_blocks));
+		if (!data_block->verify_savefile())
+			break;
+		auto num_loaded = data_block->get_number_of_items();
+		if (!data_block->is_valid())
+			break;
+		++number_of_blocks;
+		//data_block->clear_data();
+		this->data_block_list.push_back(data_block);
+		this->offset_list.push_back(offset);
+		offset += data_block->get_number_of_items();
+		
+		this->number_of_items += num_loaded;
+	}
+	
+	Daemon::debug("created chunk manager");
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+unsigned int ChunkManager<DataBlock, ScoreType>::load_chunk_data()
+{
+	Daemon::debug("loading chunk data");
+	
+	auto number_loaded = 0u;
+	this->data_item_list.resize(this->number_of_items);
+	this->offset_list.resize(this->number_of_items);
+	
+	for (auto i = 0u; i < this->data_block_list.size(); ++i)
+	{
+		auto block = this->data_block_list[i];
+		number_loaded += block->load_data();
+		block->extract_all_items(this->data_item_list, this->offset_list[i]);
+	}
+	
+	return number_loaded;
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+unsigned int ChunkManager<DataBlock, ScoreType>::load_member_blocks() const
+{
+	unsigned int number_loaded = 0u;
 	for (auto &block : this->member_block_list)
 		for (auto &block_sample : block)
 			if (block_sample->load_members())
@@ -87,9 +213,9 @@ const unsigned int ChunkManager::load_member_blocks() const
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
-const unsigned int ChunkManager::load_inverted_member_blocks() const
+unsigned int ChunkManager<DataBlock, ScoreType>::load_inverted_member_blocks() const
 {
-	unsigned int number_loaded = 0;
+	unsigned int number_loaded = 0u;
 	for (auto &block : this->inverted_member_block_list)
 		for (auto &block_sample : block)
 			if (block_sample->load_inverted_members())
@@ -98,9 +224,9 @@ const unsigned int ChunkManager::load_inverted_member_blocks() const
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
-const unsigned int ChunkManager::save_member_blocks() const
+unsigned int ChunkManager<DataBlock, ScoreType>::save_member_blocks() const
 {
-	unsigned int number_saved = 0;
+	unsigned int number_saved = 0u;
 	for (auto &block : this->member_block_list)
 		for (auto &block_sample : block)
 			if (block_sample->save_members())
@@ -109,9 +235,9 @@ const unsigned int ChunkManager::save_member_blocks() const
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
-const unsigned int ChunkManager::save_inverted_member_blocks() const
+unsigned int ChunkManager<DataBlock, ScoreType>::save_inverted_member_blocks() const
 {
-	unsigned int number_saved = 0;
+	unsigned int number_saved = 0u;
 	for (auto &block : this->inverted_member_block_list)
 		for (auto &block_sample : block)
 			if (block_sample->save_inverted_members())
@@ -120,39 +246,84 @@ const unsigned int ChunkManager::save_inverted_member_blocks() const
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
-const bool ChunkManager::load_index_structure(const int sash_degree)
+bool ChunkManager<DataBlock, ScoreType>::load_index_structure(const int sash_degree)
 {
 	if (this->index_structure != nullptr)
 		return true;
 
-	this->index_structure = IndexStructure<DistanceData>::create_from_plugin("sash");
+	this->index_structure = std::shared_ptr<IndexStructure<DistanceData>>(IndexStructure<DistanceData>::create_from_plugin("sash"));
+	
+	std::ostringstream filename_str;
+	filename_str << Options::get_option_as<std::string>("temp-directory") << Options::get_option_as<std::string>("dataset") << "_c" << Daemon::comm().rank();
+	auto filename = filename_str.str();
+	
+	this->index_structure = std::shared_ptr<IndexStructure<DistanceData>>(IndexStructure<DistanceData>::create_from_plugin("sash"));
+	if (this->index_structure->build(filename, this->data_item_list) == this->number_of_items)
+		return true;
+	
 	this->index_structure->build(this->data_item_list, sash_degree > 2 ? sash_degree : Options::get_option_as<unsigned int>("sash-degree"));
 
-	return true;
+	return this->save_index_structure();
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
-const std::shared_ptr<MemberBlock<ScoreType>> ChunkManager::access_member_block(const unsigned int index, const unsigned int sample_level) const
+bool ChunkManager<DataBlock, ScoreType>::save_index_structure()
+{
+	std::ostringstream filename_str;
+	filename_str << Options::get_option_as<std::string>("temp-directory") << Options::get_option_as<std::string>("dataset") << "_c" << Daemon::comm().rank();
+	auto filename = filename_str.str();
+	
+	if (this->index_structure->save_to_file(filename) == this->number_of_items)
+		return true;
+	return false;
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+unsigned int ChunkManager<DataBlock, ScoreType>::get_number_of_blocks() const
+{
+	return this->member_block_list.size();
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+unsigned int ChunkManager<DataBlock, ScoreType>::get_block_offset(const unsigned int block) const
+{
+	return this->global_offset + this->offset_list[block];
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+unsigned int ChunkManager<DataBlock, ScoreType>::get_sample_size(const int sample_level)
+{
+	return this->sample_size_list[sample_level];
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+const std::shared_ptr<MemberBlock<ScoreType>> ChunkManager<DataBlock, ScoreType>::access_member_block(const unsigned int index)
+{
+	return this->access_member_block(index, -this->number_of_tiny_samples);
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+const std::shared_ptr<MemberBlock<ScoreType>> ChunkManager<DataBlock, ScoreType>::access_member_block(const unsigned int index, const unsigned int sample_level)
 {
 	return this->member_block_list[index][sample_level + this->number_of_tiny_samples];
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
-const std::shared_ptr<DistanceData> ChunkManager::access_item(const unsigned int index) const
+const std::shared_ptr<DistanceData> ChunkManager<DataBlock, ScoreType>::access_item(const unsigned int index) const
 {
 	return this->data_item_list[index - this->global_offset];
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
-const unsigned int ChunkManager::find_block_for_item(const unsigned int item_index) const
+unsigned int ChunkManager<DataBlock, ScoreType>::find_block_for_item(const unsigned int item_index) const
 {
-	unsigned int low = 0;
-	unsigned int high = this->number_of_blocks - 1;
+	auto low = 0u;
+	auto high = this->member_block_list.size() - 1;
 
 	if (item_index < this->global_offset + this->offset_list[low])
 		throw new std::exception();
 	else if (item_index >= this->global_offset + this->offset_list[high] + this->block_size_list[high])
-		return this->number_of_blocks;
+		return this->member_block_list.size();
 
 	while (low < high)
 	{
@@ -168,312 +339,365 @@ const unsigned int ChunkManager::find_block_for_item(const unsigned int item_ind
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
-const int ChunkManager::build_exact_neighbourhoods(const bool load_flag, const bool save_flag)
+unsigned int ChunkManager<DataBlock, ScoreType>::setup_samples(const unsigned int sample_limit, const unsigned int maximum_number_of_members, 
+												  const boost::optional<unsigned int> maximum_number_of_mini_members, 
+												  const boost::optional<unsigned int> maximum_number_of_micro_members)
 {
-	return this->internal_build_exact_neighbourhoods(4, 0.0, load_flag, save_flag);
+	if (maximum_number_of_micro_members && maximum_number_of_mini_members)
+		this->number_of_tiny_samples = 2u;
+	else if (!maximum_number_of_micro_members && !maximum_number_of_mini_members)
+		this->number_of_tiny_samples = 0u;
+	else
+		this->number_of_tiny_samples = 1u;
+	
+	if (maximum_number_of_micro_members)
+		this->maximum_number_of_micro_members = *maximum_number_of_micro_members;
+	if (maximum_number_of_mini_members)
+		this->maximum_number_of_mini_members = *maximum_number_of_mini_members;
+	this->maximum_number_of_members = maximum_number_of_members;
+	
+	return this->internal_setup_samples(sample_limit);
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
-const int ChunkManager::internal_build_exact_neighbourhoods_send_mode(const int degree, const double scale_factor, const bool load_flag, const bool save_flag)
+bool ChunkManager<DataBlock, ScoreType>::build_approximate_neighborhoods(const boost::optional<unsigned int> sash_degree, 
+																		 const boost::optional<double> scale_factor, 
+																		 const bool load_flag, 
+																		 const bool save_flag, 
+																		 const TransmissionMode transmission_mode, 
+																		 const unsigned int sender_id)
 {
-	auto string_buffer = this->list_directory_path + "/" + this->list_filename_prefix;
-	this->clear_chunk_data();
+	Daemon::debug("building approximate neighborhoods");
+	return this->internal_build_neighborhood(sash_degree, scale_factor, load_flag, save_flag, transmission_mode, sender_id);
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+bool ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood(const boost::optional<unsigned int>& sash_degree, 
+									 const boost::optional<double>& scale_factor, 
+								  const bool load_flag, const bool save_flag, 
+								  const TransmissionMode transmission_mode, unsigned int sender_id)
+{
+	Daemon::debug(" [-] internal building approximate neighborhoods");
+	if (transmission_mode == TransmissionMode::TransmissionSend)
+		this->internal_build_neighborhood_send_stage1(sash_degree, scale_factor, load_flag, save_flag, sender_id);
+	
+	auto pending_sample_list = std::vector<bool>(this->number_of_samples, true);
+	
+	// With respect to each of the other chunks,
+	// compute and save the member blocks of this chunk's items.
+	// For every block in this chunk, compute and save its members
+	// with respect to the current list chunk's SASH.
+	for (auto block = 0u; block < this->data_block_list.size(); ++block)
+	{
+		Daemon::debug("  [+] processing block %i [samples: %i]", block, this->number_of_samples);
+		const auto data_block = this->data_block_list[block];
+		auto at_least_one_sample_pending = false;
+		
+		for (auto sample = 0u; sample < this->number_of_samples; ++sample)
+		{
+			//auto s = sample + this->number_of_tiny_samples;
+		
+			// If the member lists for this block have not already been
+			// computed and saved, then we must build them from scratch.
+			if (false)//this->member_block_list[block][s]->verify_savefile())
+				pending_sample_list[sample] = false;
+			else
+			{
+				pending_sample_list[sample] = true;
+				at_least_one_sample_pending = true;
+			}
+		}
+		
+		// If we need member list lists for at least one sample,
+		// then we will need to do some SASH queries for this chunk.
+		// Load or build the SASH, as necessary.
+		// Also, if the SASH has not been loaded for this chunk before,
+		// then load it now, so that its sample sizes can be determined.
+		Daemon::debug("   [*] at_least_one_sample_pending: %s", at_least_one_sample_pending ? "true" : "false");
+		Daemon::debug("   [*] sample_size_list.empty(): %s", sample_size_list.empty() ? "true" : "false");
+		if (!at_least_one_sample_pending && !this->sample_size_list.empty())
+			continue;
+		
+		// Load a new set of chunk data, and its SASH.
+		// If the SASH doesn't already exist, create it and save it.
+		//if (!this->is_resident_sash())
+		if (this->index_structure == nullptr)
+		{
+			this->load_chunk_data();
+			this->load_index_structure(*sash_degree);
+		}
+			
+		// We are now guaranteed to have a SASH available.
+		const auto current_index_structure = this->index_structure;
+		const auto index_structure_offset = this->get_offset();
+			
+		if (transmission_mode == TransmissionMode::TransmissionSend)
+			this->internal_build_neighborhood_send_stage2(sash_degree, scale_factor, load_flag, save_flag, 
+																 sender_id, pending_sample_list, at_least_one_sample_pending, 
+																data_block, block, index_structure_offset);
+		else 
+			this->internal_build_neighborhood_receive_stage2(sash_degree, scale_factor, load_flag, save_flag,
+																	sender_id, pending_sample_list, at_least_one_sample_pending,
+																data_block, block, index_structure_offset);
+	}
+	
+ 	
+ 	if (transmission_mode == TransmissionMode::TransmissionSend)
+ 		return this->internal_build_neighborhood_send_stage3(sash_degree, scale_factor, load_flag, save_flag, sender_id);
+	
+	Daemon::comm().barrier();
+	return true;
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+bool ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood_send_stage1(const boost::optional<unsigned int>& sash_degree, 
+										  const boost::optional<double>& scale_factor, 
+									   const bool load_flag, const bool save_flag, const unsigned int sender_id)
+{
+	Daemon::debug("  [+] building approximate neighborhoods [stage 1]");
+	// Clear any previously-existing member list blocks
+	// and inverted member list blocks of the chunk.
 	this->clear_member_blocks();
 	this->clear_inverted_member_blocks();
-
-	for (auto block = 0; block < this->number_of_blocks; ++block)
+	
+	// Reserve memory for the final member list block list.
+	// For now, compute SASH neighborhoods only for "true" sample levels.
+	// The neighborhoods at the two special levels
+	// (for mini-clusters and micro-clusters)
+	// are subsets of the neighborhoods generated for the
+	// full set, and will be computed later if necessary.
+	this->member_block_list.resize(this->data_block_list.size());
+	
+	std::ostringstream block_name_str;
+	block_name_str << Options::get_option_as<std::string>("temp-directory") << Options::get_option_as<std::string>("dataset");
+	auto block_name = block_name_str.str();
+	
+	for (auto block = 0u; block < this->data_block_list.size(); ++block)
 	{
-		this->member_block_list[block].resize(this->number_of_samples + this->number_of_tiny_samples);
-		this->member_block_list[block][0] = nullptr;
-		this->member_block_list[block][1] = nullptr;
-
+		Daemon::debug("allocation member blocks [%i, %i, %i]", this->number_of_samples, this->number_of_tiny_samples, this->member_block_list.size());
+		this->member_block_list[block].resize(this->number_of_samples + this->number_of_tiny_samples, nullptr);
+		this->member_block_list[block][0] = std::shared_ptr<MemberBlock<ScoreType>>(nullptr);
+		this->member_block_list[block][1] = std::shared_ptr<MemberBlock<ScoreType>>(nullptr);
 		auto data_block = this->data_block_list[block];
-
-		for (auto sample = 0; sample < this->number_of_samples; ++sample)
+		
+		for (auto sample = 0u; sample < this->number_of_samples; ++sample)
 		{
 			auto s = sample + this->number_of_tiny_samples;
-			this->member_block_list[block][s] = new MemberBlock<ScoreType>(data_block, sample, this->maximum_number_of_members);
-
-			if (unchunked_flag)
-				this->member_block_list[block][s]->set_id(string_buffer);
-			else
-				this->member_block_list[block][s]->set_id(string_buffer, block);
-		}
-	}
-
-	std::vector<bool> pending_sample_list;
-	pending_sample_list.resize(this->number_of_samples);
-
-	for (auto block = 0; block < this->number_of_blocks; ++block)
-	{
-		auto data_block = this->data_block_list[block];
-		auto at_least_one_sample_pending = true;
-
-		for (auto &x : pending_sample_list)
-			x = true;
-
-		if (at_least_one_sample_pending)
-		{
-			if (!this->is_resident_sash())
-			{
-				this->load_chunk_data();
-				if (!this->load_sash())
-				{
-					Daemon::error("Loading SASH failed.");
-					throw new std::exception();
-				}
-			}
-
-			// TODO
-
-			auto number_of_block_items = data_block.get_number_of_items();
-			auto block_offset = data_block.get_offset();
-
-			data_block.load_data();
-
-			for (auto target_processor = 0; target_processor < Daemon::comm().size(); ++target_processor)
-			{
-				if (target_processor == Daemon::comm().rank())
-					continue;
-
-				Daemon::comm().send(target_processor, 0, data_block);
-			}
-
-			for (auto sample = 0; sample < this->number_of_samples; ++sample)
-			{
-				auto s = sample + this->number_of_tiny_samples;
-
-				for (auto item = block_offset + number_of_block_items-1; item >= block_offset; --item)
-				{
-					if (pending_sample_list[sample])
-					{
-						if (scale_factor > 0.0)
-							this->member_block_list[block][s]->build_approximate_neighbourhood(current_sash, sash_offset, scale_factor, item);
-						else
-					}		this->member_block_list[block][s]->build_exact_neighbourhood(current_sash, sash_offset, item);
-				}
-
-				for (auto target_processor = 0; target_processor < Daemon::comm().size(); ++target_processor)
-				{
-					if (target_processor == Daemon::comm().rank())
-						continue;
-
-					if (pending_sample_list[sample])
-					{
-						auto current_block = this->member_block_list[block][s];
-						auto member_block = new MemberBlock<ScoreType>(current_block, 0);
-
-						Daemon::comm().recv(target_processor, 0, *member_block);
-
-						this->member_block_list[block][s]->merge_members(member_block, this->maximum_number_of_members);
-						member_block->clear_members();
-					}
-				}
-
-				if (pending_sample_list[sample])
-					this->member_block_list[block][s]->save_members();
-			}
-
-			data_block.clear_data();
-		}
-	}
-
-	for (auto block = 0; block < this->number_of_blocks; ++block)
-	{
-		auto member_block = this->member_block_list[block][this->number_of_tiny_samples];
-		member_block->load_members();
-
-		for (auto sample = -this->number_of_tiny_samples; sample < 0; ++sample)
-		{
-			auto s = sample + this->number_of_tiny_samples;
-			auto maximum_list_size;
-
-			if (sample == -1)
-				maximum_list_size = this->maximum_number_of_mini_members;
-			else if (sample == -2)
-				maximum_list_size = this->maximum_number_of_micro_members;
-			else
-				maximum_list_size = this->maximum_number_of_members;
-
-			this->member_block_list[block][s] = new MemberBlock<ScoreType>(this->member_block_list[block][this->number_of_tiny_samples], sample,  maximum_list_size);
-
-			if (unchunked_flag)
-				this->member_block_list[block][s]->set_id(string_buffer);
-			else
-				this->member_block_list[block][s]->set_id(string_buffer, block);
-
-			if (!this->member_block_list[block][s]->verify_save_file())
-			{
-				if (this->member_block_list[block][s]->save_members())
-				{
-					Daemon::error("Could not save file.");
-					throw new std::exception();
-				}
-
-				Daemon::debug("Saved member lists.");
-			}
 			
-			Daemon::debug("Member lists already saved.");	
+			this->member_block_list[block][s] = std::shared_ptr<MemberBlock<ScoreType>>(new MemberBlock<ScoreType>(*data_block, sample, this->maximum_number_of_members));
+			this->member_block_list[block][s]->set_id(block_name, block);
 		}
 	}
-
-	Daemon::comm().barrier();
+	
+	Daemon::debug("  [+] building approximate neighborhoods [stage 1 / done]");
+	
+	return true;
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
-const int ChunkManager::internal_build_exact_neighbourhoods_receive_mode(const int degree, const double scale_factor, const bool load_flag, const bool save_flag)
+void ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood_send_stage2(const boost::optional<unsigned int>& sash_degree, 
+												 const boost::optional<double>& scale_factor, 
+											  const bool load_flag, const bool save_flag, 
+											  const unsigned int sender_id, 
+											  std::vector<bool>& pending_sample_list, 
+											  bool& at_least_one_sample_pending,
+											  const std::shared_ptr<VecDataBlock>& data_block,
+											  const unsigned int block,
+											  const unsigned int index_structure_offset)
 {
-	auto data_block = new DataBlock(data_block);
-	Daemon::comm().recv(sender_id, 0, *data_block);
-
-	auto number_of_block_items = data_block.get_number_of_items();
-	auto block_offset = data_block.get_offset();
-
-	this->member_block_list[block].resize(this->number_of_samples + this->number_of_tiny_samples);
-	this->member_block_list[block][0] = nullptr;
-	this->member_block_list[block][1] = nullptr;
-
-	for (auto sample = 0; sample < this->number_of_samples; ++sample)
+	Daemon::debug("  [+] building approximate neighborhoods [stage 2]");
+	auto number_of_block_items = data_block->get_number_of_items();
+	auto block_offset = data_block->get_offset();
+	
+	data_block->load_data();
+	
+	std::ostringstream block_name_str;
+	block_name_str << Options::get_option_as<std::string>("temp-directory") << Options::get_option_as<std::string>("dataset");
+	auto block_name = block_name_str.str();
+	
+	for (auto target_processor = 0; target_processor < Daemon::comm().size(); ++target_processor)
 	{
-		auto s = sample + this->number_of_tiny_samples;
-		this->member_block_list[block][s] = new MemberBlock<ScoreType>(data_block, sample, this->maximum_number_of_members);
+		if (target_processor == Daemon::comm().rank())
+			continue;
+		
+		Daemon::comm().send(target_processor, 0, *data_block);
 	}
-
-	for (auto sample = 0; sample < this->number_of_samples; ++sample)
+	
+	for (auto sample = 0u; sample < this->number_of_samples; ++sample)
 	{
 		auto s = sample + this->number_of_tiny_samples;
-
-		if (scale_factor > 0.0)
+		
+		for (auto item = block_offset + number_of_block_items - 1; item >= block_offset; --item)
+		{			
+			if (!pending_sample_list[sample])
+				continue;
+			
+			if (scale_factor && *scale_factor > 0.0)
+				this->member_block_list[block][s]->build_approximate_neighbourhood(*this->index_structure, index_structure_offset, *scale_factor, item);
+			else
+				this->member_block_list[block][s]->build_approximate_neighbourhood(*this->index_structure, index_structure_offset, 0.0, item);
+		}
+		
+		for (auto target_processor = 0; target_processor < Daemon::comm().size(); ++target_processor)
+		{
+			if (target_processor == Daemon::comm().rank())
+				continue;
+			
+			if (!pending_sample_list[sample])
+				continue;
+			
+			auto s = sample + this->number_of_tiny_samples;
+			
+			auto current_block = this->member_block_list[block][s];
+			auto member_block = MemberBlock<ScoreType>(*this->member_block_list[block][s], 0);
+			
+			Daemon::comm().recv(target_processor, 0, member_block);
+			member_block.set_id(block_name);
+			member_block.save_members();
+			
+			current_block->merge_members(member_block, maximum_number_of_members);
+		}
+		
+		// For each "true" sample on our pending list,
+		// save the corresponding member list lists to disk.
+		// This is done only if there is more than one chunk in the
+		// data set.
+		if (!pending_sample_list[sample])
+			continue;
+		
+		this->member_block_list[block][s]->save_members();
+	}
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+void ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood_receive_stage2(const boost::optional<unsigned int>& sash_degree, 
+												 const boost::optional<double>& scale_factor, 
+											  const bool load_flag, const bool save_flag, 
+											  const unsigned int sender_id, 
+											  std::vector<bool>& pending_sample_list, 
+											  bool& at_least_one_sample_pending,
+											  const std::shared_ptr<VecDataBlock>& data_block,
+											  const unsigned int block,
+											  const unsigned int index_structure_offset)
+{
+	auto temp_data_block = DataBlock(data_block);
+	Daemon::comm().recv(sender_id, 0, temp_data_block);
+	
+	auto number_of_block_items = temp_data_block.get_number_of_items();
+	auto block_offset = temp_data_block.get_offset();
+	
+	auto temp_member_block_list = std::vector<std::shared_ptr<MemberBlock<ScoreType>>>(this->number_of_samples, nullptr);
+	
+	for (auto sample = 0u; sample < this->number_of_samples; ++sample)
+	{
+		auto s = sample + this->number_of_tiny_samples;
+		temp_member_block_list[s] = std::shared_ptr<MemberBlock<ScoreType>>(new MemberBlock<ScoreType>(temp_data_block, sample, this->maximum_number_of_members));
+	}
+	
+	// For each item, compute members with respect to each
+	// sample simultaneously.
+	// This ordering of member list computation allows for more
+	// efficient SASH querying, since the SASH reuses distance
+	// computations for successive queries on the same query item.
+	// Warning: reordering these queries could lead to a significant
+	// increase in execution time!
+	// Send to the processor to which the data
+	// block items belong the member list.
+	for (auto sample = 0u; sample < this->number_of_samples; ++sample)
+	{
+		auto s = sample + this->number_of_samples;
+		
+		if (scale_factor && *scale_factor)
 		{
 			for (auto item = block_offset + number_of_block_items - 1; item >= block_offset; --item)
 			{
-				if (pending_sample_list[sample])
-					this->member_block_list[block][s]->build_approximate_neighbourhood(current_sash, sash_offset, scale_factor, item);
+				if (!pending_sample_list[sample])
+					continue;
+				
+				temp_member_block_list[s]->build_approximate_neighbourhood(*this->index_structure, index_structure_offset, *scale_factor, item);
 			}
 		}
 		else
 		{
 			for (auto item = block_offset + number_of_block_items - 1; item >= block_offset; --item)
 			{
-				if (pending_sample_list[sample])
-					this->member_block_list[block][s]->build_exact_neighbourhood(current_sash, sash_offset, item);
+				if (!pending_sample_list[sample])
+					continue;
+				
+				temp_member_block_list[s]->build_approximate_neighbourhood(*this->index_structure, index_structure_offset, 0.0, item);
 			}
 		}
-
-		if (pending_sample_list[sample])
-			Daemon::comm().send(sender_id, 0, *this->member_block_list[block][s]);
+		
+		if (!pending_sample_list[sample])
+			continue;
+		
+		temp_member_block_list[s]->send_members_data(sender_id);
+		temp_member_block_list[s].reset();
 	}
-
-	data_block.clear_data();
-
-	Daemon::comm().barrier();
+	
+	//temp_data_block.clear_data();
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
-const int ChunkManager::internal_build_inverted_members_send_mode(const int sender_id)
+bool ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood_send_stage3(const boost::optional<unsigned int>& sash_degree, 
+										  const boost::optional<double>& scale_factor, 
+									   const bool load_flag, const bool save_flag, const unsigned int sender_id)
 {
-	for (auto sample = -this->number_of_tiny_samples; sample < this->number_of_samples; ++sample)
+	std::ostringstream block_name_str;
+	block_name_str << Options::get_option_as<std::string>("temp-directory") << Options::get_option_as<std::string>("dataset");
+	auto block_name = block_name_str.str();
+	
+	for (auto block = 0u; block < this->data_block_list.size(); ++block)
 	{
-		auto s = sample + this->number_of_tiny_samples;
-
-		for (auto block = 0; block < this->number_of_blocks; ++block)
+		auto member_block = this->member_block_list[block][this->number_of_tiny_samples];
+		member_block->load_members();
+		
+		for (auto sample = -(int)this->number_of_tiny_samples; sample < 0; ++sample)
 		{
-			for (auto target_processor = 0; target_processor < Daemon::comm().size(); ++target_processor)
-			{
-				if (target_processor == Daemon::comm().rank())
-				{
-					if (this->sampling_flag)
-						member_block = this->access_member_block(block);
-					else
-						member_block = this->access_member_block(block, sample);
-				}
-				else
-				{
-					member_block = new MemberBlock<ScoreType>(this->data_block_list[block]);
-					Daemon::comm().recv(target_processor, 0, *member_block);
-					Daemon::comm().send(target_processor, 0, 1);
-				}
-
-				member_block->load_members();
-				auto member_block_size = member_block->get_number_of_items();
-				auto member_offset = member_block->get_offset();
-
-				for (auto i = member_offset + member_block_size - 1; i >= member_offset; --i)
-				{
-					auto member_index_list = member_block->extract_member_indices(i);
-					auto number_of_members = member_block->get_number_of_members(i);
-
-					for (auto j = 0u; j < number_of_members; ++j)
-					{
-						auto member = member_index_list[j];
-						auto target_block = this->find_block_for_item(member);
-
-						this->inverted_member_block_list[target_block][s]->add_to_inverted_members(member, i, j);
-					}
-				}
-
-				auto combo = block * Daemon::comm().size() + target_processor;
-
-				for (auto blck = 0; blck < this->number_of_blocks; ++blck)
-				{
-					this->inverted_member_block_list[blck][s]->finalize_inverted_members();
-					this->inverted_member_block_list[blck][s]->save_inverted_members(combo);
-				}
-
-				this->clear_inverted_member_blocks();
-			}			
-
-			for (auto blck = 0; blck < this->number_of_blocks; ++blck)
-			{
-				for (auto i = block * Daemon::comm().size(); i < block * Daemon::comm().size() + Daemon::comm().size(); ++i)
-				{
-					if (i == 0)
-						continue;
-
-					std::shared_ptr<InvertedMemberBlock<ScoreType>> inverted_member_block = new InvertedMemberBlock<ScoreType>(this->inverted_member_block_list[blck][s]);
-
-					this->inverted_member_block_list[blck][s]->load_inverted_members(0);
-					inverted_member_block->load_inverted_members(i);
-					this->inverted_member_block_list[blck][s]->merge_inverted_members(*inverted_member_block);
-					this->inverted_member_block_list[blck][s]->save_inverted_members(0);
-					this->inverted_member_block_list[blck][s]->clear_inverted_members();
-					inverted_member_block->clear_inverted_members(0);
-					inverted_member_block->purge_inverted_members_from_disk(0);
-				}
-			}
-		}
-
-		for (auto block = 0; block < this->number_of_blocks; ++block)
-		{
-			this->inverted_member_block_list[block][s]->load_inverted_members(0);
-			this->inverted_member_block_list[block][s]->finalize_inverted_members();
-			this->inverted_member_block_list[block][s]->save_inverted_members(0);
-			this->inverted_member_block_list[block][s]->purge_inverted_members_from_disk(0);
+			auto s = sample + this->number_of_tiny_samples;
+			auto maximum_list_size = sample == -1 ? this->maximum_number_of_mini_members : sample == -2 ? this->maximum_number_of_micro_members : this->maximum_number_of_members;
+			
+			this->member_block_list[block][s] = std::shared_ptr<MemberBlock<ScoreType>>(new MemberBlock<ScoreType>(*this->member_block_list[block][this->number_of_tiny_samples], sample, maximum_list_size));
+			this->member_block_list[block][s]->set_id(block_name, block);
+			
+			if (this->member_block_list[block][s]->verify_savefile())
+				continue;
+			
+			this->member_block_list[block][s]->save_members();
 		}
 	}
+	
+	return true;
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
-const int ChunkManager::internal_build_inverted_members_receive_mode(const int sender_id)
+int ChunkManager<DataBlock, ScoreType>::internal_setup_samples(const unsigned int sample_limit)
 {
-	for (auto sample = -this->number_of_tiny_samples; sample < this->number_of_samples; ++sample)
+	this->sampling_flag = true;
+	
+	if (this->index_structure == nullptr)
 	{
-		auto s = sample + this->number_of_tiny_samples;
-
-		for (auto block = 0; block < this->number_of_blocks; ++block)
-		{
-			if (this->sampling_flag)
-				member_block = this->access_member_block(block);
-			else
-				member_block = this->access_member_block(block, sample);
-
-			int ack_flag;
-			member_block->load_members();
-			Daemon::comm().send(sender_id, 0, *member_block);
-			Daemon::comm().recv(sender_id, 0, ack_flag);
-			member_block->clear_members();
-		}
+		this->load_chunk_data();
+		this->load_index_structure(4);
 	}
+	
+	if (sample_limit > 0u)
+		this->number_of_samples = sample_limit;
+	else
+		this->number_of_samples = 1u;
+	
+	auto buffer_size = static_cast<unsigned int>(this->index_structure->get_number_of_levels());
+	
+	if (this->number_of_samples > buffer_size)
+		buffer_size = this->number_of_samples;
+	
+	this->sample_size_list.resize(buffer_size);
+	this->index_structure->get_sample_sizes(/*this->sample_size_list, buffer_size*/);
+	
+	for (auto sample = this->number_of_samples; sample < buffer_size; ++sample)
+		this->sample_size_list[sample] = 0u;
+	
+	return this->number_of_samples;
 }
 /*-----------------------------------------------------------------------------------------------*/
 #endif

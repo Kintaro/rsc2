@@ -38,14 +38,14 @@
 // Contact e-mail address: meh@nii.ac.jp, meh@acm.org
 //                         mail.wollwage@gmail.com
 
-#ifndef __DISTANCE_DATA_H__
-#define __DISTANCE_DATA_H__
+#ifndef __DEFAULT_OPTIONS_H__
+#define __DEFAULT_OPTIONS_H__
 
-class DistanceData
+class DefaultOptions
 {
 public:
-	virtual ~DistanceData() {};
-	virtual double distance_to(const DistanceData& to) { return 0.0; };
+	static void set_default_options();
+	static void initialize_enums();
 };
 
 #endif

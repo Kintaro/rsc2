@@ -38,66 +38,45 @@
 // Contact e-mail address: meh@nii.ac.jp, meh@acm.org
 //                         mail.wollwage@gmail.com
 
-#include "FileUtil.h"
+#include "DefaultOptions.h"
+#include "Options.h"
+#include "EnumParser.h"
+
+#include "ListStyle.h"
 
 /*-----------------------------------------------------------------------------------------------*/
-boost::optional<bool> FileUtil::is_binary;
-/*-----------------------------------------------------------------------------------------------*/
-bool FileUtil::open_read(const std::string& path, std::ifstream& file, const boost::optional<bool>& binary)
+void DefaultOptions::set_default_options()
 {
-	if (!is_binary)
-		is_binary = Options::get_option_as<bool>("use-binary-files");
+	Options::set_option("use-binary-files", "false");
+	Options::set_option("info-output", "true");
+	Options::set_option("debug-output", "false");
 	
-	if (!binary)
-	{
-		if (*is_binary)
-			file.open(path, std::ios::in | std::ios::binary);
-		else 
-			file.open(path, std::ios::in);
-	}
-	else if (binary && *binary)
-		file.open(path, std::ios::in | std::ios::binary);
-	else
-		file.open(path, std::ios::in);
-	
-	return !file.fail();
+	Options::set_option("vecdata-filename-extension", "dvf");
+
+	// RscClusterer defaults
+	Options::set_option("number-of-tiny-samples", "2");
+	Options::set_option("rsc-list-style", "1");
+	Options::set_option("maximum-list-range-limit", "60");
+	Options::set_option("minimum-list-range-limit", "7");
+	Options::set_option("maximum-mini-list-range-limit", "20");
+	Options::set_option("minimum-mini-list-range-limit", "2");
+	Options::set_option("maximum-micro-list-range-limit", "20");
+	Options::set_option("minimum-micro-list-range-limit", "2");
+
+	Options::set_option("maximum-list-accept-limit", "50");
+	Options::set_option("minimum-list-accept-limit", "13");
+	Options::set_option("maximum-mini-list-accept-limit", "13");
+	Options::set_option("minimum-mini-list-accept-limit", "3");
+	Options::set_option("maximum-micro-list-accept-limit", "13");
+	Options::set_option("minimum-micro-list-accept-limit", "3");
+
+	Options::set_option("list-style", "medium");
 }
 /*-----------------------------------------------------------------------------------------------*/
-bool FileUtil::open_write(const std::string& path, std::ofstream& file, const boost::optional<bool>& binary)
+void DefaultOptions::initialize_enums()
 {
-	if (!is_binary)
-		is_binary = Options::get_option_as<bool>("use-binary-files");
-	
-	if (!binary)
-	{
-		if (*is_binary)
-			file.open(path, std::ios::out | std::ios::binary);
-		else 
-			file.open(path, std::ios::out);
-	}
-	else if (*binary)
-		file.open(path, std::ios::out | std::ios::binary);
-	else
-		file.open(path, std::ios::out);
-	
-	return !file.fail();
-}
-/*-----------------------------------------------------------------------------------------------*/
-void FileUtil::space(std::ofstream& file)
-{
-	if (!is_binary)
-		is_binary = Options::get_option_as<bool>("use-binary-files");
-	
-	if (!*is_binary)
-		file << " ";
-}
-/*-----------------------------------------------------------------------------------------------*/
-void FileUtil::newline(std::ofstream& file)
-{
-	if (!is_binary)
-		is_binary = Options::get_option_as<bool>("use-binary-files");
-	
-	if (!*is_binary)
-		file << std::endl;
+	EnumParser<ListStyle>::add_value("small", ListStyle::Small);
+	EnumParser<ListStyle>::add_value("medium", ListStyle::Medium);
+	EnumParser<ListStyle>::add_value("large", ListStyle::Large);
 }
 /*-----------------------------------------------------------------------------------------------*/

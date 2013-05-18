@@ -38,69 +38,35 @@
 // Contact e-mail address: meh@nii.ac.jp, meh@acm.org
 //                         mail.wollwage@gmail.com
 
-#ifndef __OPTIONS_H__
-#define __OPTIONS_H__
+#ifndef __ENUM_PARSER_H__
+#define __ENUM_PARSER_H__
 
-#include <map>
 #include <string>
-#include <type_traits>
-#include <boost/lexical_cast.hpp>
-#include "EnumParser.h"
+#include <map>
 
-class Options
-{
-private:
-	static std::map<std::string, std::string> values;
+template<typename T>
+class EnumParser {
 public:
-	static void internal_set_option(const std::string& name, const std::string& value);
-	static std::string internal_get_option(const std::string& name);
-	static void set_option(const std::string& name, const std::string& value);
-	static std::string get_option(const std::string& name);
-	template<typename T> static const typename std::enable_if<!std::is_enum<T>::value, T>::type get_option_as(const std::string& name);
-	template<typename T> static const typename std::enable_if<std::is_enum<T>::value, T>::type get_option_as(const std::string& name);
-	template<typename T> static const typename std::enable_if<!std::is_enum<T>::value, T>::type get_option_as(const std::string& name, const T default_value);
-	template<typename T> static const typename std::enable_if<std::is_enum<T>::value, T>::type get_option_as(const std::string& name, const T default_value);
-	static bool internal_parse_option(const std::string& option);
-	static bool internal_parse_command_line_options(int argc, char** argv);
-	static bool internal_parse_options_from_xml(const std::string& filename);
-	static bool is_option_set(const std::string& name);
-	static std::map<std::string, std::string>& get_values() { return values; }
+	static void add_value(const std::string& name, const T& value);
+	static const T get_value(const std::string& name);
+	//static const T get_name(const T& value);
+private:
+	static std::map<std::string, T> mapping;
 };
-
 /*-----------------------------------------------------------------------------------------------*/
 template<typename T>
-const typename std::enable_if<!std::is_enum<T>::value, T>::type 
-Options::get_option_as(const std::string& name)
+void EnumParser<T>::add_value(const std::string& name, const T& value)
 {
-	return boost::lexical_cast<T>(get_option(name));
+	mapping[name] = value;
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename T>
-const typename std::enable_if<std::is_enum<T>::value, T>::type 
-Options::get_option_as(const std::string& name)
+const T EnumParser<T>::get_value(const std::string& name) 
 {
-	return EnumParser<T>::get_value(get_option(name));
+	return mapping[name];
 }
 /*-----------------------------------------------------------------------------------------------*/
-template<typename T>
-const typename std::enable_if<!std::is_enum<T>::value, T>::type 
-Options::get_option_as(const std::string& name, const T default_value)
-{
-	if (!is_option_set(name))
-		return default_value;
-
-	return boost::lexical_cast<T>(get_option(name));
-}
-/*-----------------------------------------------------------------------------------------------*/
-template<typename T>
-const typename std::enable_if<std::is_enum<T>::value, T>::type 
-Options::get_option_as(const std::string& name, const T default_value)
-{
-	if (!is_option_set(name))
-		return default_value;
-
-	return EnumParser<T>::get_value(get_option(name));
-}
+template<typename T> std::map<std::string, T> EnumParser<T>::mapping;
 /*-----------------------------------------------------------------------------------------------*/
 
 #endif

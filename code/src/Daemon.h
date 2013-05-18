@@ -63,8 +63,8 @@ public:
 	static const boost::mpi::communicator& world() { return *world_communicator; }
 	static const boost::mpi::communicator& comm() { return *communicator; }
 
-	static const void set_world(boost::mpi::communicator* w) { world_communicator = w; }
-	static const void set_communicator(boost::mpi::communicator* c) { communicator = c; }
+	static void set_world(boost::mpi::communicator* w) { world_communicator = w; }
+	static void set_communicator(boost::mpi::communicator* c) { communicator = c; }
 private:
 	bool running;
 	static boost::mpi::communicator* world_communicator;

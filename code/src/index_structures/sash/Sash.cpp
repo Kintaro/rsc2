@@ -43,17 +43,494 @@
 #include "../../Sort.h"
 #include "Sash.h"
 
+int Sash::partialQuickSort
+(int howMany,
+ std::vector<double>& distList, std::vector<unsigned int>& indexList,
+ int rangeFirst, int rangeLast)
+//
+// Sorts the smallest items in the supplied list ranges, in place,
+//   according to distances.
+// A partial quicksort is used to sort only the requested number
+//   of items.
+// The smallest items are placed at the beginning of the range,
+//   in increasing order of distance.
+// WARNING: the remainder of the range can become corrupted
+//   by this operation!
+//
+{
+    unsigned int i;
+    unsigned int pivotLoc = 0;
+    unsigned int pivotIndex = 0;
+    float pivotDist = 0.0F;
+    unsigned int tempIndex = 0;
+    float tempDist = 0.0F;
+    unsigned int low = 0;
+    unsigned int high = 0;
+    unsigned int numFound = 0;
+    unsigned int numDuplicatesToReplace = 0;
+    unsigned int tieBreakIndex = 0;
+
+    // If the range is empty, or if we've been asked to sort no
+    //   items, then return immediately.
+
+    if ((rangeLast < rangeFirst) || (howMany < 1))
+    {
+        return 0;
+    }
+
+    // If there is exactly one element, then again there is nothing
+    //   that need be done.
+
+    if (rangeLast == rangeFirst)
+    {
+        return 1;
+    }
+
+    // If the range to be sorted is small, just do an insertion sort.
+
+    if (rangeLast - rangeFirst < 7)
+    {
+        high = rangeFirst + 1;
+        tieBreakIndex = indexList[random_generator () % (rangeLast-rangeFirst+1)];
+
+        // The outer while loop considers each item in turn (starting
+        //   with the second item in the range), for insertion unsigned into
+        //   the sorted list of items that precedes it.
+
+        while (static_cast<int>(high) <= rangeLast)
+        {
+            // Copy the next item to be inserted, as the "pivot".
+            // Start the insertion tests with its immediate predecessor.
+
+            pivotDist = distList[high];
+            pivotIndex = indexList[high];
+            low = high - 1;
+
+            // Work our way down through previously-sorted items
+            //   towards the start of the range.
+
+            while (static_cast<int>(low) >= rangeFirst)
+            {
+                // Compare the item to be inserted (the "pivot") with
+                //   the current item.
+
+                if (distList[low] < pivotDist)
+                {
+                    // The current item precedes the pivot in the sorted order.
+                    // Break out of the loop - we have found the insertion pounsigned int.
+
+                    break;
+                }
+                else if (distList[low] > pivotDist)
+                {
+                    // The current item follows the pivot in the sorted order.
+                    // Shift the current item one spot upwards, to make room
+                    //   for inserting the pivot below it.
+
+                    distList[low+1] = distList[low];
+                    indexList[low+1] = indexList[low];
+                    low--;
+                }
+                else
+                {
+                    if (indexList[low] != pivotIndex)
+                    {
+                        // The items have the same sort value but are not identical.
+                        // Break the tie pseudo-randomly.
+
+                        if (
+                            (
+                                (tieBreakIndex < pivotIndex)
+                                &&
+                                (tieBreakIndex < indexList[low])
+                                &&
+                                (indexList[low] < pivotIndex)
+                            )
+                            ||
+                            (
+                                (tieBreakIndex >= pivotIndex)
+                                &&
+                                (
+                                    (tieBreakIndex < indexList[low])
+                                    ||
+                                    (indexList[low] < pivotIndex)
+                                )
+                            )
+                        )
+                        {
+                            // The current item precedes the pivot in the sorted order.
+                            // Break out of the loop - we have found the insertion pounsigned int.
+
+                            break;
+                        }
+                        else
+                        {
+                            // The current item follows the pivot in the sorted order.
+                            // Shift the current item one spot upwards, to make room
+                            //   for inserting the pivot below it.
+
+                            distList[low+1] = distList[low];
+                            indexList[low+1] = indexList[low];
+                            low--;
+                        }
+                    }
+                    else
+                    {
+                        // Oh no!
+                        // We opened up an empty slot for the pivot,
+                        //   only to find that it's a duplicate of the current item!
+                        // Close the slot up again, and eliminate the duplicate.
+
+                        for (i=low+1; i<high; i++)
+                        {
+                            distList[i] = distList[i+1];
+                            indexList[i] = indexList[i+1];
+                        }
+
+                        // To eliminate the duplicate, overwrite its location with the
+                        //   item from the end of the range, and then shrink the range
+                        //   by one.
+
+                        distList[high] = distList[rangeLast];
+                        indexList[high] = indexList[rangeLast];
+                        rangeLast--;
+
+                        // The next iteration must not advance "high", since we've
+                        //   just put a new element unsigned into it which needs to be processed.
+                        // Decrementing it here will cancel out with the incrementation
+                        //   of the next iteration.
+
+                        high--;
+
+                        // When we break the loop, the pivot element will be put
+                        //   in its proper place ("low" + 1)
+                        // Here, the proper place is where rangeLast used to be.
+                        // To achieve this, we need to adjust "low" here.
+
+                        low = rangeLast;
+
+                        break;
+                    }
+                }
+            }
+
+            // If we've made it to here, we've found the insertion
+            //   spot for the current element.
+            // Perform the insertion.
+
+            low++;
+            distList[low] = pivotDist;
+            indexList[low] = pivotIndex;
+
+            // Move to the next item to be inserted in the growing sorted list.
+
+            high++;
+        }
+
+        // Return the number of sorted items found.
+
+        numFound = rangeLast - rangeFirst + 1;
+
+        if (static_cast<int>(numFound) > howMany)
+        {
+            numFound = howMany;
+        }
+
+        return numFound;
+    }
+
+    // The range to be sorted is large, so do a partial quicksort.
+    // Select a pivot item, and swap it with the item at the beginning
+    //   of the range.
+
+    pivotLoc = rangeFirst + (random_generator () % (rangeLast-rangeFirst+1));
+    tieBreakIndex = indexList[random_generator () % (rangeLast-rangeFirst+1)];
+
+    pivotDist = distList[pivotLoc];
+    distList[pivotLoc] = distList[rangeFirst];
+    distList[rangeFirst] = pivotDist;
+
+    pivotIndex = indexList[pivotLoc];
+    indexList[pivotLoc] = indexList[rangeFirst];
+    indexList[rangeFirst] = pivotIndex;
+
+    // Eliminate all duplicates of the pivot.
+    // Any duplicates found are pushed to the end of the range, and
+    //   the range shrunk by one (thereby excluding them).
+
+    i = rangeFirst + 1;
+
+    while (static_cast<int>(i) <= rangeLast)
+    {
+        if ((pivotDist == distList[i]) && (pivotIndex == indexList[i]))
+        {
+            distList[i] = distList[rangeLast];
+            indexList[i] = indexList[rangeLast];
+            rangeLast--;
+        }
+        else
+        {
+            i++;
+        }
+    }
+
+    // Partition the remaining items with respect to the pivot.
+    // This efficient method is adapted from the one outlined in
+    //   Cormen, Leiserson & Rivest.
+    // The range is scanned from both ends.
+    // Items with small distances are placed below "low", and those
+    //   with large distances are placed above "high".
+    // Where "low" and "high" meet, the pivot item is inserted.
+
+    low = rangeFirst;
+    high = rangeLast + 1;
+
+    while (true)
+    {
+        // Move the "high" endpounsigned int down until it meets either the pivot,
+        //   or something that belongs on the "low" side.
+        // If the key values are tied, decide pseudo-randomly.
+
+        do
+        {
+            high--;
+        }
+        while (
+            (distList[high] > pivotDist)
+            ||
+            (
+                (distList[high] == pivotDist)
+                &&
+                (
+                    (
+                        (tieBreakIndex >= pivotIndex)
+                        &&
+                        (pivotIndex < indexList[high])
+                        &&
+                        (indexList[high] <= tieBreakIndex)
+                    )
+                    ||
+                    (
+                        (tieBreakIndex < pivotIndex)
+                        &&
+                        (
+                            (pivotIndex < indexList[high])
+                            ||
+                            (indexList[high] <= tieBreakIndex)
+                        )
+                    )
+                )
+            )
+        );
+
+        // Move the "low" endpounsigned int up until it meets either the pivot,
+        //   or something that belongs on the "high" side.
+        // If the key values are tied, decide pseudo-randomly.
+
+        do
+        {
+            low++;
+        }
+        while (
+            (low < high)
+            &&
+            (
+                (distList[low] < pivotDist)
+                ||
+                (
+                    (distList[low] == pivotDist)
+                    &&
+                    (
+                        (
+                            (tieBreakIndex < pivotIndex)
+                            &&
+                            (tieBreakIndex < indexList[low])
+                            &&
+                            (indexList[low] < pivotIndex)
+                        )
+                        ||
+                        (
+                            (tieBreakIndex >= pivotIndex)
+                            &&
+                            (
+                                (tieBreakIndex < indexList[low])
+                                ||
+                                (indexList[low] < pivotIndex)
+                            )
+                        )
+                    )
+                )
+            )
+        );
+
+        // Have the "low" and "high" endpounsigned ints crossed?
+        // If not, we still have more work to do.
+
+        if (low < high)
+        {
+            // Swap the misplaced items, and try again.
+
+            tempDist = distList[low];
+            distList[low] = distList[high];
+            distList[high] = tempDist;
+
+            tempIndex = indexList[low];
+            indexList[low] = indexList[high];
+            indexList[high] = tempIndex;
+        }
+        else
+        {
+            // We found the cross-over pounsigned int.
+
+            break;
+        }
+    }
+
+    // The pivot value ends up at the location referenced by "high".
+    // Swap it with the pivot (which resides at the beginning of the range).
+
+    distList[rangeFirst] = distList[high];
+    distList[high] = pivotDist;
+
+    indexList[rangeFirst] = indexList[high];
+    indexList[high] = pivotIndex;
+
+    pivotLoc = high;
+
+    // The partition is complete.
+    // Recursively sort the items with smaller distance.
+
+    numFound = partialQuickSort
+               (howMany, distList, indexList, rangeFirst, pivotLoc-1);
+
+    // If we found enough items (including the pivot), then we are done.
+    // Make sure the pivot is in its correct position, if it is used.
+
+    if (static_cast<int>(numFound) >= howMany - 1)
+    {
+        if (static_cast<int>(numFound) == howMany - 1)
+        {
+            distList[rangeFirst+numFound] = pivotDist;
+            indexList[rangeFirst+numFound] = pivotIndex;
+        }
+
+        return howMany;
+    }
+
+    // We didn't find enough items, even taking the pivot unsigned into account.
+    // Were any duplicates discovered during this call?
+
+    if (numFound < pivotLoc - rangeFirst)
+    {
+        // Duplicates were discovered!
+        // Figure out the minimum number of duplicates that must be
+        //   replaced by items from the end of the range in order to
+        //   leave the non-duplicates in contiguous locations.
+
+        numDuplicatesToReplace = pivotLoc - rangeFirst - numFound;
+        high = rangeLast;
+
+        if (numDuplicatesToReplace > rangeLast - pivotLoc)
+        {
+            numDuplicatesToReplace = rangeLast - pivotLoc;
+            rangeLast = rangeFirst + numFound + numDuplicatesToReplace;
+        }
+        else
+        {
+            rangeLast -= numDuplicatesToReplace;
+        }
+
+        // Replace the required number of duplicates by items from
+        //   the end of the range.
+        // The size of the range will shrink as a result.
+
+        low = rangeFirst + numFound + 1;
+
+        for (i=0; i<numDuplicatesToReplace; i++)
+        {
+            distList[low] = distList[high];
+            indexList[low] = indexList[high];
+            low++;
+            high--;
+        }
+    }
+
+    // Put the pivot element in its proper place.
+
+    distList[rangeFirst+numFound] = pivotDist;
+    indexList[rangeFirst+numFound] = pivotIndex;
+
+    // Finish up by sorting larger-distance items.
+    // Note that the number of sorted items needed has dropped.
+
+    return numFound + 1 + partialQuickSort
+           (howMany - numFound - 1,
+            distList, indexList,
+            rangeFirst+numFound+1, rangeLast);
+}
+
 /*-----------------------------------------------------------------------------------------------*/
 std::mt19937 Sash::random_generator;
 /*-----------------------------------------------------------------------------------------------*/
 Sash::Sash () : data(boost::none)
 {
-	seed = 314159UL;
+    this->maxParents = 4;
+    this->maxChildren = 16;
+    this->intern_to_extern_mapping.clear();
+    this->sample_size_list.clear();
+    this->levels = 0u;
+    this->parent_index_list.clear();
+    this->parent_distance_list.clear();
+    this->parent_size_list.clear();
+    this->child_index_list.clear();
+    this->child_distance_list.clear();
+    this->child_size_list.clear();
+    this->query = nullptr;
+    this->distance_from_query_list.clear();
+    this->stored_distance_index_list.clear();
+    this->number_of_stored_distances = 0;
+    this->number_of_distance_comparisons = 0UL;
+    this->level_quota_list.clear();
+    this->query_result_index_list.clear();
+    this->query_result_distance_list.clear();
+    this->query_result_size = 0;
+    this->query_result_sample_size = 0;
+    this->scratch_index_list.clear();
+    this->scratch_distance_list.clear();
+    this->scratch_size = 0;
+    this->number_of_orphans = 0;
+	
+	seed = 314159;
 	random_generator.seed(seed);
 }
 /*-----------------------------------------------------------------------------------------------*/
 Sash::Sash (unsigned long seed) : data(boost::none) 
 {
+    this->maxParents = 4;
+    this->maxChildren = 16;
+    this->intern_to_extern_mapping.clear();
+    this->sample_size_list.clear();
+    this->levels = 0u;
+    this->parent_index_list.clear();
+    this->parent_distance_list.clear();
+    this->parent_size_list.clear();
+    this->child_index_list.clear();
+    this->child_distance_list.clear();
+    this->child_size_list.clear();
+    this->query = nullptr;
+    this->distance_from_query_list.clear();
+    this->stored_distance_index_list.clear();
+    this->number_of_stored_distances = 0;
+    this->number_of_distance_comparisons = 0UL;
+    this->level_quota_list.clear();
+    this->query_result_index_list.clear();
+    this->query_result_distance_list.clear();
+    this->query_result_size = 0;
+    this->query_result_sample_size = 0;
+    this->scratch_index_list.clear();
+    this->scratch_distance_list.clear();
+    this->scratch_size = 0;
+    this->number_of_orphans = 0;
 	random_generator.seed (seed);
 	this->seed = seed;
 }
@@ -62,7 +539,7 @@ Sash::~Sash ()
 {
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::build (std::vector<std::shared_ptr<DistanceData>>& inputData, const boost::optional<int>& numParents)
+int Sash::build (std::vector<std::shared_ptr<DistanceData>>& inputData, const boost::optional<unsigned int>& numParents)
 {
 	// If the data set is empty, then abort.
 	if (inputData.size() <= 1)
@@ -87,7 +564,7 @@ const int Sash::build (std::vector<std::shared_ptr<DistanceData>>& inputData, co
 	for (auto i = 0u; i < inputData.size(); ++i)
 		this->intern_to_extern_mapping[i] = i;
 
-	for (auto i = inputData.size() - 1; i >= 0u; --i)
+	for (int i = inputData.size() - 1; i >= 0; --i)
 		std::swap(this->intern_to_extern_mapping[random_generator() % (i + 1)], this->intern_to_extern_mapping[i]);
 
 	// Recursively build the SASH structure.
@@ -98,7 +575,7 @@ const int Sash::build (std::vector<std::shared_ptr<DistanceData>>& inputData, co
 	return inputData.size();
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::build (const std::string& filename, std::vector<std::shared_ptr<DistanceData>>& inputData)
+unsigned int Sash::build (const std::string& filename, std::vector<std::shared_ptr<DistanceData>>& inputData)
 {
 	// If the data set is empty, then abort.
 	if (filename.empty() || (inputData.size() <= 0))
@@ -116,21 +593,21 @@ const int Sash::build (const std::string& filename, std::vector<std::shared_ptr<
 
 	// Open the file containing the SASH.
 	// If we fail to open the file, then abort.
-	std::fstream in_file;
+	std::ifstream in_file;
 	FileUtil::open_read(filename + ".sash", in_file);
 
 	if (!in_file.is_open())
 	{
-		Daemon::error("ERROR (from build): file %s.sash could not be opened.", filename.c_str());
+		//Daemon::error("ERROR (from build): file %s.sash could not be opened.", filename.c_str());
 		return 0;
 	}
 
 	// The second parameter is omitted and just read
-	unsigned int inSize       = FileUtil::read_from_file<unsigned >(in_file);
-	                            FileUtil::read_from_file<unsigned >(in_file);
-	unsigned int inMaxParents = FileUtil::read_from_file<unsigned >(in_file);
-	this->number_of_orphans = FileUtil::read_from_file<int>(in_file);
-	this->seed       = FileUtil::read_from_file<int>(in_file);
+	const unsigned int inSize       = FileUtil::read_from_file<unsigned int>(in_file);
+	                                  FileUtil::read_from_file<unsigned int>(in_file);
+	const unsigned int inMaxParents = FileUtil::read_from_file<unsigned int>(in_file);
+	this->number_of_orphans =         FileUtil::read_from_file<unsigned int>(in_file);
+	this->seed       =                FileUtil::read_from_file<unsigned int>(in_file);
 
 	// Are these parameter values what we expected?
 	// If not, then abort!
@@ -155,7 +632,7 @@ const int Sash::build (const std::string& filename, std::vector<std::shared_ptr<
 	// Build the list of children, if any exist.
 	for (auto i = 0u; i < inputData.size(); ++i)
 	{
-		unsigned int loc = FileUtil::read_from_file<unsigned int>(in_file);
+		const unsigned int loc = FileUtil::read_from_file<unsigned int>(in_file);
 
 		if (loc != i)
 		{
@@ -165,8 +642,8 @@ const int Sash::build (const std::string& filename, std::vector<std::shared_ptr<
 			throw new std::exception();
 		}
 
-		this->intern_to_extern_mapping[i] = FileUtil::read_from_file<int>(in_file);
-		int numChildren = FileUtil::read_from_file<int>(in_file);
+		this->intern_to_extern_mapping[i] = FileUtil::read_from_file<unsigned int>(in_file);
+		const int numChildren = FileUtil::read_from_file<unsigned int>(in_file);
 
 		if (numChildren > 0)
 			this->child_index_list[i].resize(numChildren);
@@ -174,7 +651,7 @@ const int Sash::build (const std::string& filename, std::vector<std::shared_ptr<
 			this->child_index_list[i].clear();
 
 		for (int j = 0; j < numChildren; ++j)
-			this->child_index_list[i][j] = FileUtil::read_from_file<int>(in_file);
+			this->child_index_list[i][j] = FileUtil::read_from_file<unsigned int>(in_file);
 	}
 
 	in_file.close();
@@ -184,16 +661,14 @@ const int Sash::build (const std::string& filename, std::vector<std::shared_ptr<
 	return inputData.size();
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::find_all_in_range (const std::shared_ptr<DistanceData> query, const double limit, const boost::optional<int>& sampleRate)
+int Sash::find_all_in_range (const std::shared_ptr<DistanceData> query, const double limit, const boost::optional<unsigned int>& sampleRate)
 {
-	this->query_result_index_list.clear();
-	this->query_result_distance_list.clear();
+	this->query_result_size = 0u;
 	this->query_result_sample_size = 0;
 	this->number_of_distance_comparisons = 0UL;
 
 	if ((this->data->size() <= 0)
 			|| (limit < 0.0)
-			|| (*sampleRate < 0)
 			|| ((*sampleRate >= levels) && (this->data->size() > 1)))
 	{
 		Daemon::error("ERROR (from find_all_in_range): invalid argument(s).");
@@ -205,18 +680,16 @@ const int Sash::find_all_in_range (const std::shared_ptr<DistanceData> query, co
 	return internal_find_all_in_range (limit, *sampleRate);
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::find_most_in_range(const std::shared_ptr<DistanceData> query, const double limit, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
+int Sash::find_most_in_range(const std::shared_ptr<DistanceData> query, const double limit, const boost::optional<unsigned int>& sampleRate, const boost::optional<double>& scaleFactor)
 {
-	this->query_result_index_list.clear();
-	this->query_result_distance_list.clear();
+	this->query_result_size = 0u;
 	this->query_result_sample_size = 0;
 	this->number_of_distance_comparisons = 0UL;
 
 	if ((this->data->size() <= 0)
 			|| (limit < 0.0)
-			|| (*sampleRate < 0)
 			|| ((*sampleRate >= levels) && (this->data->size() > 1))
-			|| (*scaleFactor <= 0.0F))
+			|| (*scaleFactor <= 0.0))
 	{
 		Daemon::error("ERROR (from find_most_in_range): invalid argument(s).");
 		throw new std::exception();
@@ -227,20 +700,18 @@ const int Sash::find_most_in_range(const std::shared_ptr<DistanceData> query, co
 	return internal_find_most_in_range(limit, *sampleRate, *scaleFactor);
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::find_near(const std::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
+int Sash::find_near(const std::shared_ptr<DistanceData> query, const unsigned int howMany, const boost::optional<unsigned int>& sampleRate, const boost::optional<double>& scaleFactor)
 {
-	this->query_result_index_list.clear();
-	this->query_result_distance_list.clear();
+	this->query_result_size = 0u;
 	this->query_result_sample_size = 0;
 	this->number_of_distance_comparisons = 0UL;
 
 	if ((this->data->size() <= 0)
 			|| (howMany <= 0)
-			|| (*sampleRate < 0)
 			|| ((*sampleRate >= levels) && (this->data->size() > 1))
 			|| (*scaleFactor <= 0.0))
 	{
-		Daemon::error("ERROR (from find_near): invalid argument(s).");
+		Daemon::error("ERROR (from find_near): invalid argument(s). [%i, %i, %i, %i, %f]", this->data->size(), howMany, *sampleRate, levels, *scaleFactor);
 		throw new std::exception();
 	}
 
@@ -249,16 +720,14 @@ const int Sash::find_near(const std::shared_ptr<DistanceData> query, const int h
 	return this->internal_find_near(howMany, *sampleRate, *scaleFactor);
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::find_nearest (const std::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate)
+int Sash::find_nearest (const std::shared_ptr<DistanceData> query, const unsigned int howMany, const boost::optional<unsigned int>& sampleRate)
 {
-	this->query_result_index_list.clear();
-	this->query_result_distance_list.clear();
+	this->query_result_size = 0u;
 	this->query_result_sample_size = 0;
 	this->number_of_distance_comparisons = 0UL;
 
 	if ((this->data->empty())
 			|| (howMany <= 0)
-			|| (*sampleRate < 0)
 			|| ((*sampleRate >= levels) && (this->data->size() > 1)))
 	{
 		Daemon::error ("ERROR (from find_nearest): invalid argument(s).");
@@ -275,9 +744,9 @@ std::vector<std::shared_ptr<DistanceData>>& Sash::get_data()
 	return *data;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const std::vector<int> Sash::get_extern_to_intern_mapping() const
+const std::vector<unsigned int> Sash::get_extern_to_intern_mapping() const
 {
-	std::vector<int> result;
+	std::vector<unsigned int> result;
 	result.resize(this->intern_to_extern_mapping.size());
 
 	for (auto i = 0u; i < result.size(); ++i)
@@ -286,36 +755,36 @@ const std::vector<int> Sash::get_extern_to_intern_mapping() const
 	return result;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const std::vector<int> Sash::get_intern_to_extern_mapping() const
+const std::vector<unsigned int> Sash::get_intern_to_extern_mapping() const
 {
 	return this->intern_to_extern_mapping;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::get_max_number_of_parents () const
+int Sash::get_max_number_of_parents () const
 {
 	return maxParents;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::get_number_of_items () const
+int Sash::get_number_of_items () const
 {
 	return this->data->size();
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::get_number_of_levels () const
+int Sash::get_number_of_levels () const
 {
 	return levels;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::get_number_of_orphans () const
+int Sash::get_number_of_orphans () const
 {
 	return number_of_orphans;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const double Sash::get_result_accuracy (const std::vector<double>& exactDistList) const
+double Sash::get_result_accuracy (const std::vector<double>& exactDistList) const
 {
 	unsigned int loc = 0u;
 
-	if (exactDistList.size() < this->query_result_index_list.size())
+	if (exactDistList.size() < this->query_result_size)
 	{
 		Daemon::error ("ERROR (from get_result_accuracy): ");
 		Daemon::error ("exact distance list is too small.");
@@ -325,7 +794,7 @@ const double Sash::get_result_accuracy (const std::vector<double>& exactDistList
 
 	for (auto i = 0u; i < exactDistList.size(); i++)
 	{
-		if ((loc < this->query_result_index_list.size())
+		if ((loc < this->query_result_size)
 				&& (this->query_result_distance_list[loc] <= exactDistList[i]))
 			loc++;
 	}
@@ -337,33 +806,33 @@ const std::vector<double> Sash::get_result_distances () const
 {
 	std::vector<double> result;
 
-	for (auto i = 0u; i < this->query_result_distance_list.size(); ++i)
+	for (auto i = 0u; i < this->query_result_size; ++i)
 		result.push_back(this->query_result_distance_list[i]);
 
 	return result;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::get_result_distance_comparisons () const
+int Sash::get_result_distance_comparisons () const
 {
 	return this->number_of_distance_comparisons;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const std::vector<int> Sash::get_result_indices () const
+const std::vector<unsigned int> Sash::get_result_indices () const
 {
-	std::vector<int> result;
+	std::vector<unsigned int> result;
 
-	for (auto i = 0u; i < this->query_result_index_list.size(); ++i)
+	for (auto i = 0u; i < this->query_result_size; ++i)
 		result.push_back(this->intern_to_extern_mapping[this->query_result_index_list[i]]);
 
 	return result;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::get_number_of_results_found () const
+int Sash::get_number_of_results_found () const
 {
-	return this->query_result_index_list.size();
+	return this->query_result_size;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::get_result_sample_size () const
+int Sash::get_result_sample_size () const
 {
 	return this->query_result_sample_size;
 }
@@ -373,13 +842,13 @@ unsigned long Sash::getRNGSeed ()
 	return seed;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const std::vector<int> Sash::get_sample_assignment() const
+const std::vector<unsigned int> Sash::get_sample_assignment() const
 {
-	std::vector<int> result;
+	std::vector<unsigned int> result;
 	result.resize(0);
 
-	for (int lvl = 0; lvl < levels; ++lvl)
-		for (int i = sample_size_list[lvl + 1]; i < sample_size_list[lvl]; ++i)
+	for (auto lvl = 0u; lvl < levels; ++lvl)
+		for (auto i = sample_size_list[lvl + 1]; i < sample_size_list[lvl]; ++i)
 			result[this->intern_to_extern_mapping[i]] = lvl;
 
 	result[this->intern_to_extern_mapping[0]] = levels;
@@ -387,7 +856,7 @@ const std::vector<int> Sash::get_sample_assignment() const
 	return result;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const std::vector<int> Sash::get_sample_sizes () const
+const std::vector<unsigned int> Sash::get_sample_sizes () const
 {
 	return this->sample_size_list;
 }
@@ -397,7 +866,7 @@ void Sash::reset_query ()
 	this->set_new_query(nullptr);
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::save_to_file (const std::string& filename)
+unsigned int Sash::save_to_file (const std::string& filename)
 {
 	// If the SASH has not yet been built, abort.
 	if (this->data->size() <= 0)
@@ -405,7 +874,7 @@ const int Sash::save_to_file (const std::string& filename)
 
 	// Open the file for writing.
 	// If this fails, then abort.
-	std::fstream out_file;
+	std::ofstream out_file;
 	FileUtil::open_write(filename + ".sash", out_file);
 
 	if (!out_file.is_open())
@@ -414,11 +883,11 @@ const int Sash::save_to_file (const std::string& filename)
 		throw new std::exception();
 	}
 
-	FileUtil::write_to_file<int>(out_file, this->data->size()); FileUtil::space(out_file);
-	FileUtil::write_to_file<int>(out_file, levels); FileUtil::space(out_file);
-	FileUtil::write_to_file<int>(out_file, maxParents); FileUtil::space(out_file);
-	FileUtil::write_to_file<int>(out_file, number_of_orphans); FileUtil::space(out_file);
-	FileUtil::write_to_file<int>(out_file, seed); FileUtil::space(out_file);
+	FileUtil::write_to_file<unsigned int>(out_file, this->data->size()); FileUtil::space(out_file);
+	FileUtil::write_to_file<unsigned int>(out_file, levels); FileUtil::space(out_file);
+	FileUtil::write_to_file<unsigned int>(out_file, maxParents); FileUtil::space(out_file);
+	FileUtil::write_to_file<unsigned int>(out_file, number_of_orphans); FileUtil::space(out_file);
+	FileUtil::write_to_file<unsigned int>(out_file, seed); FileUtil::space(out_file);
 	FileUtil::newline(out_file);
 
 	// For each item, write out:
@@ -428,17 +897,17 @@ const int Sash::save_to_file (const std::string& filename)
 	//   and a list of the indices of the children.
 	for (auto i = 0u; i < this->data->size(); ++i)
 	{
-		int numChildren = child_size_list[i];
-		std::vector<int> childList = child_index_list[i];
+		const auto numChildren = child_size_list[i];
+		std::vector<unsigned int> childList = child_index_list[i];
 
-		FileUtil::write_to_file<int>(out_file, i); FileUtil::space(out_file);
-		FileUtil::write_to_file<int>(out_file, intern_to_extern_mapping[i]); FileUtil::space(out_file);
-		FileUtil::write_to_file<int>(out_file, numChildren); FileUtil::space(out_file);
+		FileUtil::write_to_file<unsigned int>(out_file, i); FileUtil::space(out_file);
+		FileUtil::write_to_file<unsigned int>(out_file, intern_to_extern_mapping[i]); FileUtil::space(out_file);
+		FileUtil::write_to_file<unsigned int>(out_file, numChildren); FileUtil::space(out_file);
 
-		for (int j = 0; j < numChildren; ++j)
+		for (auto j = 0u; j < numChildren; ++j)
 		{
 			FileUtil::space(out_file);
-			FileUtil::write_to_file<int>(out_file, childList[j]);
+			FileUtil::write_to_file<unsigned int>(out_file, childList[j]);
 		}
 
 		FileUtil::newline(out_file);
@@ -449,24 +918,24 @@ const int Sash::save_to_file (const std::string& filename)
 	return this->data->size();
 }
 /*-----------------------------------------------------------------------------------------------*/
-const double Sash::compute_distance_from_query(const int item_index)
+double Sash::compute_distance_from_query(const unsigned int item_index)
 {
 	if (this->distance_from_query_list[item_index] >= 0.0)
 		return this->distance_from_query_list[item_index];
 
-	this->distance_from_query_list[item_index] = query->distance_to (*(*this->data)[this->intern_to_extern_mapping[item_index]]);
+	this->distance_from_query_list[item_index] = 0.0;//query->distance_to (*((*this->data)[this->intern_to_extern_mapping[item_index]]));
 	this->stored_distance_index_list.push_back(item_index);
 	++this->number_of_distance_comparisons;
 
 	return this->distance_from_query_list[item_index];
 }
 /*-----------------------------------------------------------------------------------------------*/
-void Sash::internal_build (const int number_of_items)
+void Sash::internal_build (const unsigned int number_of_items)
 {
 	if (this->internal_build_explicitly(number_of_items))
 		return;
-	int halfSize = this->internal_build_recursively(number_of_items);
-	int quarterSize = this->internal_build_reserve_tentative_storage(halfSize);
+	const unsigned int halfSize = this->internal_build_recursively(number_of_items);
+	const unsigned int quarterSize = this->internal_build_reserve_tentative_storage(halfSize);
 	this->internal_build_construct_child_lists(number_of_items, halfSize); 
 	this->internal_build_trim_child_lists(quarterSize, halfSize);
 	this->internal_build_connect_orphans(number_of_items, halfSize);
@@ -474,15 +943,15 @@ void Sash::internal_build (const int number_of_items)
 	// All orphans have now found foster parents.
 	// The SASH has grown by one level.
 	// Clean up and return.
-	for (int parent = quarterSize; parent < halfSize; ++parent)
+	for (auto parent = quarterSize; parent < halfSize; ++parent)
 		this->child_distance_list[parent].clear();
 
 	++levels;
-
-	Daemon::debug("Number of SASH levels constructed: %d", levels);
+	
+	Daemon::debug("Number of SASH levels constructed: %d", this->levels);
 }
 /*-----------------------------------------------------------------------------------------------*/
-const bool Sash::internal_build_explicitly(const int number_of_items)
+bool Sash::internal_build_explicitly(const unsigned int number_of_items)
 {
 	if (number_of_items > maxChildren + 1)
 		return false;
@@ -490,45 +959,40 @@ const bool Sash::internal_build_explicitly(const int number_of_items)
 	// We have only a small number of items.
 	// Build the SASH explicitly, without recursion.
 	// Treat the first array item as the root.
-	this->parent_size_list[0] = 0;
-	this->parent_index_list.clear();
-	this->parent_distance_list.clear();
+	this->parent_size_list[0] = 0u;
+	this->parent_index_list[0].clear();
 
 	// Explicitly connect all other items as children of the root,
 	//   if they exist.
 	// Don't bother sorting the children according to distance from
 	//   the root.
-	if (number_of_items == 1)
+	if (number_of_items == 1u)
 	{
-		levels = 0;
-		this->child_size_list[0] = 0;
-		this->child_index_list.clear();
-		this->child_distance_list.clear();
+		this->levels = 0u;
+		this->child_size_list[0] = 0u;
+		this->child_index_list[0].clear();
 	}
 	else
 	{
 		// Establish connections from root to children.
-		levels = 1;
+		this->levels = 1u;
 		this->child_size_list[0] = number_of_items - 1;
-		this->child_index_list.resize(1);
-		this->child_distance_list.resize(1);
 		this->child_index_list[0].resize(number_of_items - 1);
-		this->child_distance_list[0].resize(number_of_items - 1);
 
-		for (int i = 1; i < number_of_items; ++i)
+		for (auto i = 1u; i < number_of_items; ++i)
 			this->child_index_list[0][i - 1] = i;
 	}
 
-	Daemon::debug("Number of SASH levels constructed: %d", levels);
+	Daemon::debug("Number of SASH levels constructed: %d", this->levels);
 
 	return true;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::internal_build_recursively(const int number_of_items)
-{
+int Sash::internal_build_recursively(const unsigned int number_of_items)
+{	
 	// The number of items is large.
 	// Build the SASH recursively on half the items.
-	int halfSize = (number_of_items + 1) / 2;
+	const auto halfSize = (number_of_items + 1) / 2;
 	this->internal_build (halfSize);
 
 	// We now want to connect the bottom level of the
@@ -538,7 +1002,7 @@ const int Sash::internal_build_recursively(const int number_of_items)
 	//   parents from the bottom level of the current SASH.
 	// Also, temporarily store (in "child_size_list") the number of times
 	//   each node is requested as a parent.
-	for (int child = halfSize; child < number_of_items; ++child)
+	for (auto child = halfSize; child < number_of_items; ++child)
 	{
 		if (child % 5000 == 4999)
 			Daemon::debug("Inserting item %d (out of %d)...", child + 1, this->data->size());
@@ -546,11 +1010,11 @@ const int Sash::internal_build_recursively(const int number_of_items)
 		this->set_new_query((*this->data)[this->intern_to_extern_mapping[child]]);
 		this->internal_find_parents(maxParents);
 
-		this->parent_size_list[child] = this->query_result_index_list.size();
+		this->parent_size_list[child] = this->query_result_size;
 		this->parent_index_list[child].resize(maxParents);
 		this->parent_distance_list[child].resize(maxParents);
 
-		for (auto i = 0u; i < this->query_result_index_list.size(); ++i)
+		for (auto i = 0u; i < this->query_result_size; ++i)
 		{
 			this->parent_index_list[child][i] = this->query_result_index_list[i];
 			this->parent_distance_list[child][i] = this->query_result_distance_list[i];
@@ -561,55 +1025,54 @@ const int Sash::internal_build_recursively(const int number_of_items)
 	return halfSize;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::internal_build_reserve_tentative_storage(const int halfSize)
+int Sash::internal_build_reserve_tentative_storage(const unsigned int halfSize)
 {
-	int quarterSize;
+	auto quarterSize = 1u;
 	// For each parent, reserve tentative storage for its child lists.
-	if (halfSize <= maxChildren + 1)
-		quarterSize = 1;
-	else
+	if (halfSize > maxChildren + 1)
 		quarterSize = (halfSize + 1) / 2;
 
-	for (int parent = quarterSize; parent < halfSize; ++parent)
+	for (auto parent = quarterSize; parent < halfSize; ++parent)
 	{
-		if (this->child_size_list[parent] > 0)
-		{
-			this->child_index_list[parent].resize(this->child_size_list[parent]);
-			this->child_distance_list[parent].resize(this->child_size_list[parent]);
-			this->child_size_list[parent] = 0;
-		}
+		if (this->child_size_list[parent] == 0)
+			continue;
+		
+		this->child_index_list[parent].resize(this->child_size_list[parent]);
+		this->child_distance_list[parent].resize(this->child_size_list[parent]);
+		this->child_size_list[parent] = 0u;
 	}
 
 	return quarterSize;
 }
 /*-----------------------------------------------------------------------------------------------*/
-void Sash::internal_build_construct_child_lists(const int number_of_items, const int halfSize)
+void Sash::internal_build_construct_child_lists(const unsigned int number_of_items, const unsigned int halfSize)
 {
 	// Construct tentative child lists for each of the parents,
 	//   by reversing the child-to-parent edges.
 	// Since the child-to-parent edges are no longer needed,
 	//   delete them.
-	for (int child = halfSize; child < number_of_items; ++child)
+	for (auto child = halfSize; child < number_of_items; ++child)
 	{
-		for (int i = this->parent_index_list[child].size() - 1; i >= 0; --i)
+		for (int i = this->parent_size_list[child] - 1; i >= 0; --i)
 		{
-			int parent = this->parent_index_list[child][i];
-			int j = this->child_index_list[parent].size();
+			auto parent = this->parent_index_list[child][i];
+			auto j = this->child_size_list[parent];
+
 			this->child_index_list[parent][j] = child;
 			this->child_distance_list[parent][j] = this->parent_distance_list[child][i];
 			++this->child_size_list[parent];
 		}
 
-		if (this->parent_size_list[child] > 0)
-		{
-			this->parent_index_list[child].clear();
-			this->parent_distance_list[child].clear();
-			this->parent_size_list[child] = 0;
-		}
+		if (this->parent_size_list[child] == 0)
+			continue;
+		
+		this->parent_index_list[child].clear();
+		this->parent_distance_list[child].clear();
+		this->parent_size_list[child] = 0u;
 	}
 }
 /*-----------------------------------------------------------------------------------------------*/
-void Sash::internal_build_trim_child_lists(const int quarterSize, const int halfSize)
+void Sash::internal_build_trim_child_lists(const unsigned int quarterSize, const unsigned int halfSize)
 {
 	// If a child list exceeds the length quota, then trim it.
 	// The smallest edges are selected, and the distances are cleared.
@@ -618,17 +1081,18 @@ void Sash::internal_build_trim_child_lists(const int quarterSize, const int half
 	// This number will be temporarily stored in "parent_size_list".
 	// Also, delete the edge distances as we go, since after the
 	//   trimming they are no longer needed.
-	for (int parent = quarterSize; parent < halfSize; ++parent)
+	for (auto parent = quarterSize; parent < halfSize; ++parent)
 	{
 		if (this->child_size_list[parent] > maxChildren)
 		{
-			std::vector<double> temp_distance_list = this->child_distance_list[parent];
-			std::vector<int> temp_index_list = this->child_index_list[parent];
+			auto temp_distance_list = std::vector<double>(this->child_distance_list[parent].begin(), this->child_distance_list[parent].end());
+			auto temp_index_list = std::vector<unsigned int>(this->child_index_list[parent].begin(), this->child_index_list[parent].end());
 
 			this->child_distance_list[parent].clear();
 			this->child_index_list[parent].resize(maxChildren);
 
-			this->child_size_list[parent] = Sort::partial_sort<int, double>(temp_index_list, temp_distance_list, 0, maxChildren);
+			//this->child_size_list[parent] = Sort::partial_sort<double, unsigned int>(maxChildren, temp_distance_list, temp_index_list, 0, this->child_size_list[parent] - 1);
+			this->child_size_list[parent] = partialQuickSort(maxChildren, temp_distance_list, temp_index_list, 0, this->child_size_list[parent] - 1);
 			this->child_distance_list[parent].resize(this->child_size_list[parent]);
 			this->child_index_list[parent].resize(this->child_size_list[parent]);
 
@@ -636,7 +1100,7 @@ void Sash::internal_build_trim_child_lists(const int quarterSize, const int half
 			// Inform the children that another request has been granted.
 			for (int i = this->child_size_list[parent] - 1; i >= 0; --i)
 			{
-				int child = temp_index_list[i];
+				auto child = temp_index_list[i];
 				this->child_index_list[parent][i] = child;
 				++this->parent_size_list[child];
 			}
@@ -645,7 +1109,9 @@ void Sash::internal_build_trim_child_lists(const int quarterSize, const int half
 		{
 			// Inform the children that another request has been granted.
 			for (int i = child_size_list[parent] - 1; i >= 0; --i)
+			{
 				this->parent_size_list[this->child_index_list[parent][i]]++;
+			}
 		}
 
 		// Eliminate the edge distance information.
@@ -653,15 +1119,15 @@ void Sash::internal_build_trim_child_lists(const int quarterSize, const int half
 	}
 }
 /*-----------------------------------------------------------------------------------------------*/
-void Sash::internal_build_connect_orphans(const int number_of_items, const int halfSize)
+void Sash::internal_build_connect_orphans(const unsigned int number_of_items, const unsigned int halfSize)
 {
 	// For each child, check to see if at least one parent granted
 	//   its connection request.
 	// (The number of connections granted is stored in "parent_size_list".)
 	// Any "orphans" discovered must be connected to a "foster parent".
-	for (int child = halfSize; child < number_of_items; ++child)
+	for (auto child = halfSize; child < number_of_items; ++child)
 	{
-		if (this->parent_size_list[child] != 0)
+		if (this->parent_size_list[child] > 0u)
 			continue;
 
 		// The current child is an orphan.
@@ -670,23 +1136,26 @@ void Sash::internal_build_connect_orphans(const int number_of_items, const int h
 		// But just to be sure, we test to make sure that the range is
 		//   not bigger than the number of items in the SASH.
 		++this->number_of_orphans;
+		//if (this->number_of_orphans % 10 == 0)
+			Daemon::debug("[-] Orphans: %i", this->number_of_orphans);
 		this->internal_build_connect_orphan(number_of_items, child);
 	}
 }
 /*-----------------------------------------------------------------------------------------------*/
-void Sash::internal_build_connect_orphan(const int number_of_items, const int child)
+void Sash::internal_build_connect_orphan(const unsigned int number_of_items, const unsigned int child)
 {
-	int range = 2 * maxParents;
+	auto range = 2u * maxParents;
+	auto not_found = true;
 
-	while (range <= number_of_items)
+	while (not_found && range <= number_of_items)
 	{
 		this->set_new_query((*this->data)[this->intern_to_extern_mapping[child]]);
 		this->internal_find_parents(range);
 
-		for (auto i = 0u; i < this->query_result_index_list.size(); ++i)
+		for (auto i = 0u; i < this->query_result_size; ++i)
 		{
 			// Fetch a new candidate foster parent from the query result.
-			int parent = this->query_result_index_list[i];
+			const auto parent = this->query_result_index_list[i];
 
 			// Does this parent have room for another child?
 			// If so, then accept the child immediately.
@@ -704,7 +1173,7 @@ void Sash::internal_build_connect_orphan(const int number_of_items, const int ch
 				// Expand the size of its child list to the maximum
 				//   possible, to accommodate the current orphan
 				//   and any future orphans.
-				std::vector<int> temp_index_list = this->child_index_list[parent];
+				auto temp_index_list = this->child_index_list[parent];
 				this->child_index_list[parent].resize(maxChildren);
 
 				for (int j = this->child_size_list[parent] - 1; j >= 0; --j)
@@ -718,15 +1187,16 @@ void Sash::internal_build_connect_orphan(const int number_of_items, const int ch
 			this->child_distance_list[parent] = this->distance_from_query_list;
 			this->child_index_list[parent][this->child_size_list[parent]] = child;
 			++this->child_size_list[parent];
+			not_found = false;
 
-			return;
+			break;
 		}
 
 		range *= 2;
 	}
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::internal_find_all_in_range (const double limit, const int sampleRate)
+int Sash::internal_find_all_in_range (const double limit, const unsigned int sampleRate)
 {
 	// Handle the singleton case separately.
 
@@ -737,23 +1207,17 @@ const int Sash::internal_find_all_in_range (const double limit, const int sample
 		this->query_result_sample_size = 1;
 
 		if (this->query_result_distance_list[0] <= limit)
-		{
-			this->query_result_index_list.resize(1);
-			this->query_result_distance_list.resize(1);
-		}
+			this->query_result_size = 1u;
 		else
-		{
-			this->query_result_index_list.clear();
-			this->query_result_distance_list.clear();
-		}
+			this->query_result_size = 0u;
 
-		return this->query_result_index_list.size();
+		return this->query_result_size;
 	}
 
 	this->query_result_sample_size = sample_size_list[sampleRate];
 
 	// Compute distances from the current query to all items.
-	for (int i = 0; i < this->query_result_sample_size; ++i)
+	for (auto i = 0u; i < this->query_result_sample_size; ++i)
 	{
 		this->query_result_distance_list[i] = this->compute_distance_from_query (i);
 		this->query_result_index_list[i] = i;
@@ -761,25 +1225,24 @@ const int Sash::internal_find_all_in_range (const double limit, const int sample
 
 	// Sort the items by distances, returning the number of
 	//   elements actually found.
-	int length = Sort::partial_sort<int, double>(this->query_result_index_list, this->query_result_distance_list, 0, this->query_result_sample_size);
-	this->query_result_index_list.resize(length);
+	this->query_result_size = Sort::partial_sort<unsigned int, double>(this->query_result_sample_size, this->query_result_index_list, this->query_result_distance_list, 0, this->query_result_sample_size - 1);
 
 	// Report only those items whose distances fall within the limit.
-	unsigned int counter = 0;
+	auto counter = 0u;
 
-	while ((counter < this->query_result_index_list.size()) && (this->query_result_distance_list[counter] <= limit))
+	while (counter < this->query_result_size && this->query_result_distance_list[counter] <= limit)
 		++counter;
 
-	this->query_result_index_list.resize(counter);
+	this->query_result_size = counter;
 
-	return this->query_result_index_list.size();
+	return this->query_result_size;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::internal_find_most_in_range (const double limit, const int sampleRate, const double scaleFactor)
+int Sash::internal_find_most_in_range (const double limit, const unsigned int sampleRate, const double scaleFactor)
 {
-	int activeLevelFirst = 0;
-	int activeLevelLast = 0;
-	int activeLevelNext = 0;
+	auto activeLevelFirst = 0u;
+	auto activeLevelLast = 0u;
+	auto activeLevelNext = 0u;
 
 	// Handle the singleton case separately.
 	if (this->data->size() == 1)
@@ -789,25 +1252,19 @@ const int Sash::internal_find_most_in_range (const double limit, const int sampl
 		this->query_result_sample_size = 1;
 
 		if (this->query_result_distance_list[0] <= limit)
-		{
-			this->query_result_index_list.resize(1);
-			this->query_result_distance_list.resize(1);
-		}
+			this->query_result_size = 1u;
 		else
-		{
-			this->query_result_index_list.clear();
-			this->query_result_distance_list.clear();
-		}
+			this->query_result_size = 0u;
 
-		return this->query_result_index_list.size();
+		return this->query_result_size;
 	}
 
 	// Compute the sample size for the operation.
 	this->query_result_sample_size = sample_size_list[sampleRate];
 
 	// Compute the minimum number of neighbours for each sample level.
-	int minNeighbours
-		= (int) ((maxParents * maxChildren * 0.5 * scaleFactor) + 0.5);
+	const auto minNeighbours
+		= (unsigned int) ((maxParents * maxChildren * 0.5 * scaleFactor) + 0.5);
 
 	// Load the root as the tentative sole member of the query result list.
 	// If its distance to the query is less than or equal to the limit,
@@ -815,7 +1272,7 @@ const int Sash::internal_find_most_in_range (const double limit, const int sampl
 	//   sample level.
 	this->query_result_distance_list[0] = compute_distance_from_query (0);
 	this->query_result_index_list[0] = 0;
-	this->query_result_index_list.resize(1);
+	this->query_result_size = 1u;
 
 	if (this->query_result_distance_list[0] <= limit)
 		activeLevelNext = 1;
@@ -823,7 +1280,7 @@ const int Sash::internal_find_most_in_range (const double limit, const int sampl
 		activeLevelNext = 0;
 
 	// From the root, search out other nodes to place in the query result.
-	for (int lvl = levels-1; lvl >= sampleRate; --lvl)
+	for (auto lvl = levels - 1; lvl >= sampleRate; --lvl)
 	{
 		// For every node at the active level, load its children
 		//   into the scratch list, and compute their distances to the query.
@@ -832,30 +1289,31 @@ const int Sash::internal_find_most_in_range (const double limit, const int sampl
 		//   nodes in the range [activeLevelNext..activeLevelLast]
 		//   have query distances in excess of the limit.
 		// Either or both of these ranges can be empty.
-		this->scratch_index_list.clear();
-		this->scratch_distance_list.clear();
+		this->scratch_size = 0u;
 
-		for (int i = activeLevelFirst; i <= activeLevelLast; ++i)
+		for (auto i = activeLevelFirst; i <= activeLevelLast; ++i)
 		{
-			int nodeIndex = this->query_result_index_list[i];
-			int numChildren = this->child_size_list[nodeIndex];
+			const auto nodeIndex = this->query_result_index_list[i];
+			const auto numChildren = this->child_size_list[nodeIndex];
 
-			for (int j = 0; j < numChildren; ++j)
+			for (auto j = 0u; j < numChildren; ++j)
 			{
-				this->scratch_index_list.push_back(this->child_index_list[nodeIndex][j]);
-				this->scratch_distance_list.push_back(this->compute_distance_from_query (this->scratch_index_list[scratch_index_list.size() - 1]));
+				this->scratch_index_list[this->scratch_size] = this->child_index_list[nodeIndex][j];
+				this->scratch_distance_list[this->scratch_size] = this->compute_distance_from_query(this->scratch_index_list[this->scratch_size]);
+				++this->scratch_size;
 			}
 		}
 
 		// Sort the source lists in place, according to distance.
 		// The requested number of edges with smallest distances are preserved,
 		//   but other entries may be destroyed.
-		int numFound = Sort::partial_sort<int, double>(this->scratch_index_list, this->scratch_distance_list, 0, this->scratch_index_list.size());
+		//const auto numFound = Sort::partial_sort<unsigned int, double>(this->scratch_size, this->scratch_index_list, this->scratch_distance_list, 0, this->scratch_size - 1);
+		const auto numFound = static_cast<unsigned int>(this->partialQuickSort(this->scratch_size, this->scratch_distance_list, this->scratch_index_list, 0, this->scratch_size - 1));
 
 		// Copy over the extracted edges to the output lists,
 		//   and return the number of edges extracted.
 		activeLevelFirst = activeLevelNext;
-		int loc = 0;
+		auto loc = 0u;
 
 		while ((loc < numFound) && (scratch_distance_list[loc] <= limit))
 		{
@@ -872,7 +1330,7 @@ const int Sash::internal_find_most_in_range (const double limit, const int sampl
 		//   at most the number of items available.
 		activeLevelLast = activeLevelNext - 1;
 
-		int numSought = (int) ((loc * scaleFactor) + 0.5F);
+		auto numSought = (unsigned int) ((loc * scaleFactor) + 0.5F);
 
 		if (numSought < minNeighbours)
 			numSought = minNeighbours;
@@ -891,23 +1349,21 @@ const int Sash::internal_find_most_in_range (const double limit, const int sampl
 
 	// Sort those items within the range by their distances,
 	//   returning the number of elements actually found.
-	int size = Sort::partial_sort<int, double>(this->query_result_index_list, this->query_result_distance_list, 0, activeLevelNext);
-	this->query_result_index_list.resize(size);
-	this->query_result_distance_list.resize(size);
+	//this->query_result_size = Sort::partial_sort<double, unsigned int>(activeLevelNext, this->query_result_distance_list, this->query_result_index_list, 0, activeLevelNext - 1);
+	this->query_result_size = partialQuickSort(activeLevelNext, this->query_result_distance_list, this->query_result_index_list, 0, activeLevelNext - 1);
 
-	return query_result_index_list.size();
+	return this->query_result_size;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::internal_find_near (const int howMany, const int sampleRate, const double scaleFactor)
+int Sash::internal_find_near (const unsigned int howMany, const unsigned int sampleRate, const double scaleFactor)
 {
-	int activeLevelFirst = 0;
-	int activeLevelLast = 0;
+	auto activeLevelFirst = 0u;
+	auto activeLevelLast = 0u;
 
 	// Handle the singleton case separately.
 	if (this->data->size() == 1)
 	{
-		this->query_result_index_list.resize(1);
-		this->query_result_index_list.resize(1);
+		this->query_result_size = 1u;
 		this->query_result_index_list[0] = 0;
 		this->query_result_distance_list[0] = this->compute_distance_from_query (0);
 		this->query_result_sample_size = 1;
@@ -919,10 +1375,10 @@ const int Sash::internal_find_near (const int howMany, const int sampleRate, con
 	this->query_result_sample_size = sample_size_list[sampleRate];
 
 	// Compute the item quota for each sample level.
-	int minNeighbours
-		= (int) ((maxParents * maxChildren * 0.5 * scaleFactor) + 0.5);
+	const auto minNeighbours
+		= (unsigned int) ((maxParents * maxChildren * 0.5 * scaleFactor) + 0.5);
 
-	double reductionFactor = 1.0
+	const auto reductionFactor = 1.0
 		/
 		pow (
 				(double) howMany,
@@ -939,9 +1395,9 @@ const int Sash::internal_find_near (const int howMany, const int sampleRate, con
 				)
 			);
 
-	int levelQuota = (int) ((howMany * scaleFactor) + 0.5);
+	auto levelQuota = (unsigned int) ((howMany * scaleFactor) + 0.5);
 
-	for (int lvl = sampleRate; lvl < levels; ++lvl)
+	for (auto lvl = sampleRate; lvl < levels; ++lvl)
 	{
 		if (levelQuota < minNeighbours)
 			levelQuota = minNeighbours;
@@ -954,34 +1410,34 @@ const int Sash::internal_find_near (const int howMany, const int sampleRate, con
 	// Load the root as the tentative sole member of the query result list.
 	this->query_result_distance_list[0] = this->compute_distance_from_query (0);
 	this->query_result_index_list[0] = 0;
-	this->query_result_index_list.resize(1);
+	this->query_result_size = 1u;
 
 	// From the root, search out other nodes to place in the query result.
-	for (int lvl = levels - 1; lvl >= sampleRate; --lvl)
+	for (auto lvl = levels - 1; lvl >= sampleRate; --lvl)
 	{
 		// For every node at the active level, load its children
 		//   into the scratch list, and compute their distances to the query.
-		this->scratch_index_list.clear();
-		this->scratch_distance_list.clear();
+		this->scratch_size = 0u;
 
-		for (int i = activeLevelFirst; i <= activeLevelLast; ++i)
+		for (auto i = activeLevelFirst; i <= activeLevelLast; ++i)
 		{
-			int nodeIndex = this->query_result_index_list[i];
-			int numChildren = this->child_size_list[nodeIndex];
+			const auto nodeIndex = this->query_result_index_list[i];
+			const auto numChildren = this->child_size_list[nodeIndex];
 
-			for (int j = 0; j < numChildren; ++j)
+			for (auto j = 0u; j < numChildren; ++j)
 			{
-				this->scratch_index_list.push_back(this->child_index_list[nodeIndex][j]);
-				this->scratch_distance_list.push_back(this->compute_distance_from_query (this->scratch_index_list[this->scratch_index_list.size() - 1]));
+				this->scratch_index_list[this->scratch_size] = this->child_index_list[nodeIndex][j];
+				this->scratch_distance_list[this->scratch_size] = this->compute_distance_from_query (this->scratch_index_list[this->scratch_size - 1]);
+				++this->scratch_size;
 			}
 		}
 
 		// Extract the closest nodes from the list of accumulated children,
 		//   and append them to the tentative query result.
-		int numFound = extract_best_edges
+		const auto numFound = extract_best_edges
 			(level_quota_list[lvl],
 			 this->query_result_distance_list, this->query_result_index_list,
-			 activeLevelLast + 1, this->scratch_distance_list, this->scratch_index_list, 0);
+			 activeLevelLast + 1, this->data->size(), this->scratch_distance_list, this->scratch_index_list, 0, this->scratch_size - 1);
 
 		activeLevelFirst = activeLevelLast + 1;
 		activeLevelLast += numFound;
@@ -989,22 +1445,23 @@ const int Sash::internal_find_near (const int howMany, const int sampleRate, con
 
 	this->query_result_index_list.resize(activeLevelLast + 1);
 	this->query_result_distance_list.resize(activeLevelLast + 1);
+	
+	this->query_result_size = activeLevelLast + 1;
 
 	// Sort the items by distances, returning the number of
-	//   elements actually found.
-	int length = Sort::partial_sort<int, double>(query_result_index_list, query_result_distance_list, 0, howMany);
-	this->query_result_index_list.resize(length);
-	this->query_result_distance_list.resize(length);
+	// elements actually found.
+	//this->query_result_size = Sort::partial_sort<double, unsigned int>(howMany, this->query_result_distance_list, query_result_index_list, 0, this->query_result_size - 1);
+	this->query_result_size = partialQuickSort(howMany, this->query_result_distance_list, query_result_index_list, 0, this->query_result_size - 1);
 
-	return query_result_index_list.size();
+	return this->query_result_size;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::internal_find_nearest (const int howMany, const int sampleRate)
+int Sash::internal_find_nearest (const unsigned int howMany, const unsigned int sampleRate)
 {
 	// Handle the singleton case separately.
 	if (this->data->size() == 1)
 	{
-		this->query_result_index_list.resize(1);
+		this->query_result_size = 1u;
 		this->query_result_distance_list[0] = this->compute_distance_from_query (0);
 		this->query_result_index_list[0] = 0;
 		this->query_result_sample_size = 1;
@@ -1015,7 +1472,7 @@ const int Sash::internal_find_nearest (const int howMany, const int sampleRate)
 	this->query_result_sample_size = this->sample_size_list[sampleRate];
 
 	// Compute distances from the current query to all items.
-	for (int i = 0; i < this->query_result_sample_size; ++i)
+	for (auto i = 0u; i < this->query_result_sample_size; ++i)
 	{
 		this->query_result_distance_list[i] = this->compute_distance_from_query (i);
 		this->query_result_index_list[i] = i;
@@ -1023,38 +1480,36 @@ const int Sash::internal_find_nearest (const int howMany, const int sampleRate)
 
 	// Sort the items by distances, returning the number of
 	//   elements actually found.
-	int length = Sort::partial_sort<int, double>(this->query_result_index_list, this->query_result_distance_list, 0, howMany);
-	this->query_result_index_list.resize(length);
-	this->query_result_distance_list.resize(length);
+	//this->query_result_size = Sort::partial_sort<double, unsigned int>(howMany, this->query_result_distance_list, this->query_result_index_list, 0, this->query_result_size - 1);
+	this->query_result_size = partialQuickSort(howMany, this->query_result_distance_list, this->query_result_index_list, 0, this->query_result_size - 1);
 
-	return query_result_index_list.size();
+	return this->query_result_size;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::internal_find_parents (const int howMany)
+int Sash::internal_find_parents (const unsigned int howMany)
 {
 	// Load the root as the tentative sole member of the query result list.
-	this->query_result_index_list.resize(1);
-	this->query_result_distance_list.resize(1);
-	this->query_result_index_list[0] = 0;
+	this->query_result_size = 1u;
+	this->query_result_index_list[0] = 0u;
 	this->query_result_distance_list[0] = this->compute_distance_from_query (0);
 
 	// From the root, search out other nodes to place in the query result.
-	for (int lvl = 0; lvl < levels; ++lvl)
+	for (auto lvl = 0u; lvl < levels; ++lvl)
 	{
 		// For every node at the active level, load its children
 		//   into the scratch list, and compute their distances to the query.
-		this->scratch_index_list.clear();
-		this->scratch_distance_list.clear();
+		this->scratch_size = 0u;
 
-		for (auto i = 0u; i < this->query_result_index_list.size(); ++i)
+		for (auto i = 0u; i < this->query_result_size; ++i)
 		{
-			int nodeIndex = this->query_result_index_list[i];
-			int numChildren = this->child_size_list[nodeIndex];
+			auto nodeIndex = this->query_result_index_list[i];
+			auto numChildren = this->child_size_list[nodeIndex];
 
-			for (int j = 0; j < numChildren; ++j)
+			for (auto j = 0u; j < numChildren; ++j)
 			{
-				this->scratch_index_list.push_back(this->child_index_list[nodeIndex][j]);
-				this->scratch_distance_list.push_back(this->compute_distance_from_query (this->scratch_index_list[this->scratch_index_list.size() - 1]));
+				this->scratch_index_list[this->scratch_size] = this->child_index_list[nodeIndex][j];
+				this->scratch_distance_list[this->scratch_size] = this->compute_distance_from_query (this->scratch_index_list[this->scratch_size]);
+				++this->scratch_size;
 			}
 		}
 
@@ -1062,32 +1517,31 @@ const int Sash::internal_find_parents (const int howMany)
 		//   and keep them as the tentative parents of the query.
 		// Note that only the candidates from the most recently-processed
 		//   level are kept.
-		this->extract_best_edges(howMany, this->query_result_distance_list, this->query_result_index_list, 0, 
-			this->scratch_distance_list, this->scratch_index_list, 0);
+		this->query_result_size = this->extract_best_edges(howMany, this->query_result_distance_list, this->query_result_index_list, 0, this->data->size(),
+			this->scratch_distance_list, this->scratch_index_list, 0, this->scratch_size - 1);
 	}
 
-	return this->query_result_index_list.size();
+	return this->query_result_size;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const int Sash::extract_best_edges
+int Sash::extract_best_edges
 (unsigned int howMany,
- std::vector<double>& to_distance_list, std::vector<int>& to_index_list, int toFirst,
- std::vector<double>& from_distance_list, std::vector<int>& from_index_list, int fromFirst)
+ std::vector<double>& to_distance_list, std::vector<unsigned int>& to_index_list, unsigned int toFirst, unsigned int toCapacity,
+ std::vector<double>& from_distance_list, std::vector<unsigned int>& from_index_list, unsigned int fromFirst, unsigned int fromLast)
 {
 	// Make sure that we don't extract more edges than currently exist.
-	if (howMany > to_distance_list.size() - toFirst)
-		howMany = to_distance_list.size() - toFirst;
+	if (howMany > toCapacity - toFirst)
+		howMany = toCapacity - toFirst;
 
 	// Sort the source lists in place, according to distance.
 	// The requested number of edges with smallest distances are preserved,
 	//   but other entries may be destroyed.
-	int num_extracted = Sort::partial_sort<int, double>(from_index_list, from_distance_list, fromFirst, fromFirst + howMany);
-	to_distance_list.resize(num_extracted);
-	to_index_list.resize(num_extracted);
+	//const auto num_extracted = Sort::partial_sort<double, unsigned int>(howMany, from_distance_list, from_index_list, fromFirst, fromLast);
+	const auto num_extracted = static_cast<unsigned int>(this->partialQuickSort(howMany, from_distance_list, from_index_list, fromFirst, fromLast));
 
 	// Copy over the extracted edges to the output lists,
 	//   and return the number of edges extracted.
-	for (int i = 0; i < num_extracted; ++i)
+	for (auto i = 0u; i < num_extracted; ++i)
 	{
 		to_distance_list[toFirst] = from_distance_list[fromFirst];
 		to_index_list[toFirst] = from_index_list[fromFirst];
@@ -1106,28 +1560,29 @@ void Sash::print_stats ()
 	Daemon::info("  levels                == %d", levels);
 	Daemon::info("  max parents per node  == %d", maxParents);
 	Daemon::info("  max children per node == %d", maxChildren);
-	Daemon::info("  orphan nodes          == %d", number_of_orphans);
+	Daemon::info("  orphan nodes          == %i", number_of_orphans);
 	Daemon::info("  distance comparisons  == %ld", number_of_distance_comparisons);
 	Daemon::info("  RNG seed              == %ld", seed);
 	Daemon::info("");
 }
 /*-----------------------------------------------------------------------------------------------*/
-void Sash::reserve_storage (const int number_of_items, const int numParents)
+void Sash::reserve_storage (const unsigned int number_of_items, const unsigned int numParents)
 {
-	int sampleSize = 0;
+	Daemon::debug(" [-] reserving storage for SASH");
+	auto sampleSize = 0u;
 
-	int size = number_of_items;
+	const auto size = number_of_items;
 
-	if (numParents <= 3)
-		maxParents = 3;
+	if (numParents <= 3u)
+		maxParents = 3u;
 	else
 		maxParents = numParents;
 
-	maxChildren = 4 * maxParents;
+	maxChildren = 4u * maxParents;
 
 	// Determine the number of SASH levels, and
 	//   the level sample sizes.
-	levels = 0;
+	levels = 0u;
 
 	if (size > 1)
 	{
@@ -1145,7 +1600,7 @@ void Sash::reserve_storage (const int number_of_items, const int numParents)
 	this->sample_size_list.resize(levels + 1);
 	sampleSize = size;
 
-	for (int i = 0; i < levels; ++i)
+	for (auto i = 0u; i < levels; ++i)
 	{
 		level_quota_list[i] = 0;
 		sample_size_list[i] = sampleSize;
@@ -1158,7 +1613,7 @@ void Sash::reserve_storage (const int number_of_items, const int numParents)
 	//   data indices.
 	this->intern_to_extern_mapping.resize(size);
 
-	for (int i = 0; i < size; ++i)
+	for (auto i = 0u; i < size; ++i)
 		this->intern_to_extern_mapping[i] = i;
 
 	// Set up storage for child-to-parent edges and parent-to-child edges.
@@ -1170,8 +1625,11 @@ void Sash::reserve_storage (const int number_of_items, const int numParents)
 	this->child_distance_list.resize(size);
 	this->child_size_list.resize(size);
 
-	for (int i=0; i<size; i++)
+	for (auto i = 0u; i<size; i++)
 	{
+		this->parent_size_list[i] = 0u;
+		this->child_size_list[i] = 0u;
+		
 		this->parent_index_list[i].clear();
 		this->parent_distance_list[i].clear();
 		this->child_index_list[i].clear();
@@ -1181,11 +1639,19 @@ void Sash::reserve_storage (const int number_of_items, const int numParents)
 	// Set up storage for managing distance computations and
 	//   query results.
 	this->distance_from_query_list.resize(size);
-	this->stored_distance_index_list.clear();
+	this->stored_distance_index_list.resize(size);
+	this->number_of_stored_distances = 0u;
 
 	this->query_result_distance_list.resize(size);
-	this->query_result_index_list.clear();
-	this->query_result_sample_size = 0;
+	this->query_result_index_list.resize(size);
+	this->query_result_sample_size = 0u;
+	this->query_result_size = 0u;
+	
+	this->scratch_size = maxChildren * ((size + 1) / 2);
+	this->scratch_distance_list.resize(this->scratch_size);
+	this->scratch_index_list.resize(this->scratch_size);
+	
+	this->scratch_size = 0u;
 }
 /*-----------------------------------------------------------------------------------------------*/
 void Sash::set_new_query (const std::shared_ptr<DistanceData> query)
@@ -1193,11 +1659,11 @@ void Sash::set_new_query (const std::shared_ptr<DistanceData> query)
 	if (query == this->query)
 		return;
 
-	for (auto &x : this->stored_distance_index_list)
-		this->distance_from_query_list[x] = -1.0;
+	for (auto i = 0u; i < this->number_of_stored_distances; ++i)
+		this->distance_from_query_list[this->stored_distance_index_list[i]] = -1.0;
 
 	this->query = query;
-	this->stored_distance_index_list.clear();
+	this->number_of_stored_distances = 0u;
 }
 /*-----------------------------------------------------------------------------------------------*/
 extern "C" IndexStructure<DistanceData>* create_index_structure(int x) 

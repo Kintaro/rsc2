@@ -38,14 +38,13 @@
 // Contact e-mail address: meh@nii.ac.jp, meh@acm.org
 //                         mail.wollwage@gmail.com
 
-#ifndef __DISTANCE_DATA_H__
-#define __DISTANCE_DATA_H__
+#ifndef __CLUSTER_DATA_H__
+#define __CLUSTER_DATA_H__
 
-class DistanceData
+class ClusterData// : public VecData
 {
 public:
-	virtual ~DistanceData() {};
-	virtual double distance_to(const DistanceData& to) { return 0.0; };
+	unsigned int get_cluster_size() const { return 0u; }
 };
 
 #endif

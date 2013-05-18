@@ -38,14 +38,18 @@
 // Contact e-mail address: meh@nii.ac.jp, meh@acm.org
 //                         mail.wollwage@gmail.com
 
-#ifndef __DISTANCE_DATA_H__
-#define __DISTANCE_DATA_H__
+#ifndef __METHOD_FLAG_H__
+#define __METHOD_FLAG_H__
 
-class DistanceData
+enum class MethodFlag 
 {
-public:
-	virtual ~DistanceData() {};
-	virtual double distance_to(const DistanceData& to) { return 0.0; };
+	Default,
+	SelectTrimPatternsForSample,
+	SelectFinalPatternsForSampleA,
+	SelectFinalPatternsForSampleB,
+	GenerateClusterMembersForSample,
+	FinalizeClustersAndBuildGraph,
+	FinalizeClustersForSample
 };
 
 #endif

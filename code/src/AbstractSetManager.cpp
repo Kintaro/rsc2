@@ -38,69 +38,62 @@
 // Contact e-mail address: meh@nii.ac.jp, meh@acm.org
 //                         mail.wollwage@gmail.com
 
-#ifndef __OPTIONS_H__
-#define __OPTIONS_H__
-
-#include <map>
-#include <string>
-#include <type_traits>
-#include <boost/lexical_cast.hpp>
-#include "EnumParser.h"
-
-class Options
-{
-private:
-	static std::map<std::string, std::string> values;
-public:
-	static void internal_set_option(const std::string& name, const std::string& value);
-	static std::string internal_get_option(const std::string& name);
-	static void set_option(const std::string& name, const std::string& value);
-	static std::string get_option(const std::string& name);
-	template<typename T> static const typename std::enable_if<!std::is_enum<T>::value, T>::type get_option_as(const std::string& name);
-	template<typename T> static const typename std::enable_if<std::is_enum<T>::value, T>::type get_option_as(const std::string& name);
-	template<typename T> static const typename std::enable_if<!std::is_enum<T>::value, T>::type get_option_as(const std::string& name, const T default_value);
-	template<typename T> static const typename std::enable_if<std::is_enum<T>::value, T>::type get_option_as(const std::string& name, const T default_value);
-	static bool internal_parse_option(const std::string& option);
-	static bool internal_parse_command_line_options(int argc, char** argv);
-	static bool internal_parse_options_from_xml(const std::string& filename);
-	static bool is_option_set(const std::string& name);
-	static std::map<std::string, std::string>& get_values() { return values; }
-};
+#include <boost/mpi/communicator.hpp>
+#include <boost/mpi/collectives.hpp>
+#include "Daemon.h"
+#include "AbstractSetManager.h"
 
 /*-----------------------------------------------------------------------------------------------*/
-template<typename T>
-const typename std::enable_if<!std::is_enum<T>::value, T>::type 
-Options::get_option_as(const std::string& name)
+void AbstractSetManager::exchange_information()
 {
-	return boost::lexical_cast<T>(get_option(name));
+	auto chunk_size = this->get_number_of_items();
+	auto blocks = this->get_number_of_blocks();
+	auto offset = this->get_offset();
+	
+	std::vector<unsigned int> block_offsets;
+	for (auto i = 0u; i < blocks; ++i)
+		block_offsets.push_back(this->get_block_offset(i));
+	
+	std::vector<unsigned int> block_items;
+	for (auto i = 0u; i < blocks; ++i)
+		block_items.push_back(this->get_number_of_items_in_block(i));
+	
+	boost::mpi::all_gather(Daemon::comm(), chunk_size, this->chunk_sizes);
+	boost::mpi::all_gather(Daemon::comm(), blocks, this->blocks_in_chunk);
+	boost::mpi::all_gather(Daemon::comm(), offset, this->chunk_offsets);
+	boost::mpi::all_gather(Daemon::comm(), block_offsets, this->block_offsets_in_chunk);
+	boost::mpi::all_gather(Daemon::comm(), block_items, this->items_in_block_of_chunk);
 }
 /*-----------------------------------------------------------------------------------------------*/
-template<typename T>
-const typename std::enable_if<std::is_enum<T>::value, T>::type 
-Options::get_option_as(const std::string& name)
+unsigned int AbstractSetManager::get_number_of_items_in_chunk(const unsigned int chunk)
 {
-	return EnumParser<T>::get_value(get_option(name));
+	return this->chunk_sizes[chunk];
 }
 /*-----------------------------------------------------------------------------------------------*/
-template<typename T>
-const typename std::enable_if<!std::is_enum<T>::value, T>::type 
-Options::get_option_as(const std::string& name, const T default_value)
+unsigned int AbstractSetManager::get_chunk_offset(const unsigned int chunk)
 {
-	if (!is_option_set(name))
-		return default_value;
-
-	return boost::lexical_cast<T>(get_option(name));
+	return this->chunk_offsets[chunk];
 }
 /*-----------------------------------------------------------------------------------------------*/
-template<typename T>
-const typename std::enable_if<std::is_enum<T>::value, T>::type 
-Options::get_option_as(const std::string& name, const T default_value)
+unsigned int AbstractSetManager::get_number_of_blocks_in_chunk(const unsigned int chunk)
 {
-	if (!is_option_set(name))
-		return default_value;
-
-	return EnumParser<T>::get_value(get_option(name));
+	return this->blocks_in_chunk[chunk];
+}	
+/*-----------------------------------------------------------------------------------------------*/
+unsigned int AbstractSetManager::get_block_offset_in_chunk(const unsigned int chunk, const unsigned int block)
+{
+	return this->block_offsets_in_chunk[chunk][block];
 }
 /*-----------------------------------------------------------------------------------------------*/
-
-#endif
+unsigned int AbstractSetManager::get_number_of_items_in_block_of_chunk(const unsigned int chunk, const unsigned int block)
+{
+	return this->items_in_block_of_chunk[chunk][block];
+}
+/*-----------------------------------------------------------------------------------------------*/
+unsigned int AbstractSetManager::get_number_of_items_across_processors()
+{
+	auto number_of_total_items = this->get_number_of_items();
+	boost::mpi::all_reduce(Daemon::comm(), number_of_total_items, number_of_total_items, std::plus<unsigned int>());
+	return number_of_total_items;
+}
+/*-----------------------------------------------------------------------------------------------*/

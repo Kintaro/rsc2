@@ -42,15 +42,14 @@
 #define __CHUNK_H__
 
 #include <vector>
-#include "mpi_util.h"
-#include "member_block.h"
+#include "MemberBlock.h"
 
 template<typename ScoreType>
 class Chunk
 {
 private:
 	size_t global_offset;
-	std::vector<MemberBlock&> member_blocks;
+	std::vector<MemberBlock> member_blocks;
 public:
 	const size_t get_number_of_items() const;
 	const size_t get_number_of_blocks() const;

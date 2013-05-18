@@ -43,28 +43,33 @@
 
 #include <boost/serialization/optional.hpp>
 #include <fstream>
+#include <vector>
 #include "Options.h"
+#include "Daemon.h"
 
 class FileUtil
 {
 private:
-	static bool read_option;
-	static bool is_binary;
+	static boost::optional<bool> is_binary;
 public:
-	static void open_read(const std::string& path, std::fstream& file, const boost::optional<bool>& binary = false);
-	static void open_write(const std::string& path, std::fstream& file, const boost::optional<bool>& binary = false);
-	template<typename T> static const T read_from_file(std::fstream& file);
-	template<typename T> static const void write_to_file(std::fstream& file, const T& value, bool text_only = false);
-	static const void space(std::fstream& file);
-	static const void newline(std::fstream& file);
+	static bool open_read(const std::string& path, std::ifstream& file, const boost::optional<bool>& binary = boost::none);
+	static bool open_write(const std::string& path, std::ofstream& file, const boost::optional<bool>& binary = boost::none);
+	template<typename T> static const T read_from_file(std::ifstream& file);
+	template<typename T> static const std::vector<T> read_vector_from_file(const unsigned int length, std::ifstream& file);
+	template<typename T> static void write_to_file(std::ofstream& file, const T& value, bool text_only = false);
+	static void space(std::ofstream& file);
+	static void newline(std::ofstream& file);
 };
 /*-----------------------------------------------------------------------------------------------*/
 template<typename T>
-const T FileUtil::read_from_file(std::fstream& file)
+inline const T FileUtil::read_from_file(std::ifstream& file)
 {
 	T result;
+	
+	if (!is_binary)
+		is_binary = Options::get_option_as<bool>("use-binary-files");
 
-	if (Options::get_option_as<bool>("use-binary-files"))
+	if (*is_binary)
 		file.read((char*)&result, sizeof(T));
 	else
 		file >> result;
@@ -73,12 +78,25 @@ const T FileUtil::read_from_file(std::fstream& file)
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename T>
-const void FileUtil::write_to_file(std::fstream& file, const T& value, bool text_only)
+inline void FileUtil::write_to_file(std::ofstream& file, const T& value, bool text_only)
 {
-	if (Options::get_option_as<bool>("use-binary-files") && !text_only)
+	if (!is_binary)
+		is_binary = Options::get_option_as<bool>("use-binary-files");
+	
+	if (*is_binary && !text_only)
 		file.write((const char*)&value, sizeof(T));
 	else if (!Options::get_option_as<bool>("use-binary-files"))
 		file << value;
 }
 /*-----------------------------------------------------------------------------------------------*/
+template<typename T>
+const std::vector<T> FileUtil::read_vector_from_file(const unsigned int length, std::ifstream& file)
+{
+	std::istream_iterator<T> start(file);
+	std::istream_iterator<T> end = start + length;
+	
+	return std::vector<T>(start, end);
+}
+/*-----------------------------------------------------------------------------------------------*/
+
 #endif

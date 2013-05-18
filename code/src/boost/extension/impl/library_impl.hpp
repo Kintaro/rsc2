@@ -14,6 +14,7 @@
 #define BOOST_EXTENSION_LIBRARY_IMPL_HPP
 
 #include <cstring>
+#include <iostream>
 
 #if (defined(_WIN32) || defined(__WIN32__) || defined(WIN32)) \
     && !defined(BOOST_DISABLE_WIN32) && !defined(__GNUC__)
@@ -57,7 +58,9 @@ namespace impl {
   typedef void * library_handle;
   typedef void * generic_function_ptr;
   inline library_handle load_shared_library(const char* library_name) {
-    return dlopen(library_name, RTLD_LAZY);
+    auto r = dlopen(library_name, RTLD_LAZY);
+	//std::cerr << "dlerror(): " << dlerror() << std::endl;
+	return r;
   }
   inline generic_function_ptr get_function(library_handle handle,
                                            const char* function_name) {

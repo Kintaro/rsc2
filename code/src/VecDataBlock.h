@@ -43,19 +43,32 @@
 
 #include <stdlib.h>
 #include <boost/serialization/vector.hpp>
+#include <boost/serialization/optional.hpp>
+#include <memory>
 #include "DistanceData.h"
+#include "VecData.h"
 
 class VecDataBlock
 {
 protected:
-	int number_of_items;
-	int global_offset;
+	std::vector<std::shared_ptr<VecData>> data;
+	unsigned int number_of_items;
+	unsigned int global_offset;
+	boost::optional<unsigned int> block_id;
 public:
-	const DistanceData* access_item_by_block_offset(int index);
-	const size_t get_global_offset() const;
-	const void set_global_offset(const size_t offset);
-	const size_t get_number_of_items() const;
+	VecDataBlock(const unsigned int block_id);
+	VecDataBlock(const std::shared_ptr<VecDataBlock>& data_block) {};
+	const DistanceData* access_item_by_block_offset(int index) { return nullptr; }
+	unsigned int get_offset() { return 0u; }
+	size_t get_global_offset() const;
+	void set_global_offset(const size_t offset);
+	size_t get_number_of_items() const;
 	const std::string get_filename_prefix() const;
+	size_t load_data();
+	bool is_valid();
+	bool verify_savefile();
+	
+	void extract_all_items(std::vector<std::shared_ptr<DistanceData>>& item_list, const unsigned int start_index);
 private:
 	friend class boost::serialization::access;
 
@@ -64,6 +77,8 @@ private:
 	{
 		ar &number_of_items;
 	}
+	size_t internal_load_block(std::ifstream& file);
+	std::shared_ptr<VecData> internal_load_item(std::ifstream& file);
 };
 
 #endif
