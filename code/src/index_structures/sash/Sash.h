@@ -223,7 +223,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_all_in_range(const std::shared_ptr<DistanceData> query, const double limit, const boost::optional<unsigned int>& sample_rate = 0);
+    virtual int find_all_in_range(const std::shared_ptr<DistanceData> query, const double limit, const boost::optional<unsigned int>& sample_rate = 0u);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -253,7 +253,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_most_in_range(const std::shared_ptr<DistanceData> query, const double limit, const boost::optional<unsigned int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
+    virtual int find_most_in_range(const std::shared_ptr<DistanceData> query, const double limit, const boost::optional<unsigned int>& sampleRate = 0u, const boost::optional<double>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -284,7 +284,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_near(const std::shared_ptr<DistanceData> query, const unsigned int howMany, const boost::optional<unsigned int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
+    virtual int find_near(const std::shared_ptr<DistanceData> query, const unsigned int howMany, const boost::optional<unsigned int>& sampleRate = 0u, const boost::optional<double>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -310,7 +310,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_nearest(const std::shared_ptr<DistanceData> query, const unsigned int howMany, const boost::optional<unsigned int>& sampleRate = 0);
+    virtual int find_nearest(const std::shared_ptr<DistanceData> query, const unsigned int howMany, const boost::optional<unsigned int>& sampleRate = 0u);
 
 
 /*-----------------------------------------------------------------------------------------------*/

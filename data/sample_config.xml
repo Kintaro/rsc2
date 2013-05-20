@@ -13,18 +13,22 @@
 
 	<!-- Dataset and directory handling -->
 	<dataset>isolet</dataset>
-	<input-directory>/foo/bar/input</input-directory>
-	<temp-directory>/foo/bar/temp</temp-directory>
-	<cluster-directory>/foo/bar/clusters</cluster-directory>
+	<input-directory>/tardis/datasets/isolet/input</input-directory>
+	<temp-directory>/tardis/temp/isolet-temp</temp-directory>
+	<cluster-directory>/tardis/temp/isolet-clusters/</cluster-directory>
 
 	<!-- Clustering options -->
-	<maximum-cluster-size>23</maximum-cluster-size>
-	<maximum-number-of-clusters>7</maximum-number-of-clusters>
+	<maximum-cluster-size>100</maximum-cluster-size>
+	<maximum-number-of-clusters>1000</maximum-number-of-clusters>
 
 	<!-- Clustering result options -->
 	<cluster-style>soft+rsc</cluster-style>
 
 	<!-- Index structure options -->
-	<index-structure>sash</index-structure>
-	<sash-degree>4</sash-degree>
+	<index-structure>
+		<type>sash</type>
+		<settings>
+			<sash-degree>4</sash-degree>
+		</settings>
+	</index-structure>
 </options>

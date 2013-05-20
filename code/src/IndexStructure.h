@@ -65,10 +65,10 @@ public:
 	virtual const std::vector<unsigned int> get_result_indices() const = 0;
 	virtual const std::vector<double> get_result_distances() const = 0;
 	virtual int get_result_distance_comparisons() const = 0;
-	virtual int find_all_in_range(const std::shared_ptr<T> query, const double limit, const boost::optional<unsigned int>& sample_rate = 0) = 0;
-	virtual int find_most_in_range(const std::shared_ptr<T> query, const double limit, const boost::optional<unsigned int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0) = 0;
-	virtual int find_near(const std::shared_ptr<T> query, const unsigned int howMany, const boost::optional<unsigned int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0) = 0;
-	virtual int find_nearest(const std::shared_ptr<T> query, const unsigned int howMany, const boost::optional<unsigned int>& sampleRate = 0) = 0;
+	virtual int find_all_in_range(const std::shared_ptr<T> query, const double limit, const boost::optional<unsigned int>& sample_rate = 0u) = 0;
+	virtual int find_most_in_range(const std::shared_ptr<T> query, const double limit, const boost::optional<unsigned int>& sampleRate = 0u, const boost::optional<double>& scaleFactor = 1.0) = 0;
+	virtual int find_near(const std::shared_ptr<T> query, const unsigned int howMany, const boost::optional<unsigned int>& sampleRate = 0u, const boost::optional<double>& scaleFactor = 1.0) = 0;
+	virtual int find_nearest(const std::shared_ptr<T> query, const unsigned int howMany, const boost::optional<unsigned int>& sampleRate = 0u) = 0;
 
 	static IndexStructure<T>* create_from_plugin(const std::string& plugin_name)
 	{

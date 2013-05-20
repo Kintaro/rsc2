@@ -90,6 +90,7 @@ public:
 	unsigned int get_block_offset(const unsigned int block) const;
 	unsigned int get_number_of_blocks() const;
 	unsigned int get_sample_size(const int sample_level);
+	unsigned int get_number_of_items() const { return this->number_of_items; }
 	
 	const std::shared_ptr<MemberBlock<ScoreType>> access_member_block(const unsigned int index);
 	const std::shared_ptr<MemberBlock<ScoreType>> access_member_block(const unsigned int index, const unsigned int sample_level);
@@ -109,7 +110,7 @@ public:
 	void clear_member_blocks() {};
 	void clear_inverted_member_blocks() {};
 	bool build_inverted_members_from_disk() { return true; }
-	bool build_inverted_members(std::shared_ptr<ChunkManager> chunk_ptr, const TransmissionMode transmission_mode, const unsigned int i, const Stage stage) { return false; }
+	bool build_inverted_members(const TransmissionMode transmission_mode, const unsigned int i, const Stage stage);
 private:
 	int internal_setup_samples(const unsigned int sample_limit);
 	
@@ -150,7 +151,14 @@ private:
 	bool internal_build_neighborhood_receive_stage3(boost::optional<unsigned int>& sash_degree, 
 											 const boost::optional<double>& scale_factor, 
 									   const bool load_flag, const bool save_flag, const unsigned int sender_id);
-	
+
+	bool internal_build_inverted_members_stage1(const TransmissionMode transmission_mode, const unsigned int i);
+	bool internal_build_inverted_members_stage1_send(const unsigned int i);
+	bool internal_build_inverted_members_stage1_receive(const unsigned int i);
+	bool internal_build_inverted_members_stage2(const TransmissionMode transmission_mode, const unsigned int i);
+	bool internal_build_inverted_members_stage2_send(const unsigned int i);
+	bool internal_build_inverted_members_stage2_receive(const unsigned int i);
+
 	void is_resident_sash();
 };
 /*-----------------------------------------------------------------------------------------------*/
@@ -293,6 +301,9 @@ unsigned int ChunkManager<DataBlock, ScoreType>::get_block_offset(const unsigned
 template<typename DataBlock, class ScoreType>
 unsigned int ChunkManager<DataBlock, ScoreType>::get_sample_size(const int sample_level)
 {
+	Daemon::debug("get_sample_size(%i) [CHUNK, %i]", sample_level, this->sample_size_list.size());
+	if (sample_level <= 0)
+		return this->sample_size_list[0];
 	return this->sample_size_list[sample_level];
 }
 /*-----------------------------------------------------------------------------------------------*/
@@ -671,6 +682,79 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood_send_stage3
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
+bool ChunkManager<DataBlock, ScoreType>::build_inverted_members(const TransmissionMode transmission_mode, const unsigned int i, const Stage stage)
+{
+	if (stage == Stage::First)
+		return internal_build_inverted_members_stage1(transmission_mode, i);
+	return internal_build_inverted_members_stage2(transmission_mode, i);
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_stage1(const TransmissionMode transmission_mode, const unsigned int i)
+{
+	// For each of the chunks in the list, fetch their member list lists
+	// and identify those items which belong to this chunk.
+	// Add these items to the appropriate inverted member list lists,
+	// and save the partial lists to disk.
+	// First, initialize the index used in identifying
+	// chunk-block combinations.
+	auto combo = 0u;
+
+	this->clear_chunk_data();
+	this->clear_member_blocks();
+
+	this->inverted_member_block_list.resize(this->number_of_blocks);
+
+	for (auto block = 0u; block < this->number_of_blocks; ++block)
+	{
+		this->inverted_member_block_list[block] = std::shared_ptr<InvertedMemberBlock<ScoreType>>(new InvertedMemberBlock<ScoreType>(*this->data_block_list[block]));
+
+		this->inverted_member_block_list[block][0]->set_id();
+
+		for (auto sample = -this->number_of_tiny_samples; sample < this->number_of_samples; ++sample)
+		{
+			auto s = sample + this->number_of_tiny_samples;
+			this->inverted_member_block_list[block][s] = std::shared_ptr<InvertedMemberBlock<ScoreType>>(new InvertedMemberBlock<ScoreType>(*this->data_block_list[block]));
+
+			this->inverted_member_block_list[block][s]->set_id();
+		}
+	}
+
+	if (transmission_mode == TransmissionMode::TransmissionSend)
+		return internal_build_inverted_members_stage1_send(i);
+	return internal_build_inverted_members_stage1_receive(i);
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_stage2(const TransmissionMode transmission_mode, const unsigned int i)
+{
+	if (transmission_mode == TransmissionMode::TransmissionSend)
+		return internal_build_inverted_members_stage2_send(i);
+	return internal_build_inverted_members_stage2_receive(i);
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_stage1_send(const unsigned int i)
+{
+
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_stage1_receive(const unsigned int i)
+{
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_stage2_send(const unsigned int i)
+{
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_stage2_receive(const unsigned int i)
+{
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
 int ChunkManager<DataBlock, ScoreType>::internal_setup_samples(const unsigned int sample_limit)
 {
 	this->sampling_flag = true;
@@ -681,10 +765,12 @@ int ChunkManager<DataBlock, ScoreType>::internal_setup_samples(const unsigned in
 		this->load_index_structure(4);
 	}
 	
+	Daemon::debug(" [-] samples before: %i", this->number_of_samples);
 	if (sample_limit > 0u)
 		this->number_of_samples = sample_limit;
 	else
 		this->number_of_samples = 1u;
+	Daemon::debug(" [-] samples after:  %i", this->number_of_samples);
 	
 	auto buffer_size = static_cast<unsigned int>(this->index_structure->get_number_of_levels());
 	
@@ -692,7 +778,8 @@ int ChunkManager<DataBlock, ScoreType>::internal_setup_samples(const unsigned in
 		buffer_size = this->number_of_samples;
 	
 	this->sample_size_list.resize(buffer_size);
-	this->index_structure->get_sample_sizes(/*this->sample_size_list, buffer_size*/);
+	this->sample_size_list = this->index_structure->get_sample_sizes(/*this->sample_size_list, buffer_size*/);
+	Daemon::debug("retrieved sample size list [%i]", this->sample_size_list.size());
 	
 	for (auto sample = this->number_of_samples; sample < buffer_size; ++sample)
 		this->sample_size_list[sample] = 0u;

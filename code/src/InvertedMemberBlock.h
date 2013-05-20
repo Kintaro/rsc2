@@ -41,16 +41,31 @@
 #ifndef __INVERTED_MEMBERBLOCK_H__
 #define __INVERTED_MEMBERBLOCK_H__
 
+#include "MemberBlock.h"
+#include "VecDataBlock.h"
+
 template<typename ScoreType>
 class InvertedMemberBlock
 {
 private:
-	std::vector<std::vector<int>> inverted_member_rank_list;
-	std::vector<std::vector<int>> inverted_member_index_list;
+	std::shared_ptr<VecDataBlock> data_block;
+	std::vector<std::vector<unsigned int>> inverted_member_rank_list;
+	std::vector<std::vector<unsigned int>> inverted_member_index_list;
+	std::vector<unsigned int> inverted_member_size_list;
+	std::vector<unsigned int> finger_list;
+
+	bool is_finalized;
+	unsigned int default_buffer_size;
+	int sample_level;
+	unsigned int number_of_items;
+	unsigned int global_offset;
 public:
-	InvertedMemberBlock(const std::shared_ptr<VecDataBlock> data_block, const int sample_level, const int default_buffer_size);
+	InvertedMemberBlock(const std::shared_ptr<VecDataBlock>& data_block, const boost::optional<int> sample_level, const boost::optional<int> default_buffer_size);
 	InvertedMemberBlock(const MemberBlock<ScoreType>& member_block);
 	InvertedMemberBlock(const InvertedMemberBlock<ScoreType>& inverted_member_block);
+
+	unsigned int set_id(const std::string& prefix);
+	unsigned int set_id(const std::string& prefix, unsigned int block);
 };
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>

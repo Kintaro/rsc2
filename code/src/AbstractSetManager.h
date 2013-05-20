@@ -77,6 +77,7 @@ public:
 	virtual unsigned int get_number_of_items() = 0;
 	virtual unsigned int get_number_of_items_in_block(const unsigned int block) = 0;
 	virtual unsigned int get_number_of_blocks() = 0;
+	virtual unsigned int get_number_of_samples() = 0;
 	virtual ListStyle get_rsc_list_style() = 0;
 	virtual unsigned int get_sample_size(const int sample_level) = 0;
 	virtual unsigned int get_offset() = 0;

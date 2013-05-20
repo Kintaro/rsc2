@@ -46,6 +46,7 @@
 /*-----------------------------------------------------------------------------------------------*/
 void AbstractSetManager::exchange_information()
 {
+	Daemon::debug("exchanging information");
 	auto chunk_size = this->get_number_of_items();
 	auto blocks = this->get_number_of_blocks();
 	auto offset = this->get_offset();
@@ -63,6 +64,7 @@ void AbstractSetManager::exchange_information()
 	boost::mpi::all_gather(Daemon::comm(), offset, this->chunk_offsets);
 	boost::mpi::all_gather(Daemon::comm(), block_offsets, this->block_offsets_in_chunk);
 	boost::mpi::all_gather(Daemon::comm(), block_items, this->items_in_block_of_chunk);
+	Daemon::debug("exchanging information [DONE]");
 }
 /*-----------------------------------------------------------------------------------------------*/
 unsigned int AbstractSetManager::get_number_of_items_in_chunk(const unsigned int chunk)

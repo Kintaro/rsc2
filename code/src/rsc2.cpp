@@ -95,6 +95,7 @@ int main(int argc, char** argv)
 
 	if (world.rank() != 0) {
 		SetManager<VecDataBlock, double> set;
+		set.set_list_hierarchy_parameters(ListStyle::Medium, 7, 60, boost::none, boost::none);
 		RscClusterer* rsc = new RscClusterer(std::shared_ptr<SetManager<VecDataBlock, double>>(&set));
 		rsc->cluster_soft_rsc();
 		//ChunkManager<VecDataBlock, double> chunk;

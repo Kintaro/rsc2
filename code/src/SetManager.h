@@ -123,20 +123,22 @@ public:
 	virtual unsigned int get_number_of_items();
 	virtual unsigned int get_number_of_items_in_block(const unsigned int block);
 	virtual unsigned int get_number_of_blocks();
+	virtual unsigned int get_number_of_samples();
 	virtual ListStyle get_rsc_list_style();
 	virtual unsigned int get_sample_size(const int sample_level);
 	virtual unsigned int get_offset();
 	virtual unsigned int get_block_offset(const unsigned int block);
+	
+	virtual bool set_list_hierarchy_parameters(const ListStyle list_style, const unsigned int sample_limit,
+											   const unsigned int maximum_number_of_members,
+											const boost::optional<unsigned int> maximum_number_of_mini_members,
+											const boost::optional<unsigned int> maximum_number_of_micro_members);
 private:
 	virtual bool build_members_from_disk();
 	virtual unsigned int internal_extract_members(std::vector<std::vector<unsigned int>>& member_index_list, 
 								 std::vector<std::vector<ScoreType>>& member_score_list,
 								 std::vector<unsigned int>& member_size_list,
 								 const unsigned int sample_id);
-	virtual bool set_list_hierarchy_parameters(const ListStyle list_style, const unsigned int sample_limit,
-											   const unsigned int maximum_number_of_members,
-											const boost::optional<unsigned int> maximum_number_of_mini_members,
-											const boost::optional<unsigned int> maximum_number_of_micro_members);
 };
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -144,7 +146,12 @@ template<typename DataBlock, typename ScoreType>
 SetManager<DataBlock, ScoreType>::SetManager() 
 {
 	auto ptr = std::shared_ptr<ChunkManager<DataBlock, ScoreType>>(new ChunkManager<DataBlock, ScoreType>());
+	this->maximum_number_of_micro_members = boost::none;
+	this->maximum_number_of_mini_members = boost::none;
 	this->chunk_ptr = ptr;
+	this->number_of_items = ptr->get_number_of_items();
+	this->number_of_samples = 0u;	
+	this->sample_limit = 0u;
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, typename ScoreType>
@@ -152,6 +159,7 @@ unsigned int SetManager<DataBlock, ScoreType>::setup_samples()
 {
 	auto maximum_number_of_micro_members = boost::optional<unsigned int>(boost::none);
 	auto maximum_number_of_mini_members = boost::optional<unsigned int>(boost::none);
+	Daemon::debug("SetManager::setup_samples [sample_limit = %i]", this->sample_limit);
 	
 	switch (this->number_of_tiny_samples)
 	{
@@ -166,11 +174,11 @@ unsigned int SetManager<DataBlock, ScoreType>::setup_samples()
 			break;
 	}
 	
-	auto number_of_chunk_samples = this->chunk_ptr->setup_samples(this->sample_limit, this->maximum_number_of_members, *maximum_number_of_mini_members, *maximum_number_of_micro_members);
-	
+	auto number_of_chunk_samples = this->chunk_ptr->setup_samples(this->sample_limit, this->maximum_number_of_members, maximum_number_of_mini_members, maximum_number_of_micro_members);
 	boost::mpi::all_reduce(Daemon::comm(), number_of_chunk_samples, number_of_chunk_samples, boost::mpi::maximum<unsigned int>());
-	
 	this->number_of_samples = std::max(number_of_chunk_samples, this->number_of_samples);
+	Daemon::debug("SetManager::setup_samples [DONE]");
+	
 	return number_of_chunk_samples;
 }
 /*-----------------------------------------------------------------------------------------------*/
@@ -182,6 +190,21 @@ std::shared_ptr<AbstractSetManager> SetManager<DataBlock, ScoreType>::build_trim
 	auto trim_set_manager = std::shared_ptr<SetManager<DataBlock, ScoreType>>(new SetManager<DataBlock, ScoreType>());
 	trim_set_manager->list_style = this->list_style;
 	trim_set_manager->number_of_samples = this->number_of_samples;
+
+	trim_set_manager->number_of_items = this->number_of_items;
+
+	for (auto i = 0; i < Daemon::comm().size(); ++i)
+	{	
+		auto transmission_mode = i == Daemon::comm().rank() ? TransmissionMode::TransmissionSend : TransmissionMode::TransmissionReceive;
+		trim_set_manager->chunk_ptr->build_inverted_members(transmission_mode, i, Stage::First);
+		Daemon::comm().barrier();
+	}
+
+	Daemon::comm().barrier();
+
+	trim_set_manager->chunk_ptr->build_inverted_members(TransmissionMode::TransmissionSend, Daemon::comm().rank(), Stage::Second);
+
+	Daemon::comm().barrier();
 	
 	return trim_set_manager;
 }
@@ -259,13 +282,13 @@ bool SetManager<DataBlock, ScoreType>::build_inverted_members(const bool can_loa
 	for (auto i = 0; i < Daemon::comm().size(); ++i)
 	{
 		auto transmission_mode = Daemon::comm().rank() == i ? TransmissionMode::TransmissionSend : TransmissionMode::TransmissionReceive;
-		result &= this->chunk_ptr->build_inverted_members(this->chunk_ptr, transmission_mode, i, Stage::First);
+		result &= this->chunk_ptr->build_inverted_members(transmission_mode, i, Stage::First);
 		Daemon::comm().barrier();
 	}
 	
 	Daemon::comm().barrier();
 	
-	result &= this->chunk_ptr->build_inverted_members(this->chunk_ptr, TransmissionMode::TransmissionSend, Daemon::comm().rank(), Stage::Second);
+	result &= this->chunk_ptr->build_inverted_members(TransmissionMode::TransmissionSend, Daemon::comm().rank(), Stage::Second);
 	
 	return result;
 }
@@ -334,6 +357,7 @@ bool SetManager<DataBlock, ScoreType>::set_list_hierarchy_parameters(const ListS
 											const boost::optional<unsigned int> maximum_number_of_mini_members,
 											const boost::optional<unsigned int> maximum_number_of_micro_members)
 {
+	Daemon::debug("settings list hierarchy [%i, %i]", this->number_of_samples, sample_limit);
 	if (this->number_of_samples > 0 
 		|| sample_limit <= 0 
 		|| (maximum_number_of_micro_members && *maximum_number_of_micro_members > *maximum_number_of_mini_members)
@@ -343,6 +367,7 @@ bool SetManager<DataBlock, ScoreType>::set_list_hierarchy_parameters(const ListS
 		|| maximum_number_of_members == 0)
 		return false;
 		
+	Daemon::debug("set list hierarchy parameters: %i", sample_limit);
 	this->sampling_flag = true;
 	this->list_style = list_style;
 	this->sample_limit = sample_limit;
@@ -372,6 +397,12 @@ unsigned int SetManager<DataBlock, ScoreType>::get_number_of_blocks()
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, typename ScoreType>
+unsigned int SetManager<DataBlock, ScoreType>::get_number_of_samples()
+{
+	return this->number_of_samples;
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, typename ScoreType>
 unsigned int SetManager<DataBlock, ScoreType>::get_block_offset(const unsigned int block)
 {
 	return this->chunk_ptr->get_block_offset(block);
@@ -386,6 +417,7 @@ ListStyle SetManager<DataBlock, ScoreType>::get_rsc_list_style()
 template<typename DataBlock, typename ScoreType>
 unsigned int SetManager<DataBlock, ScoreType>::get_sample_size(const int sample_level)
 {
+	Daemon::debug("get_sample_size(%i)", sample_level);
 	return this->chunk_ptr->get_sample_size(sample_level);
 }
 /*-----------------------------------------------------------------------------------------------*/
