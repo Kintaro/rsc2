@@ -58,7 +58,7 @@ protected:
 public:
 	VecDataBlock(const unsigned int block_id);
 	VecDataBlock(const std::shared_ptr<VecDataBlock>& data_block) {};
-	const DistanceData* access_item_by_block_offset(int index) { return nullptr; }
+	const DistanceData* access_item_by_block_offset(int index) const { return nullptr; }
 	unsigned int get_offset() { return 0u; }
 	size_t get_global_offset() const;
 	void set_global_offset(const size_t offset);

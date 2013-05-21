@@ -196,13 +196,13 @@ std::shared_ptr<AbstractSetManager> SetManager<DataBlock, ScoreType>::build_trim
 	for (auto i = 0; i < Daemon::comm().size(); ++i)
 	{	
 		auto transmission_mode = i == Daemon::comm().rank() ? TransmissionMode::TransmissionSend : TransmissionMode::TransmissionReceive;
-		trim_set_manager->chunk_ptr->build_inverted_members(transmission_mode, i, Stage::First);
+		trim_set_manager->chunk_ptr->build_inverted_members(transmission_mode, i);
 		Daemon::comm().barrier();
 	}
 
 	Daemon::comm().barrier();
 
-	trim_set_manager->chunk_ptr->build_inverted_members(TransmissionMode::TransmissionSend, Daemon::comm().rank(), Stage::Second);
+	trim_set_manager->chunk_ptr->build_inverted_members(TransmissionMode::TransmissionSend, Daemon::comm().rank());
 
 	Daemon::comm().barrier();
 	
@@ -282,13 +282,11 @@ bool SetManager<DataBlock, ScoreType>::build_inverted_members(const bool can_loa
 	for (auto i = 0; i < Daemon::comm().size(); ++i)
 	{
 		auto transmission_mode = Daemon::comm().rank() == i ? TransmissionMode::TransmissionSend : TransmissionMode::TransmissionReceive;
-		result &= this->chunk_ptr->build_inverted_members(transmission_mode, i, Stage::First);
+		result &= this->chunk_ptr->build_inverted_members(transmission_mode, i);
 		Daemon::comm().barrier();
 	}
 	
 	Daemon::comm().barrier();
-	
-	result &= this->chunk_ptr->build_inverted_members(TransmissionMode::TransmissionSend, Daemon::comm().rank(), Stage::Second);
 	
 	return result;
 }
