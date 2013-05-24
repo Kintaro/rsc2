@@ -51,6 +51,10 @@ void AbstractSetManager::exchange_information()
 	auto blocks = this->get_number_of_blocks();
 	auto offset = this->get_offset();
 	
+	Daemon::debug(" [-] chunk size: %i", chunk_size);
+	Daemon::debug(" [-] blocks:     %i", blocks);
+	Daemon::debug(" [-] offset:     %i", offset);
+
 	std::vector<unsigned int> block_offsets;
 	for (auto i = 0u; i < blocks; ++i)
 		block_offsets.push_back(this->get_block_offset(i));

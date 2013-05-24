@@ -59,15 +59,21 @@ public:
 	virtual unsigned int extract_members(std::vector<std::vector<unsigned int>>& member_index_list, 
 								 std::vector<unsigned int>& member_size_list,
 								 const unsigned int sample_id) = 0;
-	virtual void extract_members_from_block(std::vector<std::vector<unsigned int>>& member_index_list, 
+
+	virtual unsigned int extract_members_from_block(std::vector<std::vector<unsigned int>>& member_index_list, 
 											std::vector<unsigned int>& member_size_list,
-											const unsigned int number_of_items, 
 											const unsigned int sample_id, 
 											const unsigned int block) = 0;
+	virtual unsigned int extract_members_from_block(std::vector<std::vector<unsigned int>>& member_index_list, 
+											std::vector<std::vector<double>>& member_score_list,
+											std::vector<unsigned int>& member_size_list,
+											const unsigned int sample_id, 
+											const unsigned int block) = 0;
+
+
 	virtual void extract_inverted_members_from_block(std::vector<std::vector<unsigned int>>& inverted_member_index_list, 
 													 std::vector<std::vector<unsigned int>>& inverted_member_rank_list, 
 													 std::vector<unsigned int>& inverted_member_size_list, 
-													 const unsigned int number_of_items,
 													 const int sample_id, 
 													 const unsigned int chunk,
 													 const unsigned int block) = 0;

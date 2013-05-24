@@ -47,15 +47,15 @@ VecDataBlock::VecDataBlock(const unsigned int block_id)
 {
 	Daemon::debug("creating data block %i", block_id);
 	this->block_id = block_id;
-	
+	this->global_offset = 0u;	
 }
 /*-----------------------------------------------------------------------------------------------*/
-size_t VecDataBlock::get_global_offset() const
+size_t VecDataBlock::get_offset() const
 {
 	return this->global_offset;
 }
 /*-----------------------------------------------------------------------------------------------*/
-void VecDataBlock::set_global_offset(const size_t new_offset)
+void VecDataBlock::set_offset(const size_t new_offset)
 {
 	this->global_offset = new_offset;
 }

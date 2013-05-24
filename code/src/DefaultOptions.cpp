@@ -71,6 +71,8 @@ void DefaultOptions::set_default_options()
 	Options::set_option("minimum-micro-list-accept-limit", "3");
 
 	Options::set_option("list-style", "medium");
+
+	Options::set_option("rsc-small-buffsize", "4");
 }
 /*-----------------------------------------------------------------------------------------------*/
 void DefaultOptions::initialize_enums()

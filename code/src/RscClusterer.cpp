@@ -42,6 +42,7 @@
 #include <algorithm>
 #include <boost/mpi/communicator.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/mpi/collectives.hpp>
 #include "RscClusterer.h"
 #include "Sort.h"
 #include "Daemon.h"
@@ -75,8 +76,41 @@ bool RscClusterer::initialize_soft_rsc()
 			return false;
 		}
 	}
+
+	auto speed_accuracy = Options::get_option_as<double>("speed-accuracy");
+	auto sash_degree = Options::get_option_as<unsigned int>("sash-degree");
+
+	if (speed_accuracy > 0.0)
+	{
+		if (!this->set_manager->build_members(false, sash_degree, speed_accuracy))
+		{
+			this->set_manager->purge_members();
+			return false;
+		}
+	}
+	else
+	{
+		if (!this->set_manager->build_members(false))
+		{
+			this->set_manager->purge_members();
+			return false;
+		}
+	}
+
+	if (!this->set_manager->build_inverted_members(false))
+	{
+		//this->set_manager->purge_inverted_members();
+		return false;
+	}
+
+	//this->set_manager->clear_all();
+
 	this->trim_manager = this->set_manager->build_trim_set(false);
 	//this->set_manager->build_trim_set(true);
+	//
+	
+	//this->trim_manager->clear_all();
+	//this->set_manager->clear_all();
 
 	this->set_manager->exchange_information();
 	this->number_of_items = this->set_manager->get_number_of_items_across_processors();
@@ -125,14 +159,13 @@ void RscClusterer::cluster_soft_rsc()
 	}
 
 	Daemon::info("clustering soft rsc [%i, %i]", this->number_of_tiny_samples, this->number_of_samples);
+	this->set_manager->exchange_information();
+	this->trim_manager->exchange_information();
 
 	for (auto sample = -static_cast<int>(this->number_of_tiny_samples); sample < static_cast<int>(this->number_of_samples); ++sample)
 	{
 		Daemon::debug("processing soft clustering of sample %i...", sample);
 		
-		this->set_manager->exchange_information();
-		//this->trim_manager->exchange_information();
-
 		auto transmission_mode = 0 == Daemon::comm().rank() ? TransmissionMode::TransmissionSend : TransmissionMode::TransmissionReceive;
 		
 		for (auto sender = 0; sender < Daemon::comm().size(); ++sender)
@@ -176,11 +209,11 @@ void RscClusterer::generate_patterns_for_sample(const int sample_id, const Trans
 
 	if (transmission_mode == TransmissionMode::TransmissionSend && sender)
 	{
-		for (auto chunk = 0u; chunk < (unsigned int)Daemon::comm().size(); ++chunk)
-			this->generate_patterns_for_sample_send(chunk, sample_id, transmission_mode, sender);
+		for (auto chunk = 0u; chunk < static_cast<unsigned int>(Daemon::comm().size()); ++chunk)
+			this->generate_patterns_for_sample_send(chunk, sample_id, sender);
 	}
-	else if (sender)
-		this->generate_patterns_for_sample_receive(sample_id, transmission_mode, sender);
+	else if (transmission_mode == TransmissionMode::TransmissionReceive && sender)
+		this->generate_patterns_for_sample_receive(sample_id, sender);
 
 	// Generate ranking permutation of base items, relative to cluster candidate Z-scores.
 	// As a byproduct, invert the ranking permutation.
@@ -227,15 +260,16 @@ void RscClusterer::generate_patterns_for_sample(const int sample_id, const Trans
 	pattern_level_ready = sample_id;
 }
 /*-----------------------------------------------------------------------------------------------*/
-void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, const int sample_id, const TransmissionMode& transmission_mode, const boost::optional<unsigned int>& sender)
+void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, const int sample_id, const boost::optional<unsigned int>& sender)
 {
+	Daemon::debug("generate_patterns_for_sample_send(%i, %i, %i)", chunk, sample_id, *sender);
 	unsigned int start = 0u;
 	unsigned int finish = 0u; 
 
 	double maximum_squared_significance;
 	unsigned int maximum_squared_significance_location = 0;
 
-	if (chunk > 0)
+	if (chunk > 0u)
 	{
 		Daemon::comm().send(chunk, 0, member_index_list);
 		Daemon::comm().send(chunk, 0, member_size_list);
@@ -255,7 +289,7 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 	{
 		unsigned int number_of_blocks_in_chunk;
 
-		if (target_processor == 0)
+		if (target_processor == 0u)
 			number_of_blocks_in_chunk = this->trim_manager->get_number_of_blocks();
 		else
 			Daemon::comm().recv(target_processor, 0, &number_of_blocks_in_chunk, 1);
@@ -264,6 +298,7 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 		// based at items in the current chunk neighbourhood lists.
 		for (auto block = 0u; block < number_of_blocks_in_chunk; ++block)
 		{
+			Daemon::debug("  [+] send block %i", block);
 			unsigned int alt_start;
 			unsigned int alt_finish;
 
@@ -275,11 +310,11 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 				alt_finish = alt_start - 1 + this->trim_manager->get_number_of_items_in_block(block);
 
 				if (target_processor != chunk)
-					this->trim_manager->extract_members_from_block(this->member_index_list, this->member_size_list, number_of_items, sample_id, block);
+					this->trim_manager->extract_members_from_block(this->member_index_list, this->member_size_list, sample_id, block);
 				this->trim_manager->extract_inverted_members_from_block(this->inverted_member_index_list, 
 																		this->inverted_member_rank_list, 
 																		this->inverted_member_size_list, 
-																		this->number_of_items, sample_id, chunk, block);
+																		sample_id, chunk, block);
 			}
 			else
 			{
@@ -329,19 +364,8 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 		}
 	}
 
-	auto sample_size = 0u;
-
-	for (auto target_processor = 0u; target_processor < (unsigned int)Daemon::comm().size(); ++target_processor)
-	{
-		if ((unsigned int)Daemon::comm().rank() == target_processor)
-			sample_size += this->trim_manager->get_sample_size(sample_id);
-		else
-		{
-			int tmp;
-			Daemon::comm().recv(target_processor, 0, &tmp, 1);
-			sample_size += tmp;
-		}
-	}
+	auto sample_size = this->trim_manager->get_sample_size(sample_id);
+	boost::mpi::all_reduce(Daemon::comm(), sample_size, sample_size, std::plus<unsigned int>());
 
 	for (auto item = start; item <= finish; ++item)
 	{
@@ -401,14 +425,14 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 	}
 }
 /*-----------------------------------------------------------------------------------------------*/
-void RscClusterer::generate_patterns_for_sample_receive(const int sample_id, const TransmissionMode& transmission_mode, const boost::optional<unsigned int>& sender)
+void RscClusterer::generate_patterns_for_sample_receive(const int sample_id, const boost::optional<unsigned int>& sender)
 {
-	for (auto target_processor = 0u; target_processor < (unsigned int)Daemon::comm().size(); ++target_processor)
+	for (auto target_processor = 0u; target_processor < static_cast<unsigned int>(Daemon::comm().size()); ++target_processor)
 	{
 		auto start = this->trim_manager->get_offset();
 		auto finish = start - 1 + this->trim_manager->get_number_of_items();
 
-		if (target_processor == (unsigned int)Daemon::comm().rank())
+		if (target_processor == static_cast<unsigned int>(Daemon::comm().rank()))
 		{
 			Daemon::comm().recv(0, 0, member_index_list);
 			Daemon::comm().recv(0, 0, member_size_list);
@@ -438,13 +462,12 @@ void RscClusterer::generate_patterns_for_sample_receive(const int sample_id, con
 
 			// Fetch (where necessary) the block neighborhood lists and
 			// the inverted neighborhood lists.
-			this->trim_manager->extract_members_from_block(member_index_list, member_size_list, number_of_items, sample_id, alt_block);
+			this->trim_manager->extract_members_from_block(member_index_list, member_size_list, sample_id, alt_block);
 			Daemon::comm().send(*sender, 0, &member_index_list, 1);
 
 			this->trim_manager->extract_inverted_members_from_block(inverted_member_index_list, 
 																	this->inverted_member_rank_list, 
 																	this->inverted_member_size_list, 
-																	this->number_of_items,														   
 																	sample_id, 
 																	target_processor,
 																	alt_block);
@@ -454,8 +477,8 @@ void RscClusterer::generate_patterns_for_sample_receive(const int sample_id, con
 		}
 	}
 
-	int tmp = this->trim_manager->get_sample_size(sample_id);
-	Daemon::comm().send(*sender, 0, &tmp, 1);
+	auto sample_size = this->trim_manager->get_sample_size(sample_id);
+	boost::mpi::all_reduce(Daemon::comm(), sample_size, sample_size, std::plus<unsigned int>());
 }
 /*-----------------------------------------------------------------------------------------------*/
 void RscClusterer::select_trim_patterns_for_sample(const int sample_id, const TransmissionMode& transmission_mode)
@@ -628,7 +651,7 @@ void RscClusterer::select_trim_patterns_for_sample_send(const int sample_id, con
 			// Extract the neighbourhood lists for this block.
 			if (chunk == 0)
 			{
-				this->trim_manager->extract_members_from_block(member_index_list, member_size_list, number_of_items, sample_id, block);
+				this->trim_manager->extract_members_from_block(member_index_list, member_size_list, sample_id, block);
 
 				// Use the member lists to determine those patterns
 				// having intersection with at least one cluster pattern.
@@ -708,7 +731,7 @@ void RscClusterer::select_trim_patterns_for_sample_receive(const int sample_id, 
 		Daemon::comm().recv(0, 0, this->member_index_list);
 
 		// Extract the neighbourhood lists for this block.
-		this->trim_manager->extract_members_from_block(this->member_index_list, this->member_size_list, this->number_of_items, sample_id, block);
+		this->trim_manager->extract_members_from_block(this->member_index_list, this->member_size_list, sample_id, block);
 
 		// Use the member lists to determine those patterns
 		// having intersection with at least one cluster pattern.
@@ -1415,7 +1438,6 @@ void RscClusterer::setup_adjacency_lists(const MethodFlag method_flag, const int
 							this->inverted_member_index_list,
 							this->inverted_member_rank_list,
 							this->inverted_member_size_list,
-							this->number_of_items,
 							sample_id,
 							chunk,
 							block);
@@ -1429,7 +1451,6 @@ void RscClusterer::setup_adjacency_lists(const MethodFlag method_flag, const int
 							this->inverted_member_index_list,
 							this->inverted_member_rank_list,
 							this->inverted_member_size_list,
-							this->number_of_items,
 							sample_id,
 							chunk,
 							block);
@@ -1449,7 +1470,6 @@ void RscClusterer::setup_adjacency_lists(const MethodFlag method_flag, const int
 							this->inverted_member_index_list,
 							this->inverted_member_rank_list,
 							this->inverted_member_size_list,
-							this->number_of_items,
 							sample_id,
 							chunk,
 							block);
@@ -1684,8 +1704,6 @@ unsigned int RscClusterer::fetch_adjacency_lists_from_disk(const unsigned int ch
 	std::ifstream file;
 	FileUtil::open_read(filename, file);
 
-	Daemon::debug("Reading from scratch file %s", filename.c_str());
-
 	// Read the number of lists to be loaded, and their offset.
 	// If they do not match expected values, then return.
 	auto offset_read = FileUtil::read_from_file<unsigned int>(file);
@@ -1728,7 +1746,6 @@ bool RscClusterer::move_adjacency_lists_to_disk(const unsigned int chunk, const 
 	std::ostringstream filename_builder;
 	filename_builder << Options::get_option_as<std::string>("temporary_directory_path") << "/" << Options::get_option_as<std::string>("cluster_prefix") << "_scratch_c" << chunk << ".txt";
 	auto filename = filename_builder.str();
-	Daemon::info("writing to scratch file %s", filename.c_str());
 	
 	std::ofstream file;
 	FileUtil::open_write(filename, file);

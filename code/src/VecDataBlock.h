@@ -60,8 +60,8 @@ public:
 	VecDataBlock(const std::shared_ptr<VecDataBlock>& data_block) {};
 	const DistanceData* access_item_by_block_offset(int index) const { return nullptr; }
 	unsigned int get_offset() { return 0u; }
-	size_t get_global_offset() const;
-	void set_global_offset(const size_t offset);
+	size_t get_offset() const;
+	void set_offset(const size_t offset);
 	size_t get_number_of_items() const;
 	const std::string get_filename_prefix() const;
 	size_t load_data();
