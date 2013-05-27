@@ -45,7 +45,7 @@ class DistanceData
 {
 public:
 	virtual ~DistanceData() {};
-	virtual double distance_to(const DistanceData& to) { return 0.0; };
+	virtual double distance_to(const std::shared_ptr<DistanceData>& to) = 0;
 };
 
 #endif

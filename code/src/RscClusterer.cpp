@@ -59,7 +59,7 @@ RscClusterer::RscClusterer(const std::shared_ptr<AbstractSetManager> set_manager
 /*-----------------------------------------------------------------------------------------------*/
 bool RscClusterer::initialize_soft_rsc()
 {
-	Daemon::debug("initializing soft rsc... [%i]", this->number_of_samples);
+	Daemon::debug("initializing soft rsc...");
 	
 	this->clear_non_parameters();
 	this->initialize_non_parameters();

@@ -54,6 +54,8 @@
 #include "IndexStructure.h"
 #include "Daemon.h"
 
+template<typename ScoreType> class InvertedMemberBlock;
+
 template<typename ScoreType>
 class MemberBlock
 {
@@ -100,8 +102,9 @@ public:
 	int build_exact_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const size_t item_index);
 
 	int merge_members(const MemberBlock<ScoreType>& block, const int max_list_size);
+	bool limit_to_sample(const std::shared_ptr<InvertedMemberBlock<ScoreType>>& inverted_member_block);
 	
-	bool verify_savefile() { return true; }
+	bool verify_savefile(const boost::optional<unsigned int>& index = boost::none) { return false; }
 private:
 	int internal_build_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const double scale_factor, const size_t item_index);
 	int internal_build_neighbourhood_compute_query(IndexStructure<DistanceData>& data_index, const int offset, const double scale_factor, const int item_index);
@@ -126,18 +129,14 @@ template<typename ScoreType>
 MemberBlock<ScoreType>::MemberBlock(const std::shared_ptr<VecDataBlock>& block, const unsigned int member_list_buffer_size, const boost::optional<int>& sample_level)
 : data_block(block)
 {
-	this->global_offset = boost::none;
-	this->number_of_items = boost::none;
-	this->sample_level = boost::none;
-	this->member_list_buffer_size = 0;
-
-	this->global_offset = block->get_offset();
+	Daemon::error("Setting offset to %i", block->get_offset());
+	this->set_offset(block->get_offset());
 	this->number_of_items = block->get_number_of_items();
 	this->member_list_buffer_size = member_list_buffer_size;
 	this->sample_level = sample_level;
 	this->temporary_distance_buffer.resize(member_list_buffer_size);
-
-	Daemon::debug(" [-] setting member block offset to %i", *this->global_offset);
+	this->member_index_llist.clear();
+	this->member_score_llist.clear();
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
@@ -145,11 +144,9 @@ MemberBlock<ScoreType>::MemberBlock(std::shared_ptr<MemberBlock<ScoreType>>& blo
 :data_block(block->data_block)
 {
 	this->data_block = block->data_block;
-	this->global_offset = this->data_block->get_offset();
+	this->set_offset(block->data_block->get_offset());
 	this->number_of_items = block->number_of_items;
 	this->member_list_buffer_size = block->member_list_buffer_size;
-
-	Daemon::debug(" [-] setting member block offset to %i <>", *this->global_offset);
 
 	if (sample_level)
 		this->sample_level = *sample_level;
@@ -171,7 +168,8 @@ MemberBlock<ScoreType>::MemberBlock(std::shared_ptr<MemberBlock<ScoreType>>& blo
 
 	for (auto i = 0u; i < *this->number_of_items; ++i)
 	{
-
+		this->member_index_llist[i] = std::vector<unsigned int>(block->member_index_llist[i].begin(), block->member_index_llist[i].end());
+		this->member_score_llist[i] = std::vector<ScoreType>(block->member_score_llist[i].begin(), block->member_score_llist[i].end());
 	}
  }
 /*-----------------------------------------------------------------------------------------------*/
@@ -184,8 +182,6 @@ bool MemberBlock<ScoreType>::receive_members_data(const int source)
 	Daemon::comm().recv(source, source, this->number_of_items);
 	Daemon::comm().recv(source, source, this->member_index_llist);
 	Daemon::comm().recv(source, source, this->member_score_llist);
-
-	Daemon::debug(" [-] offset = %i", *this->global_offset);
 
 	Daemon::debug("received member block from %i", source);
 
@@ -247,7 +243,7 @@ bool MemberBlock<ScoreType>::save_members(const boost::optional<unsigned int>& i
 	else
 		str << *this->filename_prefix << ".mem";
 	
-	Daemon::debug("  + saving to file %s", str.str().c_str());
+	Daemon::debug(" [-] saving to file %s", str.str().c_str());
 	
 	std::ofstream file;
 	FileUtil::open_write(str.str(), file);
@@ -328,8 +324,8 @@ bool MemberBlock<ScoreType>::load_members(std::vector<std::vector<unsigned int>>
 {
 	amount = std::min(amount, *this->number_of_items);
 
-	member_index_llist.resize(amount);
-	member_score_llist.resize(amount);
+	member_index_llist.resize(*this->number_of_items);
+	member_score_llist.resize(*this->number_of_items);
 
 	for (auto i = 0; i < amount; ++i)
 	{
@@ -372,7 +368,7 @@ const std::vector<ScoreType> MemberBlock<ScoreType>::extract_member_scores(const
 template<typename ScoreType>
 const std::vector<unsigned int> MemberBlock<ScoreType>::extract_member_indices(const unsigned int item_index)
 {
-	Daemon::debug("extracting member indices for item %i", item_index);
+	Daemon::debug("extracting member indices for item %i [%i]", item_index, this->member_index_llist.size());
 	std::vector<unsigned int> result = this->member_index_llist[item_index - *this->global_offset];
 	this->member_index_llist[item_index - *this->global_offset].clear();
 	return result;
@@ -408,29 +404,39 @@ int MemberBlock<ScoreType>::internal_build_neighbourhood(IndexStructure<Distance
 template<typename ScoreType>
 int MemberBlock<ScoreType>::internal_build_neighbourhood_compute_query(IndexStructure<DistanceData>& data_index, const int offset, const double scale_factor, const int item_index)
 {
+	Daemon::error("A");
+	if (!global_offset)
+		Daemon::error("HUH?");
 	const int adjusted_item_index = item_index - *this->global_offset;
-	const int effective_sample_level = *this->sample_level > 0 ? *this->sample_level : 0;
-
+	const int effective_sample_level = sample_level && *this->sample_level > 0 ? *this->sample_level : 0;
+	Daemon::error("B");
 	if (this->member_index_llist.empty())
 	{
-		this->member_index_llist.reserve(*this->number_of_items);
-		this->member_score_llist.reserve(*this->number_of_items);
+		this->member_index_llist.resize(*this->number_of_items);
+		this->member_score_llist.resize(*this->number_of_items);
+
+		for (auto i = 0u; i < this->number_of_items; ++i)
+		{
+			this->member_score_llist[i] = std::vector<ScoreType>();
+			this->member_index_llist[i] = std::vector<unsigned int>();
+		}
 	}
 	else if (!this->member_index_llist[adjusted_item_index].empty())
 	{
 		Daemon::error("member_index_llist[adjusted_item_index] is not empty!");
 		throw new std::exception();
 	}
+	Daemon::error("C");
 
 	// The designated item in the block->serves as a query point
 	// for a nearest-neighbour search.
 	// Extract the query item.
-	DistanceData query = *this->data_block->access_item_by_block_offset(adjusted_item_index);
+	auto query = this->data_block->access_item_by_block_offset(adjusted_item_index);
 
 	if (scale_factor <= 0.0)
-		return data_index.find_nearest(std::shared_ptr<DistanceData>(&query), this->member_list_buffer_size, effective_sample_level);
+		return data_index.find_nearest(query, this->member_list_buffer_size, effective_sample_level);
 
-	int num_members = data_index.find_near(std::shared_ptr<DistanceData>(&query), this->member_list_buffer_size, effective_sample_level, scale_factor);
+	auto num_members = data_index.find_near(query, this->member_list_buffer_size, effective_sample_level, scale_factor);
 	
 	// We didn't find enough neighbours!
 	// This is probably due to a overoptimistically-low setting for
@@ -438,19 +444,19 @@ int MemberBlock<ScoreType>::internal_build_neighbourhood_compute_query(IndexStru
 	// Double the scale factor and try again.
 	//if (num_members >= this->member_list_size_limit)
 		//return num_members;
-
-	const int number_sample_levels = data_index.get_number_of_levels();
-	std::vector<unsigned int> sample_level_sizes = data_index.get_sample_sizes();
+		
+	const auto number_sample_levels = data_index.get_number_of_levels();
+	auto sample_level_sizes = data_index.get_sample_sizes();
 
 	if (!(effective_sample_level < number_sample_levels && 
 			this->member_list_buffer_size <= sample_level_sizes[effective_sample_level]))
 		return num_members;
 
-	double factor = scale_factor;
+	auto factor = scale_factor;
 	do
 	{
 		factor *= 2.0;
-		num_members = (int)data_index.find_near(std::shared_ptr<DistanceData>(&query), this->member_list_buffer_size, effective_sample_level, factor);
+		num_members = data_index.find_near(query, this->member_list_buffer_size, effective_sample_level, factor);
 	} 
 	while (num_members < (int)this->member_list_buffer_size);
 
@@ -458,14 +464,17 @@ int MemberBlock<ScoreType>::internal_build_neighbourhood_compute_query(IndexStru
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-int MemberBlock<ScoreType>::internal_build_neighbourhood_store(IndexStructure<DistanceData>& data_index, const int offset, const double scale_factor, const int item_index, const int num_members)
+int MemberBlock<ScoreType>::internal_build_neighbourhood_store(IndexStructure<DistanceData>& data_index, const int offset, const double scale_factor, 
+		const int item_index, const int num_members)
 {
 	const auto result_distance_comparisons = data_index.get_result_distance_comparisons();
 	const auto adjusted_item_index = item_index - *this->global_offset;
 	//const auto effective_sample_level = *this->sample_level > 0 ? *this->sample_level : 0;
 
+	Daemon::error("Resizing to %i", num_members);
 	this->member_index_llist[adjusted_item_index].resize(num_members);
 	this->member_score_llist[adjusted_item_index].resize(num_members);
+	Daemon::error("Resizing done");
 
 	if (num_members <= 0)
 		return result_distance_comparisons;
@@ -473,9 +482,9 @@ int MemberBlock<ScoreType>::internal_build_neighbourhood_store(IndexStructure<Di
 	this->member_index_llist[adjusted_item_index] = data_index.get_result_indices();
 	this->temporary_distance_buffer = data_index.get_result_distances();
 
-	int first_copy_location = 0;
+	auto first_copy_location = 0;
 
-	for (int i = 0; i < num_members; ++i)
+	for (auto i = 0; i < num_members; ++i)
 	{
 		this->member_score_llist[adjusted_item_index][i] = this->temporary_distance_buffer[i];
 
@@ -599,6 +608,21 @@ bool MemberBlock<ScoreType>::set_id(const boost::optional<std::string>& prefix, 
 	}
 	
 	this->filename_prefix = buffer.str();
+
+	return true;
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename ScoreType>
+bool MemberBlock<ScoreType>::limit_to_sample(const std::shared_ptr<InvertedMemberBlock<ScoreType>>& inverted_member_block)
+{
+	for (auto i = 0u; i < this->number_of_items; ++i)
+	{
+		if (inverted_member_block->get_number_of_inverted_members(i + *this->global_offset) > 0u)
+			continue;
+
+		this->member_score_llist[i].clear();
+		this->member_index_llist[i].clear();
+	}
 
 	return true;
 }

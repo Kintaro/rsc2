@@ -45,12 +45,11 @@
 /*-----------------------------------------------------------------------------------------------*/
 VecDataBlock::VecDataBlock(const unsigned int block_id)
 {
-	Daemon::debug("creating data block %i", block_id);
 	this->block_id = block_id;
 	this->global_offset = 0u;	
 }
 /*-----------------------------------------------------------------------------------------------*/
-size_t VecDataBlock::get_offset() const
+unsigned int VecDataBlock::get_offset() const
 {
 	return this->global_offset;
 }
@@ -102,7 +101,7 @@ size_t VecDataBlock::internal_load_block(std::ifstream& file)
 	return number_of_items;
 }
 /*-----------------------------------------------------------------------------------------------*/
-std::shared_ptr<VecData> VecDataBlock::internal_load_item(std::ifstream& file)
+VecData VecDataBlock::internal_load_item(std::ifstream& file)
 {
 	auto length = FileUtil::read_from_file<unsigned int>(file);
 	
@@ -110,12 +109,11 @@ std::shared_ptr<VecData> VecDataBlock::internal_load_item(std::ifstream& file)
 	for (auto &x : vector_data)
 		x = FileUtil::read_from_file<double>(file);
 	
-	return std::shared_ptr<VecData>(new VecData(vector_data));
+	return VecData(vector_data);
 }
 /*-----------------------------------------------------------------------------------------------*/
 bool VecDataBlock::is_valid()
 {
-	Daemon::debug("checking validity [%i, %i]", *this->block_id, this->number_of_items);
 	if (!this->block_id || this->number_of_items == 0u)
 		return false;
 	return true;
@@ -144,7 +142,12 @@ void VecDataBlock::extract_all_items(std::vector<std::shared_ptr<DistanceData>>&
 	
 	for (auto i = 0u; i < this->number_of_items; ++i)
 	{
-		item_list[i + start_index] = this->data[i];
+		item_list[i + start_index] = std::shared_ptr<DistanceData>(&this->data[i]);
 	}
+}
+/*-----------------------------------------------------------------------------------------------*/
+const std::shared_ptr<DistanceData> VecDataBlock::access_item_by_block_offset(const unsigned int index) const
+{
+	return std::shared_ptr<DistanceData>(const_cast<VecData*>(&(*(this->data.begin() + index))));
 }
 /*-----------------------------------------------------------------------------------------------*/

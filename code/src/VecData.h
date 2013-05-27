@@ -41,7 +41,10 @@
 #ifndef __VEC_DATA_H__
 #define __VEC_DATA_H__
 
+#include <boost/serialization/vector.hpp>
+#include <memory>
 #include "DistanceData.h"
+#include "Daemon.h"
 
 class VecData : public DistanceData
 {
@@ -54,10 +57,25 @@ public:
 		this->data = data;
 	}
 	
-	virtual double distance_to(const DistanceData& to) 
+	virtual double distance_to(const std::shared_ptr<DistanceData>& to) 
 	{
-		return 0.0;
+		auto other = std::static_pointer_cast<VecData>(to);
+		auto sum = 0.0;
+
+		for (auto i = 0u; i < this->data.size(); ++i)
+			sum += (this->data[i] - other->data[i]) * (this->data[i] - other->data[i]);
+
+		return sqrt(sum);
 	};
+	
+private:
+	friend class boost::serialization::access;
+
+	template<class Archive>
+	void serialize(Archive &ar, const unsigned int version)
+	{
+		ar &data;
+	}
 };
 
 #endif

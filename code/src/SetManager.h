@@ -56,6 +56,7 @@ class SetManager : public AbstractSetManager
 {
 private:
 	bool sampling_flag;
+	bool data_original;
 	ListStyle list_style;
 	unsigned int number_of_items;
 	unsigned int number_of_samples;
@@ -163,6 +164,7 @@ SetManager<DataBlock, ScoreType>::SetManager()
 	this->number_of_items = ptr->get_number_of_items();
 	this->number_of_samples = 0u;	
 	this->sample_limit = 0u;
+	this->data_original = true;
 
 	if (Daemon::comm().rank() == 0)
 	{
@@ -258,16 +260,18 @@ bool SetManager<DataBlock, ScoreType>::build_members(const bool can_load_from_di
 		return false;
 	}
 	
-	auto outcome = false;
+	auto outcome = true;
 	
-	if ((this->chunk_ptr)->build_members_from_disk())
+	if (this->chunk_ptr->build_members_from_disk())
 	{
 		// The member lists for the current chunk already reside on disk,
 		// and we are allowed to use them.
 		Daemon::info("member lists already saved to disk for");
+		outcome = true;
 	}
-	else if (Options::get_option_as<bool>("data-original"))
+	else if (this->data_original)
 	{
+		Daemon::info("member lists not found on disk. building from scratch");
 		// No member lists are present, or we are not allowed to use them.
 		// The data set is original, so build new neighbourhoods for use as member lists.
 		if (scale_factor && *scale_factor > 0.0)

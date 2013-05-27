@@ -42,8 +42,10 @@
 #define __VEC_DATABLOCK_H__
 
 #include <stdlib.h>
+#include <boost/serialization/utility.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/optional.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 #include <memory>
 #include "DistanceData.h"
 #include "VecData.h"
@@ -51,16 +53,15 @@
 class VecDataBlock
 {
 protected:
-	std::vector<std::shared_ptr<VecData>> data;
+	std::vector<VecData> data;
 	unsigned int number_of_items;
 	unsigned int global_offset;
 	boost::optional<unsigned int> block_id;
 public:
 	VecDataBlock(const unsigned int block_id);
 	VecDataBlock(const std::shared_ptr<VecDataBlock>& data_block) {};
-	const DistanceData* access_item_by_block_offset(int index) const { return nullptr; }
-	unsigned int get_offset() { return 0u; }
-	size_t get_offset() const;
+	const std::shared_ptr<DistanceData> access_item_by_block_offset(const unsigned int index) const;
+	unsigned int get_offset() const;
 	void set_offset(const size_t offset);
 	size_t get_number_of_items() const;
 	const std::string get_filename_prefix() const;
@@ -76,9 +77,12 @@ private:
 	void serialize(Archive &ar, const unsigned int version)
 	{
 		ar &number_of_items;
+		ar &global_offset;
+		ar &data;
+		ar &block_id;
 	}
 	size_t internal_load_block(std::ifstream& file);
-	std::shared_ptr<VecData> internal_load_item(std::ifstream& file);
+	VecData internal_load_item(std::ifstream& file);
 };
 
 #endif

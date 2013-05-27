@@ -61,41 +61,43 @@ public:
 
     boost::optional<std::vector<std::shared_ptr<DistanceData>>> data;
 
-    unsigned int maxParents;               // Upper limits on the maximum number of
-    unsigned int maxChildren;              //   parent and child pointers per node.
+    int size;
+
+    int maxParents;               // Upper limits on the maximum number of
+    int maxChildren;              //   parent and child pointers per node.
 
     /* Stores the mapping from internal
        item indices to external(input) indices. */
-    std::vector<unsigned int> intern_to_extern_mapping; 
+    std::vector<int> intern_to_extern_mapping; 
 
     /* Number of sample levels in the SASH
       (other than the root's).
        The bottom SASH level has index 0,
        the root has level "level". */
-    unsigned int levels;                   
+    int levels;                   
 
     /* The size of each SASH sample level. */
-    std::vector<unsigned int> sample_size_list; 
+    std::vector<int> sample_size_list; 
 
     /* For each SASH item, lists of indices to parents
        This storage is deallocated after the SASH construction
        is complete */
-    std::vector<std::vector<unsigned int> > parent_index_list; 
+    std::vector<std::vector<int> > parent_index_list; 
     /* For each SASH item, distances to parents. 
        This storage is deallocated after the SASH construction
        is complete */
     std::vector<std::vector<double> > parent_distance_list; 
-    std::vector<unsigned int> parent_size_list;
+    std::vector<int> parent_size_list;
 
     /* For each SASH item, lists of indices to children.
        This storage is deallocated after the SASH construction
        is complete */
-    std::vector<std::vector<unsigned int> > child_index_list;
+    std::vector<std::vector<int> > child_index_list;
     /* For each SASH item, lists of distances to children.
        This storage is deallocated after the SASH construction
        is complete */
-    std::vector<std::vector<double> > child_distance_list;
-    std::vector<unsigned int> child_size_list;
+    std::vector<std::shared_ptr<std::vector<double>>> child_distance_list;
+    std::vector<int> child_size_list;
 
     /* Storage supporting distance computation. */
     std::shared_ptr<DistanceData> query; 
@@ -105,32 +107,32 @@ public:
     std::vector<double> distance_from_query_list; 
     /* The "storedDistIndexList" array holds 
        the(internal) indices of items */
-    std::vector<unsigned int> stored_distance_index_list; 
+    std::vector<int> stored_distance_index_list; 
 
-	unsigned int number_of_stored_distances;
+    int number_of_stored_distances;
     unsigned long number_of_distance_comparisons;   // The number of distance computations
     //   performed during the most recent
     //   SASH operation.
 
-    std::vector<unsigned int> level_quota_list; // For each SASH sample level, the
+    std::vector<int> level_quota_list; // For each SASH sample level, the
     //   maximum number of items from that
     //   level to be conserved during search.
     // The quota is calculated for each search
     //   based on the number of neighbours sought.
 
-    std::vector<unsigned int> query_result_index_list; // Lists storing the indices and query
+    std::vector<int> query_result_index_list; // Lists storing the indices and query
     std::vector<double> query_result_distance_list; //   distances of items in the most recent
-    unsigned int query_result_size;
+    int query_result_size;
 
-    unsigned int query_result_sample_size;    // The number of sample items within which
+    int query_result_sample_size;    // The number of sample items within which
     //   the most recent similarity search was
     //   performed.
 
     // This storage is allocated only once,
     //   here, to improve search efficiency.
-    std::vector<unsigned int> scratch_index_list;
+    std::vector<int> scratch_index_list;
     std::vector<double> scratch_distance_list;
-	unsigned int scratch_size;
+    int scratch_size;
 
 
     char* stringBuf;              // Character buffer used for string
@@ -138,11 +140,11 @@ public:
 
     /* Number of orphan nodes encountered during
        the SASH construction. */
-    unsigned int number_of_orphans;               
+    int number_of_orphans;               
 
     unsigned long seed;           // Random number generator seed.
 private:
-	static std::mt19937 random_generator;
+    static std::mt19937 random_generator;
 public:
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -187,7 +189,7 @@ public:
      *   can be obtained via a call to getResultDistComps.
      */
 
-    int build(std::vector<std::shared_ptr<DistanceData>>& inputData, const boost::optional<unsigned int>& numParents = 4);
+    int build(std::vector<std::shared_ptr<DistanceData>>& inputData, const int number_of_items, const boost::optional<int>& numParents = 4);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -202,7 +204,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    virtual unsigned int build(const std::string& filename, std::vector<std::shared_ptr<DistanceData>>& inputData);
+    virtual unsigned int build(const std::string& filename, std::vector<std::shared_ptr<DistanceData>>& inputData, const int number_of_items);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -223,7 +225,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_all_in_range(const std::shared_ptr<DistanceData> query, const double limit, const boost::optional<unsigned int>& sample_rate = 0u);
+    virtual int find_all_in_range(const std::shared_ptr<DistanceData> query, const double limit, const int sample_rate = 0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -253,7 +255,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_most_in_range(const std::shared_ptr<DistanceData> query, const double limit, const boost::optional<unsigned int>& sampleRate = 0u, const boost::optional<double>& scaleFactor = 1.0);
+    virtual int find_most_in_range(const std::shared_ptr<DistanceData> query, const double limit, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -284,7 +286,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_near(const std::shared_ptr<DistanceData> query, const unsigned int howMany, const boost::optional<unsigned int>& sampleRate = 0u, const boost::optional<double>& scaleFactor = 1.0);
+    virtual int find_near(const std::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -310,7 +312,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_nearest(const std::shared_ptr<DistanceData> query, const unsigned int howMany, const boost::optional<unsigned int>& sampleRate = 0u);
+    virtual int find_nearest(const std::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate = 0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -320,7 +322,7 @@ public:
      * Returns direct access to the SASH input data list.
      */
 
-	std::vector<std::shared_ptr<DistanceData>>& get_data();
+    std::vector<std::shared_ptr<DistanceData>>& get_data();
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -549,7 +551,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    double compute_distance_from_query(const unsigned int itemIndex);
+    double compute_distance_from_query(const int itemIndex);
     //
     // Returns the distance from the current query object to the
     //   specified data object.
@@ -561,25 +563,25 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    void internal_build(const unsigned int numItems);
+    void internal_build(const int numItems);
     //
     // Recursively builds a SASH on items in the first locations of the
     //   scrambled data array.
     // The number of items to be incorporated into the SASH must be specified.
     
 
-	bool internal_build_explicitly(const unsigned int number_of_items);
-	int internal_build_recursively(const unsigned int number_of_items);
-	int internal_build_reserve_tentative_storage(const unsigned int halfSize);
-	void internal_build_construct_child_lists(const unsigned int number_of_items, const unsigned int halfSize);
-	void internal_build_trim_child_lists(const unsigned int quarterSize, const unsigned int halfSize);
-	void internal_build_connect_orphans(const unsigned int number_of_items, const unsigned int halfSize);
-	void internal_build_connect_orphan(const unsigned int number_of_items, const unsigned int child);
+    bool internal_build_explicitly(const int number_of_items);
+    int internal_build_recursively(const int number_of_items);
+    int internal_build_reserve_tentative_storage(const int halfSize);
+    void internal_build_construct_child_lists(const int number_of_items, const int halfSize);
+    void internal_build_trim_child_lists(const int quarterSize, const int halfSize);
+    void internal_build_connect_orphans(const int number_of_items, const int halfSize);
+    void internal_build_connect_orphan(const int number_of_items, const int child);
 
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    int internal_find_all_in_range(const double limit, const unsigned int sampleRate);
+    int internal_find_all_in_range(const double limit, const int sampleRate);
     //
     // Performs an exact range query from the current query object,
     //   with respect to a subset of the items.
@@ -592,7 +594,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    int internal_find_most_in_range(const double limit, const unsigned int sampleRate, const double scaleFactor);
+    int internal_find_most_in_range(const double limit, const int sampleRate, const double scaleFactor);
     //
     // Performs an approximate range query from the current query object,
     //   with respect to a subset of the items.
@@ -608,7 +610,7 @@ private:
 
 
 /*-----------------------------------------------------------------------------------------------*/
-	/*
+    /*
      *
      * Computes approximate nearest neighbours of the current query object,
      *   with respect to a subset of the items.
@@ -621,12 +623,12 @@ private:
      * The base setting is "scaleFactor=1.0"; queries with "scaleFactor=2.0"
      *   would be expected to be more accurate than those with "scaleFactor=1.0",
      *   but would take roughly twice as much time to process.i
-	 */
-    int internal_find_near(const unsigned int howMany, const unsigned int sampleRate, const double scaleFactor);
+     */
+    int internal_find_near(const int howMany, const int sampleRate, const double scaleFactor);
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    int internal_find_nearest(const unsigned int howMany, const unsigned int sampleRate);
+    int internal_find_nearest(const int howMany, const int sampleRate);
     //
     // Computes exact nearest neighbours of the current query object,
     //   with respect to a subset of the items.
@@ -639,7 +641,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    int internal_find_parents(const unsigned int howMany);
+    int internal_find_parents(const int howMany);
     //
     // Finds a set of parents for the current query item from among the
     //   bottom-level items of the current SASH.
@@ -650,9 +652,9 @@ private:
 
 
     int extract_best_edges
-   (unsigned int howMany,
- std::vector<double>& to_distance_list, std::vector<unsigned int>& to_index_list, unsigned int toFirst, unsigned int toCapacity,
- std::vector<double>& from_distance_list, std::vector<unsigned int>& from_index_list, unsigned int fromFirst, unsigned int fromLast);
+   (int howMany,
+ std::vector<double>& to_distance_list, std::vector<int>& to_index_list, int toFirst, int toCapacity,
+ std::vector<double>& from_distance_list, std::vector<int>& from_index_list, int fromFirst, int fromLast);
     //
     // Copies a requested number of directed edges having minimum distances
     //   to their targets.
@@ -678,7 +680,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    void reserve_storage(const unsigned int numItems, const unsigned int numParents);
+    void reserve_storage(const int numItems, const int numParents);
     //
     // Reserve storage for the SASH and its data.
     // The number of SASH items and the maximum number of parents per node
@@ -688,16 +690,16 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    void set_new_query(const std::shared_ptr<DistanceData> query);
+    void set_new_query(const std::shared_ptr<DistanceData>& query);
     //
     // Accepts a new item as the query object for future distance comparisons.
     // Any previously-stored distances are cleared by this operation,
     //   except in the case where the previous query object is identical
     //   to the current query object.
-	
-	int partialQuickSort
+
+    int partialQuickSort
 (int howMany,
- std::vector<double>& distList, std::vector<unsigned int>& indexList,
+ std::vector<double>& distList, std::vector<int>& indexList,
  int rangeFirst, int rangeLast);
 
 

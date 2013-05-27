@@ -74,6 +74,7 @@ public:
 	void clear_inverted_members();
 	void merge_inverted_members(const std::shared_ptr<InvertedMemberBlock<ScoreType>>& block);
 	void purge_inverted_members_from_disk(const unsigned int index);
+	unsigned int get_number_of_inverted_members(const unsigned int index) { return this->inverted_member_size_list[index]; }
 
 	unsigned int load_inverted_members(const boost::optional<unsigned int>& index = boost::none);
 	unsigned int save_inverted_members(const boost::optional<unsigned int>& index = boost::none);
