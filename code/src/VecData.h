@@ -41,7 +41,9 @@
 #ifndef __VEC_DATA_H__
 #define __VEC_DATA_H__
 
+#include <boost/serialization/export.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 #include <memory>
 #include "DistanceData.h"
 #include "Daemon.h"
@@ -52,14 +54,24 @@ private:
 	std::vector<double> data;
 public:
 	VecData() {}
+	VecData(const VecData& vec)
+	{
+		this->data = vec.data;
+	}
+
+	VecData(VecData& vec)
+	{
+		this->data = vec.data;
+	}
+
 	VecData(const std::vector<double>& data)
 	{
 		this->data = data;
 	}
 	
-	virtual double distance_to(const std::shared_ptr<DistanceData>& to) 
+	virtual double distance_to(const boost::shared_ptr<DistanceData>& to) 
 	{
-		auto other = std::static_pointer_cast<VecData>(to);
+		auto other = boost::static_pointer_cast<VecData>(to);
 		auto sum = 0.0;
 
 		for (auto i = 0u; i < this->data.size(); ++i)
@@ -74,6 +86,9 @@ private:
 	template<class Archive>
 	void serialize(Archive &ar, const unsigned int version)
 	{
+		ar.template register_type<DistanceData>();
+		//ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(DistanceData);
+		ar & boost::serialization::base_object<DistanceData>(*this);
 		ar &data;
 	}
 };

@@ -49,7 +49,7 @@ template<typename ScoreType>
 class InvertedMemberBlock
 {
 private:
-	std::shared_ptr<VecDataBlock> data_block;
+	boost::shared_ptr<VecDataBlock> data_block;
 	std::vector<std::vector<unsigned int>> inverted_member_rank_list;
 	std::vector<std::vector<unsigned int>> inverted_member_index_list;
 	std::vector<unsigned int> inverted_member_size_list;
@@ -61,7 +61,7 @@ private:
 	int sample_level;
 	unsigned int number_of_items;
 public:
-	InvertedMemberBlock(const std::shared_ptr<VecDataBlock>& data_block, const boost::optional<int> sample_level = boost::none, const boost::optional<int> default_buffer_size = boost::none);
+	InvertedMemberBlock(const boost::shared_ptr<VecDataBlock>& data_block, const boost::optional<int> sample_level = boost::none, const boost::optional<int> default_buffer_size = boost::none);
 	InvertedMemberBlock(const MemberBlock<ScoreType>& member_block);
 	InvertedMemberBlock(const InvertedMemberBlock<ScoreType>& inverted_member_block);
 
@@ -72,7 +72,7 @@ public:
 	bool add_to_inverted_members(const unsigned int item_index, const unsigned int inverted_item_index, const unsigned int rank);
 	bool finalize_inverted_members();
 	void clear_inverted_members();
-	void merge_inverted_members(const std::shared_ptr<InvertedMemberBlock<ScoreType>>& block);
+	void merge_inverted_members(const boost::shared_ptr<InvertedMemberBlock<ScoreType>>& block);
 	void purge_inverted_members_from_disk(const unsigned int index);
 	unsigned int get_number_of_inverted_members(const unsigned int index) { return this->inverted_member_size_list[index]; }
 
@@ -87,7 +87,7 @@ InvertedMemberBlock<ScoreType>::InvertedMemberBlock(const MemberBlock<ScoreType>
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-InvertedMemberBlock<ScoreType>::InvertedMemberBlock(const std::shared_ptr<VecDataBlock>& data_block, const boost::optional<int> sample_level, const boost::optional<int> default_buffer_size)
+InvertedMemberBlock<ScoreType>::InvertedMemberBlock(const boost::shared_ptr<VecDataBlock>& data_block, const boost::optional<int> sample_level, const boost::optional<int> default_buffer_size)
 {
 }
 /*-----------------------------------------------------------------------------------------------*/
@@ -204,7 +204,7 @@ bool InvertedMemberBlock<ScoreType>::initialize_inverted_members()
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-void InvertedMemberBlock<ScoreType>::merge_inverted_members(const std::shared_ptr<InvertedMemberBlock<ScoreType>>& block)
+void InvertedMemberBlock<ScoreType>::merge_inverted_members(const boost::shared_ptr<InvertedMemberBlock<ScoreType>>& block)
 {
 }
 /*-----------------------------------------------------------------------------------------------*/

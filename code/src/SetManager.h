@@ -65,7 +65,7 @@ private:
 	unsigned int maximum_number_of_members;
 	boost::optional<unsigned int> maximum_number_of_micro_members;
 	boost::optional<unsigned int> maximum_number_of_mini_members;
-	std::shared_ptr<ChunkManager<DataBlock, ScoreType>> chunk_ptr;
+	boost::shared_ptr<ChunkManager<DataBlock, ScoreType>> chunk_ptr;
 	std::string filename_prefix;
 public:
 	SetManager();
@@ -98,7 +98,7 @@ public:
 							   const boost::optional<double>& scale_factor = boost::none);
 							   
 	virtual bool build_inverted_members(const bool can_load_from_disk);
-	virtual std::shared_ptr<AbstractSetManager> build_trim_set(const bool can_load_from_disk);
+	virtual boost::shared_ptr<AbstractSetManager> build_trim_set(const bool can_load_from_disk);
 	virtual unsigned int setup_samples();
 	virtual void purge_members() {};
 
@@ -157,7 +157,7 @@ private:
 template<typename DataBlock, typename ScoreType>
 SetManager<DataBlock, ScoreType>::SetManager() 
 {
-	auto ptr = std::shared_ptr<ChunkManager<DataBlock, ScoreType>>(new ChunkManager<DataBlock, ScoreType>());
+	auto ptr = boost::shared_ptr<ChunkManager<DataBlock, ScoreType>>(new ChunkManager<DataBlock, ScoreType>());
 	this->maximum_number_of_micro_members = boost::none;
 	this->maximum_number_of_mini_members = boost::none;
 	this->chunk_ptr = ptr;
@@ -212,11 +212,11 @@ unsigned int SetManager<DataBlock, ScoreType>::setup_samples()
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, typename ScoreType>
-std::shared_ptr<AbstractSetManager> SetManager<DataBlock, ScoreType>::build_trim_set(const bool can_load_from_disk)
+boost::shared_ptr<AbstractSetManager> SetManager<DataBlock, ScoreType>::build_trim_set(const bool can_load_from_disk)
 {
 	Daemon::info("building trim set manager...");
 	
-	auto trim_set_manager = std::shared_ptr<SetManager<DataBlock, ScoreType>>(new SetManager<DataBlock, ScoreType>());
+	auto trim_set_manager = boost::shared_ptr<SetManager<DataBlock, ScoreType>>(new SetManager<DataBlock, ScoreType>());
 	trim_set_manager->filename_prefix = this->filename_prefix + "_trim";
 	trim_set_manager->list_style = this->list_style;
 	trim_set_manager->number_of_samples = this->number_of_samples;
@@ -279,10 +279,12 @@ bool SetManager<DataBlock, ScoreType>::build_members(const bool can_load_from_di
 			// Build approximate member lists.
 			for (auto i = 0; i < Daemon::comm().size(); ++i)
 			{
-				auto transmission_mode = Daemon::comm().rank() == i ? TransmissionMode::TransmissionSend : TransmissionMode::TransmissionReceive;
-				
+				auto transmission_mode = Daemon::comm().rank() == i ? TransmissionMode::TransmissionSend : TransmissionMode::TransmissionReceive;	
+				if (transmission_mode == TransmissionMode::TransmissionSend)
+					Daemon::info("processing chunk %i", i);
 				outcome = this->chunk_ptr->build_approximate_neighborhoods(sash_degree, scale_factor, true, true, transmission_mode, i);
 			}
+			Daemon::comm().barrier();
 		}
 		else
 		{
@@ -356,7 +358,7 @@ unsigned int SetManager<DataBlock, ScoreType>::internal_extract_members(std::vec
 	
 	for (auto block = 0u; block < number_of_blocks; ++block)
 	{
-		std::shared_ptr<MemberBlock<ScoreType>> block_ptr;
+		boost::shared_ptr<MemberBlock<ScoreType>> block_ptr;
 	
 		if (sample_id < -this->number_of_tiny_samples)
 			block_ptr = this->chunk_ptr->access_member_block(block);
@@ -420,7 +422,7 @@ unsigned int SetManager<DataBlock, ScoreType>::internal_extract_members_from_blo
 	
 	member_size_list.clear();
 
-	std::shared_ptr<MemberBlock<ScoreType>> block_ptr;
+	boost::shared_ptr<MemberBlock<ScoreType>> block_ptr;
 	
 	if (sample_id < -this->number_of_tiny_samples)
 		block_ptr = this->chunk_ptr->access_member_block(block);
@@ -474,6 +476,13 @@ bool SetManager<DataBlock, ScoreType>::set_list_hierarchy_parameters(const ListS
 	this->maximum_number_of_members = maximum_number_of_members;
 	this->maximum_number_of_micro_members = maximum_number_of_micro_members;
 	this->maximum_number_of_mini_members = maximum_number_of_mini_members;
+
+	if (maximum_number_of_micro_members && maximum_number_of_mini_members)
+		this->number_of_tiny_samples = 2u;
+	else if (!maximum_number_of_micro_members && !maximum_number_of_mini_members)
+		this->number_of_tiny_samples = 0u;
+	else
+		this->number_of_tiny_samples = 1u;
 	
 	return true;
 }

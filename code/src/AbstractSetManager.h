@@ -52,7 +52,7 @@ public:
 							   const boost::optional<unsigned int>& sash_degree = boost::none, 
 							   const boost::optional<double>& scale_factor = boost::none) = 0;
 	virtual bool build_inverted_members(const bool can_load_from_disk) = 0;
-	virtual std::shared_ptr<AbstractSetManager> build_trim_set(const bool can_load_from_disk) = 0;
+	virtual boost::shared_ptr<AbstractSetManager> build_trim_set(const bool can_load_from_disk) = 0;
 	virtual unsigned int setup_samples() = 0;
 	virtual void purge_members() = 0;
 

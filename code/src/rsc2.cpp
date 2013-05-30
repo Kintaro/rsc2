@@ -41,6 +41,7 @@
 #include <boost/mpi/environment.hpp>
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/group.hpp>
+#include <boost/serialization/export.hpp>
 #include <string>
 #include <list>
 #include <iostream>
@@ -51,8 +52,11 @@
 #include "RscClusterer.h"
 #include "DefaultOptions.h"
 #include "SetManager.h"
+#include "VecData.h"
 
 #include <fstream>
+
+BOOST_CLASS_EXPORT_GUID(VecData, "VecData")
 
 void print_options()
 {
@@ -95,9 +99,9 @@ int main(int argc, char** argv)
 
 	if (world.rank() != 0) {
 		SetManager<VecDataBlock, double> set;
-		set.set_list_hierarchy_parameters(ListStyle::Medium, 7, 60, boost::none, boost::none);
+		set.set_list_hierarchy_parameters(ListStyle::Medium, 7, 60, 20, 20);
 		set.setup_samples();
-		RscClusterer* rsc = new RscClusterer(std::shared_ptr<SetManager<VecDataBlock, double>>(&set));
+		RscClusterer* rsc = new RscClusterer(boost::shared_ptr<SetManager<VecDataBlock, double>>(&set));
 		rsc->cluster_soft_rsc();
 		//ChunkManager<VecDataBlock, double> chunk;
 		//chunk.load_chunk_data();

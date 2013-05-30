@@ -50,7 +50,7 @@
 #include "FileUtil.h"
 
 /*-----------------------------------------------------------------------------------------------*/
-RscClusterer::RscClusterer(const std::shared_ptr<AbstractSetManager> set_manager)
+RscClusterer::RscClusterer(const boost::shared_ptr<AbstractSetManager> set_manager)
 {
 	this->initialize_parameters();
 	this->initialize_non_parameters();

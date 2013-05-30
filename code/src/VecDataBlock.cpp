@@ -94,14 +94,18 @@ size_t VecDataBlock::internal_load_block(std::ifstream& file)
 	this->data.resize(number_of_items);
 	
 	for (auto i = 0u; i < number_of_items; ++i)
-		data[i] = this->internal_load_item(file);
+	{
+		auto vec_data = this->internal_load_item(file);
+		auto vec_ptr = new DistanceData(vec_data);
+		this->data[i] = boost::shared_ptr<DistanceData>(vec_ptr);
+	}
 	
 	this->number_of_items = number_of_items;
 	
 	return number_of_items;
 }
 /*-----------------------------------------------------------------------------------------------*/
-VecData VecDataBlock::internal_load_item(std::ifstream& file)
+DistanceData VecDataBlock::internal_load_item(std::ifstream& file)
 {
 	auto length = FileUtil::read_from_file<unsigned int>(file);
 	
@@ -109,7 +113,7 @@ VecData VecDataBlock::internal_load_item(std::ifstream& file)
 	for (auto &x : vector_data)
 		x = FileUtil::read_from_file<double>(file);
 	
-	return VecData(vector_data);
+	return DistanceData(vector_data);
 }
 /*-----------------------------------------------------------------------------------------------*/
 bool VecDataBlock::is_valid()
@@ -136,18 +140,17 @@ bool VecDataBlock::verify_savefile()
 	return true;
 }
 /*-----------------------------------------------------------------------------------------------*/
-void VecDataBlock::extract_all_items(std::vector<std::shared_ptr<DistanceData>>& item_list, const unsigned int start_index)
+void VecDataBlock::extract_all_items(std::vector<boost::shared_ptr<DistanceData>>& item_list, const unsigned int start_index)
 {
 	item_list.resize(start_index + this->number_of_items);
 	
 	for (auto i = 0u; i < this->number_of_items; ++i)
-	{
-		item_list[i + start_index] = std::shared_ptr<DistanceData>(&this->data[i]);
-	}
+		item_list[i + start_index] = boost::shared_ptr<DistanceData>(this->data[i]);
 }
 /*-----------------------------------------------------------------------------------------------*/
-const std::shared_ptr<DistanceData> VecDataBlock::access_item_by_block_offset(const unsigned int index) const
+const boost::shared_ptr<DistanceData> VecDataBlock::access_item_by_block_offset(const unsigned int index) const
 {
-	return std::shared_ptr<DistanceData>(const_cast<VecData*>(&(*(this->data.begin() + index))));
+	return boost::shared_ptr<DistanceData>(this->data[index]);
+	//return boost::shared_ptr<DistanceData>(const_cast<VecData*>(&(*(this->data.begin() + index))));
 }
 /*-----------------------------------------------------------------------------------------------*/

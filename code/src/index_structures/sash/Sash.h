@@ -59,7 +59,7 @@ class Sash : public IndexStructure<DistanceData>
 {
 public:
 
-    boost::optional<std::vector<std::shared_ptr<DistanceData>>> data;
+    boost::optional<std::vector<boost::shared_ptr<DistanceData>>> data;
 
     int size;
 
@@ -96,11 +96,11 @@ public:
     /* For each SASH item, lists of distances to children.
        This storage is deallocated after the SASH construction
        is complete */
-    std::vector<std::shared_ptr<std::vector<double>>> child_distance_list;
+    std::vector<boost::shared_ptr<std::vector<double>>> child_distance_list;
     std::vector<int> child_size_list;
 
     /* Storage supporting distance computation. */
-    std::shared_ptr<DistanceData> query; 
+    boost::shared_ptr<DistanceData> query; 
     
     /* The distance themselves are stored
        in the array "distFromQueryList". */
@@ -189,7 +189,7 @@ public:
      *   can be obtained via a call to getResultDistComps.
      */
 
-    int build(std::vector<std::shared_ptr<DistanceData>>& inputData, const int number_of_items, const boost::optional<int>& numParents = 4);
+    int build(std::vector<boost::shared_ptr<DistanceData>>& inputData, const int number_of_items, const boost::optional<int>& numParents = 4);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -204,7 +204,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    virtual unsigned int build(const std::string& filename, std::vector<std::shared_ptr<DistanceData>>& inputData, const int number_of_items);
+    virtual unsigned int build(const std::string& filename, std::vector<boost::shared_ptr<DistanceData>>& inputData, const int number_of_items);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -225,7 +225,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_all_in_range(const std::shared_ptr<DistanceData> query, const double limit, const int sample_rate = 0);
+    virtual int find_all_in_range(const boost::shared_ptr<DistanceData> query, const double limit, const int sample_rate = 0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -255,7 +255,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_most_in_range(const std::shared_ptr<DistanceData> query, const double limit, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
+    virtual int find_most_in_range(const boost::shared_ptr<DistanceData> query, const double limit, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -286,7 +286,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_near(const std::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
+    virtual int find_near(const boost::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -312,7 +312,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_nearest(const std::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate = 0);
+    virtual int find_nearest(const boost::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate = 0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -322,7 +322,7 @@ public:
      * Returns direct access to the SASH input data list.
      */
 
-    std::vector<std::shared_ptr<DistanceData>>& get_data();
+    std::vector<boost::shared_ptr<DistanceData>>& get_data();
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -690,7 +690,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    void set_new_query(const std::shared_ptr<DistanceData>& query);
+    void set_new_query(const boost::shared_ptr<DistanceData>& query);
     //
     // Accepts a new item as the query object for future distance comparisons.
     // Any previously-stored distances are cleared by this operation,

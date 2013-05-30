@@ -485,7 +485,7 @@ Sash::Sash () : data(boost::none)
     this->child_index_list.clear();
     this->child_distance_list.clear();
     this->child_size_list.clear();
-    this->query = nullptr;
+    this->query = boost::shared_ptr<DistanceData>();
     this->distance_from_query_list.clear();
     this->stored_distance_index_list.clear();
     this->number_of_stored_distances = 0;
@@ -517,7 +517,7 @@ Sash::Sash (unsigned long seed) : data(boost::none)
     this->child_index_list.clear();
     this->child_distance_list.clear();
     this->child_size_list.clear();
-    this->query = nullptr;
+    this->query = boost::shared_ptr<DistanceData>();
     this->distance_from_query_list.clear();
     this->stored_distance_index_list.clear();
     this->number_of_stored_distances = 0;
@@ -539,7 +539,7 @@ Sash::~Sash ()
 {
 }
 /*-----------------------------------------------------------------------------------------------*/
-int Sash::build (std::vector<std::shared_ptr<DistanceData>>& inputData, const int number_of_items, const boost::optional<int>& numParents)
+int Sash::build (std::vector<boost::shared_ptr<DistanceData>>& inputData, const int number_of_items, const boost::optional<int>& numParents)
 {
 	// If the data set is empty, then abort.
 	if (number_of_items <= 1)
@@ -580,7 +580,7 @@ int Sash::build (std::vector<std::shared_ptr<DistanceData>>& inputData, const in
 	return this->size;
 }
 /*-----------------------------------------------------------------------------------------------*/
-unsigned int Sash::build (const std::string& filename, std::vector<std::shared_ptr<DistanceData>>& inputData, const int number_of_items)
+unsigned int Sash::build (const std::string& filename, std::vector<boost::shared_ptr<DistanceData>>& inputData, const int number_of_items)
 {
 	// If the data set is empty, then abort.
 	if (filename.empty() || (number_of_items <= 0))
@@ -608,11 +608,11 @@ unsigned int Sash::build (const std::string& filename, std::vector<std::shared_p
 	}
 
 	// The second parameter is omitted and just read
-	const int inSize       = FileUtil::read_from_file<int>(in_file);
-	                                  FileUtil::read_from_file<int>(in_file);
-	const int inMaxParents = FileUtil::read_from_file<int>(in_file);
-	this->number_of_orphans =         FileUtil::read_from_file<int>(in_file);
-	this->seed       =                FileUtil::read_from_file<unsigned int>(in_file);
+	const int inSize        = FileUtil::read_from_file<int>(in_file);
+	                          FileUtil::read_from_file<int>(in_file);
+	const int inMaxParents  = FileUtil::read_from_file<int>(in_file);
+	this->number_of_orphans = FileUtil::read_from_file<int>(in_file);
+	this->seed              = FileUtil::read_from_file<unsigned int>(in_file);
 
 	// Are these parameter values what we expected?
 	// If not, then abort!
@@ -655,6 +655,8 @@ unsigned int Sash::build (const std::string& filename, std::vector<std::shared_p
 		else
 			this->child_index_list[i].clear();
 
+        this->child_size_list[i] = numChildren;
+
 		for (int j = 0; j < numChildren; ++j)
 			this->child_index_list[i][j] = FileUtil::read_from_file<int>(in_file);
 	}
@@ -666,7 +668,7 @@ unsigned int Sash::build (const std::string& filename, std::vector<std::shared_p
 	return this->size;
 }
 /*-----------------------------------------------------------------------------------------------*/
-int Sash::find_all_in_range (const std::shared_ptr<DistanceData> query, const double limit, const int sampleRate)
+int Sash::find_all_in_range (const boost::shared_ptr<DistanceData> query, const double limit, const int sampleRate)
 {
 	this->query_result_size = 0;
 	this->query_result_sample_size = 0;
@@ -685,7 +687,7 @@ int Sash::find_all_in_range (const std::shared_ptr<DistanceData> query, const do
 	return internal_find_all_in_range (limit, sampleRate);
 }
 /*-----------------------------------------------------------------------------------------------*/
-int Sash::find_most_in_range(const std::shared_ptr<DistanceData> query, const double limit, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
+int Sash::find_most_in_range(const boost::shared_ptr<DistanceData> query, const double limit, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
 {
 	this->query_result_size = 0;
 	this->query_result_sample_size = 0;
@@ -705,13 +707,13 @@ int Sash::find_most_in_range(const std::shared_ptr<DistanceData> query, const do
 	return internal_find_most_in_range(limit, *sampleRate, *scaleFactor);
 }
 /*-----------------------------------------------------------------------------------------------*/
-int Sash::find_near(const std::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
+int Sash::find_near(const boost::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
 {
 	this->query_result_size = 0;
 	this->query_result_sample_size = 0;
 	this->number_of_distance_comparisons = 0UL;
 
-    if (this->data == nullptr)
+    if (!this->data)
     {
         Daemon::error("EERROR (from find_near): data is null");
         throw new std::exception();
@@ -731,7 +733,7 @@ int Sash::find_near(const std::shared_ptr<DistanceData> query, const int howMany
 	return this->internal_find_near(howMany, *sampleRate, *scaleFactor);
 }
 /*-----------------------------------------------------------------------------------------------*/
-int Sash::find_nearest (const std::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate)
+int Sash::find_nearest (const boost::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate)
 {
 	this->query_result_size = 0;
 	this->query_result_sample_size = 0;
@@ -750,7 +752,7 @@ int Sash::find_nearest (const std::shared_ptr<DistanceData> query, const int how
 	return this->internal_find_nearest(howMany, *sampleRate);
 }
 /*-----------------------------------------------------------------------------------------------*/
-std::vector<std::shared_ptr<DistanceData>>& Sash::get_data()
+std::vector<boost::shared_ptr<DistanceData>>& Sash::get_data()
 {
 	return *data;
 }
@@ -886,7 +888,7 @@ const std::vector<unsigned int> Sash::get_sample_sizes () const
 /*-----------------------------------------------------------------------------------------------*/
 void Sash::reset_query ()
 {
-	this->set_new_query(std::shared_ptr<DistanceData>(nullptr));
+	this->set_new_query(boost::shared_ptr<DistanceData>());
 }
 /*-----------------------------------------------------------------------------------------------*/
 unsigned int Sash::save_to_file (const std::string& filename)
@@ -968,7 +970,7 @@ void Sash::internal_build (const int number_of_items)
 	// The SASH has grown by one level.
 	// Clean up and return.
 	for (auto parent = quarterSize; parent < halfSize; ++parent)
-		this->child_distance_list[parent] = nullptr;
+		this->child_distance_list[parent] = boost::shared_ptr<std::vector<double>>();
 
 	++levels;
 	
@@ -1062,7 +1064,7 @@ int Sash::internal_build_reserve_tentative_storage(const int halfSize)
 			continue;
 		
 		this->child_index_list[parent] = std::vector<int>(this->child_size_list[parent], 0);
-		this->child_distance_list[parent] = std::shared_ptr<std::vector<double>>(new std::vector<double>(this->child_size_list[parent], -1.0));
+		this->child_distance_list[parent] = boost::shared_ptr<std::vector<double>>(new std::vector<double>(this->child_size_list[parent], -1.0));
 		this->child_size_list[parent] = 0;
 	}
 
@@ -1112,7 +1114,7 @@ void Sash::internal_build_trim_child_lists(const int quarterSize, const int half
 			auto temp_distance_list = std::vector<double>(*this->child_distance_list[parent]);
 			auto temp_index_list = std::vector<int>(this->child_index_list[parent]);
 
-			this->child_distance_list[parent] = nullptr;
+			this->child_distance_list[parent] = boost::shared_ptr<std::vector<double>>();
 			this->child_index_list[parent] = std::vector<int>(maxChildren, 0);
 
 			//this->child_size_list[parent] = Sort::partial_sort<double, unsigned int>(maxChildren, temp_distance_list, temp_index_list, 0, this->child_size_list[parent] - 1);
@@ -1135,7 +1137,7 @@ void Sash::internal_build_trim_child_lists(const int quarterSize, const int half
 		}
 
 		// Eliminate the edge distance information.
-		this->child_distance_list[parent] = nullptr;
+		this->child_distance_list[parent] = boost::shared_ptr<std::vector<double>>();
 	}
 }
 /*-----------------------------------------------------------------------------------------------*/
@@ -1204,7 +1206,7 @@ void Sash::internal_build_connect_orphan(const int number_of_items, const int ch
 			// To indicate that the parent is now fostering orphans,
 			//   set its child edge distance list to anything non-null
 			//   (the list "distFromQueryList").
-			this->child_distance_list[parent] = std::shared_ptr<std::vector<double>>(new std::vector<double>(this->distance_from_query_list));
+			this->child_distance_list[parent] = boost::shared_ptr<std::vector<double>>(new std::vector<double>(this->distance_from_query_list));
 			this->child_index_list[parent][this->child_size_list[parent]] = child;
 			++this->child_size_list[parent];
 			not_found = false;
@@ -1384,8 +1386,8 @@ int Sash::internal_find_near (const int howMany, const int sampleRate, const dou
 	if (this->size == 1)
 	{
 		this->query_result_size = 1;
-		this->query_result_index_list[0] = 0;
 		this->query_result_distance_list[0] = this->compute_distance_from_query (0);
+		this->query_result_index_list[0] = 0;
 		this->query_result_sample_size = 1;
 
         Daemon::error("singleton case!");
@@ -1394,7 +1396,7 @@ int Sash::internal_find_near (const int howMany, const int sampleRate, const dou
 	}
 
 	// Compute the sample size for the operation.
-	this->query_result_sample_size = this-> sample_size_list[sampleRate];
+	this->query_result_sample_size = this->sample_size_list[sampleRate];
 
 	// Compute the item quota for each sample level.
 	const auto minNeighbours
@@ -1652,7 +1654,7 @@ void Sash::reserve_storage (const int number_of_items, const int numParents)
 		this->parent_index_list[i].clear();
 		this->parent_distance_list[i].clear();
 		this->child_index_list[i].clear();
-		this->child_distance_list[i] = nullptr;
+		this->child_distance_list[i] = boost::shared_ptr<std::vector<double>>();
 	}
 
 	// Set up storage for managing distance computations and
@@ -1673,8 +1675,10 @@ void Sash::reserve_storage (const int number_of_items, const int numParents)
 	this->scratch_size = 0;
 }
 /*-----------------------------------------------------------------------------------------------*/
-void Sash::set_new_query (const std::shared_ptr<DistanceData>& query)
+void Sash::set_new_query (const boost::shared_ptr<DistanceData>& query)
 {
+    if (!query && !this->query)
+        return;
 	if (query == this->query)
 		return;
 
@@ -1682,9 +1686,10 @@ void Sash::set_new_query (const std::shared_ptr<DistanceData>& query)
 		this->distance_from_query_list[this->stored_distance_index_list[i]] = -1.0;
 
     if (query)
-    	this->query = std::shared_ptr<DistanceData>(query);
+    	this->query = boost::shared_ptr<DistanceData>(query);
     else
         this->query.reset();
+        
 	this->number_of_stored_distances = 0;
 }
 /*-----------------------------------------------------------------------------------------------*/

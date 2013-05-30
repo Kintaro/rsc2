@@ -68,18 +68,20 @@ private:
 	boost::optional<std::string> original_prefix;
 	boost::optional<std::string> data_prefix;
 
-	std::shared_ptr<VecDataBlock> data_block;
+	boost::shared_ptr<VecDataBlock> data_block;
 	std::vector<std::vector<unsigned int> > member_index_llist;
 	std::vector<std::vector<ScoreType> > member_score_llist;
+	std::vector<unsigned int> member_size_list;
 	std::vector<ScoreType> temporary_distance_buffer;
 public:
-	MemberBlock(const std::shared_ptr<VecDataBlock>& block, const unsigned int member_list_buffer_size, const boost::optional<int>& sample_level = boost::none);
-	MemberBlock(std::shared_ptr<MemberBlock<ScoreType>>& block, const int member_list_size_limit, const boost::optional<int>& sample_level = boost::none);
+	MemberBlock(const boost::shared_ptr<VecDataBlock>& block, const unsigned int member_list_buffer_size, const boost::optional<int>& sample_level = boost::none);
+	MemberBlock(boost::shared_ptr<MemberBlock<ScoreType>>& block, const unsigned int member_list_size_limit, const boost::optional<int>& sample_level = boost::none);
 
 	bool receive_members_data(const int source);
 	bool send_members_data(const int source) const;
 
 	bool set_id(const boost::optional<std::string>& prefix, const boost::optional<unsigned int>& block = boost::none);
+	void set_sample(const boost::optional<int>& sample) { this->sample_level = sample; }
 
 	unsigned int get_offset() const { return *this->global_offset; }
 	void set_offset(const unsigned int offset) { this->global_offset = offset; }
@@ -91,6 +93,7 @@ public:
 	bool load_members(const boost::optional<unsigned int>& index = boost::none);
 	bool load_members(std::vector<std::vector<unsigned int> >& member_index_llist,
 			std::vector<std::vector<ScoreType> >& member_score_llist,
+			std::vector<unsigned int>& member_size_list,
 			const int offset, const int amount) const;
 	void clear_members ();
 	void clip_members(const size_t clip_size);
@@ -102,9 +105,11 @@ public:
 	int build_exact_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const size_t item_index);
 
 	int merge_members(const MemberBlock<ScoreType>& block, const int max_list_size);
-	bool limit_to_sample(const std::shared_ptr<InvertedMemberBlock<ScoreType>>& inverted_member_block);
+	bool limit_to_sample(const boost::shared_ptr<InvertedMemberBlock<ScoreType>>& inverted_member_block);
 	
-	bool verify_savefile(const boost::optional<unsigned int>& index = boost::none) { return false; }
+	bool verify_savefile(const boost::optional<unsigned int>& index = boost::none);
+
+	void shrink_to_fit();
 private:
 	int internal_build_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const double scale_factor, const size_t item_index);
 	int internal_build_neighbourhood_compute_query(IndexStructure<DistanceData>& data_index, const int offset, const double scale_factor, const int item_index);
@@ -116,20 +121,18 @@ private:
 	template<class Archive>
 	void serialize(Archive &ar, const unsigned int version)
 	{
-		Daemon::debug("serializing member block [version %i]", version);
 		ar &this->number_of_items;
 		ar &this->global_offset;
-		ar &this->sample_level;
 		ar &this->member_index_llist;
 		ar &this->member_score_llist;
+		ar &this->member_size_list;
 	}
 };
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-MemberBlock<ScoreType>::MemberBlock(const std::shared_ptr<VecDataBlock>& block, const unsigned int member_list_buffer_size, const boost::optional<int>& sample_level)
+MemberBlock<ScoreType>::MemberBlock(const boost::shared_ptr<VecDataBlock>& block, const unsigned int member_list_buffer_size, const boost::optional<int>& sample_level)
 : data_block(block)
 {
-	Daemon::error("Setting offset to %i", block->get_offset());
 	this->set_offset(block->get_offset());
 	this->number_of_items = block->get_number_of_items();
 	this->member_list_buffer_size = member_list_buffer_size;
@@ -137,10 +140,11 @@ MemberBlock<ScoreType>::MemberBlock(const std::shared_ptr<VecDataBlock>& block, 
 	this->temporary_distance_buffer.resize(member_list_buffer_size);
 	this->member_index_llist.clear();
 	this->member_score_llist.clear();
+	this->member_size_list.clear();
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-MemberBlock<ScoreType>::MemberBlock(std::shared_ptr<MemberBlock<ScoreType>>& block, const int member_list_size_limit, const boost::optional<int>& sample_level)
+MemberBlock<ScoreType>::MemberBlock(boost::shared_ptr<MemberBlock<ScoreType>>& block, const unsigned int member_list_size_limit, const boost::optional<int>& sample_level)
 :data_block(block->data_block)
 {
 	this->data_block = block->data_block;
@@ -156,21 +160,51 @@ MemberBlock<ScoreType>::MemberBlock(std::shared_ptr<MemberBlock<ScoreType>>& blo
 	if (member_list_size_limit == 0)
 		return;
 
+	auto freshly_loaded = false;
+
 	if (block->load_members(boost::none) >= 0)
-	{
-		;
-	}
+		freshly_loaded = true;
 	else if (this->member_index_llist.empty())
 		return;
 
 	this->member_index_llist.resize(*this->number_of_items);
 	this->member_score_llist.resize(*this->number_of_items);
+	this->member_size_list.resize(*this->number_of_items);
 
 	for (auto i = 0u; i < *this->number_of_items; ++i)
 	{
-		this->member_index_llist[i] = std::vector<unsigned int>(block->member_index_llist[i].begin(), block->member_index_llist[i].end());
-		this->member_score_llist[i] = std::vector<ScoreType>(block->member_score_llist[i].begin(), block->member_score_llist[i].end());
+		this->member_index_llist[i] = std::vector<unsigned int>();
+		this->member_score_llist[i] = std::vector<ScoreType>();
+
+		if (member_list_size_limit > 0u && block->member_size_list[i] > member_list_size_limit)
+			this->member_size_list[i] = member_list_size_limit;
+		else
+			this->member_size_list[i] = block->member_size_list[i];
+
+		auto number_of_members = this->member_size_list[i];
+
+		auto mb_score_list = block->member_score_llist[i];
+		auto mb_index_list = block->member_index_llist[i];
+
+		if (!mb_score_list.empty())
+		{
+			this->member_score_llist[i] = std::vector<ScoreType>(number_of_members, ScoreType());
+
+			for (auto j = 0u; j < number_of_members; ++j)
+				this->member_score_llist[i][j] = mb_score_list[j];
+		}
+
+		if (!mb_index_list.empty())
+		{
+			this->member_index_llist[i] = std::vector<unsigned int>(number_of_members, 0u);
+
+			for (auto j = 0u; j < number_of_members; ++j)
+				this->member_index_llist[i][j] = mb_index_list[j];
+		}
 	}
+
+	if (freshly_loaded)
+		block->clear_members();
  }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
@@ -229,21 +263,22 @@ bool MemberBlock<ScoreType>::internal_load_members(std::ifstream& file)
 		}
 	}
 
+	file.close();
+
 	return this->number_of_items;
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
 bool MemberBlock<ScoreType>::save_members(const boost::optional<unsigned int>& index) 
 {
-	Daemon::debug("saving member block");
 	std::ostringstream str;
 	
-	if (index == boost::none)
-		str << *this->filename_prefix <<  "-n" << index << ".mem";
+	if (index)
+		str << *this->filename_prefix <<  "-n" << *index << ".mem";
 	else
 		str << *this->filename_prefix << ".mem";
 	
-	Daemon::debug(" [-] saving to file %s", str.str().c_str());
+	Daemon::debug("saving member block to file %s", str.str().c_str());
 	
 	std::ofstream file;
 	FileUtil::open_write(str.str(), file);
@@ -255,14 +290,20 @@ bool MemberBlock<ScoreType>::internal_save_members(std::ofstream& file)
 {
 	this->identify_save_file(file);
 
+	if (!this->number_of_items)
+	{
+		Daemon::error("number_of_items is not set!");
+		throw new std::exception();
+	}
+
 	FileUtil::write_to_file<unsigned int>(file, *this->number_of_items);
 	FileUtil::space(file);
 	FileUtil::write_to_file<int>(file, *this->sample_level);
 	FileUtil::newline(file);
 
-	for (auto i = 0u; i < this->number_of_items; ++i)
+	for (auto i = 0u; i < *this->number_of_items; ++i)
 	{
-		const unsigned int num_members = this->member_index_llist[i].size();
+		const unsigned int num_members = this->member_size_list[i];
 
 		FileUtil::write_to_file<unsigned int>(file, i);
 		FileUtil::space(file);
@@ -282,7 +323,9 @@ bool MemberBlock<ScoreType>::internal_save_members(std::ofstream& file)
 		FileUtil::newline(file);
 	}
 
-	return this->number_of_items;
+	file.close();
+
+	return *this->number_of_items;
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
@@ -300,8 +343,8 @@ bool MemberBlock<ScoreType>::load_members(const boost::optional<unsigned int>& i
 {
 	std::ostringstream str;
 	
-	if (index == boost::none)
-		str << *this->filename_prefix <<  "-n" << index << ".mem";
+	if (index)
+		str << *this->filename_prefix <<  "-n" << *index << ".mem";
 	else
 		str << *this->filename_prefix << ".mem";
 	
@@ -320,17 +363,31 @@ bool MemberBlock<ScoreType>::load_members(const boost::optional<unsigned int>& i
 template<typename ScoreType>
 bool MemberBlock<ScoreType>::load_members(std::vector<std::vector<unsigned int>>& member_index_llist,
 		std::vector<std::vector<ScoreType> >& member_score_llist,
+		std::vector<unsigned int>& member_size_list,
 		const int offset, const int amount) const
 {
 	amount = std::min(amount, *this->number_of_items);
 
-	member_index_llist.resize(*this->number_of_items);
-	member_score_llist.resize(*this->number_of_items);
+	this->member_index_llist.resize(*this->number_of_items);
+	this->member_score_llist.resize(*this->number_of_items);
+	this->member_size_list.resize(*this->number_of_items, 0u);
 
 	for (auto i = 0; i < amount; ++i)
 	{
-		member_index_llist[i] = this->member_index_llist[i + offset];
-		member_score_llist[i] = this->member_score_llist[i + offset];
+		this->member_index_llist[i] = member_index_llist[i + offset];
+		this->member_score_llist[i] = member_score_llist[i + offset];
+		this->member_size_list[i] = member_size_list[i + offset];
+
+		member_index_llist[i + offset].clear();
+		member_score_llist[i + offset].clear();
+		member_size_list[i + offset] = 0u;
+	}
+
+	for (auto i = amount; i < *this->number_of_items; ++i)
+	{
+		this->member_index_llist[i].clear();
+		this->member_index_llist[i].clear();
+		this->member_size_list[i] = 0u;
 	}
 
 	return amount;
@@ -359,7 +416,6 @@ void MemberBlock<ScoreType>::clip_members(const size_t clip_size)
 template<typename ScoreType>
 const std::vector<ScoreType> MemberBlock<ScoreType>::extract_member_scores(const unsigned int item_index)
 {
-	Daemon::debug("extracting member scores for item %i", item_index);
 	std::vector<ScoreType> result = this->member_score_llist[item_index - *this->global_offset];
 	this->member_score_llist[item_index - *this->global_offset].clear();
 	return result;
@@ -368,7 +424,6 @@ const std::vector<ScoreType> MemberBlock<ScoreType>::extract_member_scores(const
 template<typename ScoreType>
 const std::vector<unsigned int> MemberBlock<ScoreType>::extract_member_indices(const unsigned int item_index)
 {
-	Daemon::debug("extracting member indices for item %i [%i]", item_index, this->member_index_llist.size());
 	std::vector<unsigned int> result = this->member_index_llist[item_index - *this->global_offset];
 	this->member_index_llist[item_index - *this->global_offset].clear();
 	return result;
@@ -383,14 +438,12 @@ unsigned int MemberBlock<ScoreType>::get_number_of_members(const unsigned int it
 template<typename ScoreType>
 int MemberBlock<ScoreType>::build_approximate_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const double scale_factor, const size_t item_index)
 {
-	Daemon::debug("building approximate neighbourhood [offset %i, scale_factor %f, item index %i]", offset, scale_factor, item_index);
 	return internal_build_neighbourhood(data_index, offset, scale_factor, item_index);
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
 int MemberBlock<ScoreType>::build_exact_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const size_t item_index)
 {
-	Daemon::debug("building exact neighbourhood [offset %i, item index %i]", offset, item_index);
 	return internal_build_neighbourhood(data_index, offset, 0.0, item_index);
 }
 /*-----------------------------------------------------------------------------------------------*/
@@ -404,21 +457,20 @@ int MemberBlock<ScoreType>::internal_build_neighbourhood(IndexStructure<Distance
 template<typename ScoreType>
 int MemberBlock<ScoreType>::internal_build_neighbourhood_compute_query(IndexStructure<DistanceData>& data_index, const int offset, const double scale_factor, const int item_index)
 {
-	Daemon::error("A");
-	if (!global_offset)
-		Daemon::error("HUH?");
 	const int adjusted_item_index = item_index - *this->global_offset;
 	const int effective_sample_level = sample_level && *this->sample_level > 0 ? *this->sample_level : 0;
-	Daemon::error("B");
+	
 	if (this->member_index_llist.empty())
 	{
 		this->member_index_llist.resize(*this->number_of_items);
 		this->member_score_llist.resize(*this->number_of_items);
+		this->member_size_list.resize(*this->number_of_items);
 
 		for (auto i = 0u; i < this->number_of_items; ++i)
 		{
 			this->member_score_llist[i] = std::vector<ScoreType>();
 			this->member_index_llist[i] = std::vector<unsigned int>();
+			this->member_size_list[i] = 0u;
 		}
 	}
 	else if (!this->member_index_llist[adjusted_item_index].empty())
@@ -426,7 +478,7 @@ int MemberBlock<ScoreType>::internal_build_neighbourhood_compute_query(IndexStru
 		Daemon::error("member_index_llist[adjusted_item_index] is not empty!");
 		throw new std::exception();
 	}
-	Daemon::error("C");
+
 
 	// The designated item in the block->serves as a query point
 	// for a nearest-neighbour search.
@@ -471,10 +523,8 @@ int MemberBlock<ScoreType>::internal_build_neighbourhood_store(IndexStructure<Di
 	const auto adjusted_item_index = item_index - *this->global_offset;
 	//const auto effective_sample_level = *this->sample_level > 0 ? *this->sample_level : 0;
 
-	Daemon::error("Resizing to %i", num_members);
 	this->member_index_llist[adjusted_item_index].resize(num_members);
 	this->member_score_llist[adjusted_item_index].resize(num_members);
-	Daemon::error("Resizing done");
 
 	if (num_members <= 0)
 		return result_distance_comparisons;
@@ -524,6 +574,7 @@ int MemberBlock<ScoreType>::internal_build_neighbourhood_store(IndexStructure<Di
 template<typename ScoreType>
 int MemberBlock<ScoreType>::merge_members(const MemberBlock<ScoreType>& block, const int max_list_size)
 {
+	/*Daemon::debug("merging block members [%i]", max_list_size);
 	struct sort_helper 
 	{
 		static bool sort(const std::pair<int, ScoreType>& a, const std::pair<int, ScoreType>& b)  
@@ -539,28 +590,26 @@ int MemberBlock<ScoreType>::merge_members(const MemberBlock<ScoreType>& block, c
 		}
 	};
 
-	const int buffer_size = max_list_size > 0 ? max_list_size : 60;
+	const int buffer_size = max_list_size > 0 ? max_list_size : this->member_list_buffer_size;
 
-	std::vector<ScoreType> buffer_score_list;
-	buffer_score_list.reserve(buffer_size);
-	std::vector<unsigned int> buffer_index_list;
-	buffer_index_list.reserve(buffer_size);
+	std::vector<ScoreType> buffer_score_list(buffer_size, ScoreType());
+	std::vector<unsigned int> buffer_index_list(buffer_size, 0u);
 
-	for (auto i = 0u; i < this->number_of_items; ++i)
+	for (auto i = 0u; i < *this->number_of_items; ++i)
 	{
 		std::vector<std::pair<int, ScoreType> > this_list, mb_list, result_list;
 
 		this_list.resize(this->member_index_llist[i].size());
 		mb_list.resize(block.member_index_llist[i].size());
 
-		for (auto j = 0u; j < this->member_index_llist[i].size(); ++j)
+		for (auto j = 0u; j < this->member_size_list[i]; ++j)
 			this_list[j] = std::make_pair(this->member_index_llist[i][j], this->member_score_llist[i][j]);
-		for (auto j = 0u; j < block.member_index_llist[i].size(); ++j)
+		for (auto j = 0u; j < block.member_size_list[i]; ++j)
 			mb_list[j] = std::make_pair(block.member_index_llist[i][j], block.member_score_llist[i][j]);
 
 		const int size = max_list_size > 0 ? 
-				max_list_size : (this->member_index_llist[i].size() < block.member_index_llist[i].size() ?
-						this->member_index_llist[i].size() : block.member_index_llist[i].size());
+				max_list_size : (this->member_size_list[i] < member_size_list[i] ?
+						this->member_size_list[i] : member_size_list[i]);
 
 		result_list.reserve(size);
 		std::merge(this_list.begin(), this_list.end(), mb_list.begin(), mb_list.end(), std::back_inserter(result_list), sort_helper::sort);
@@ -570,11 +619,110 @@ int MemberBlock<ScoreType>::merge_members(const MemberBlock<ScoreType>& block, c
 
 		this->member_index_llist[i].resize(size);
 		this->member_score_llist[i].resize(size);
+		this->member_size_list[i] = size;
 
 		for (auto j = 0u; j < result_list.size(); ++j)
 		{
 			this->member_index_llist[i][j] = result_list[j].first;
 			this->member_score_llist[i][j] = result_list[j].second;
+		}
+	}*/
+
+	auto buffer_size = max_list_size > 0 ? max_list_size : this->member_list_buffer_size;
+	auto buffer_score_list = std::vector<ScoreType>(buffer_size, ScoreType());
+	auto buffer_index_list = std::vector<unsigned int>(buffer_size, 0u);
+
+	for (auto i = 0u; i < *this->number_of_items; ++i)
+	{
+		auto buffer_current = 0u;
+		auto this_current = 0u;
+		auto block_current = 0u;
+		auto this_size = this->member_size_list[i];
+		auto block_size = block.member_size_list[i];
+
+		while (this_current < this_size && block_current < block_size)
+		{
+			if (buffer_current == buffer_size)
+			{
+				if (max_list_size > 0)
+					break;
+				
+				buffer_size *= 2;
+
+				buffer_score_list.resize(buffer_size);
+				buffer_index_list.resize(buffer_size);
+			}
+
+			if (this->member_score_llist[i][this_current] < block.member_score_llist[i][block_current])
+			{
+				buffer_score_list[buffer_current] = this->member_score_llist[i][this_current];
+				buffer_index_list[buffer_current] = this->member_index_llist[i][this_current];
+				++buffer_current;
+				++this_current;
+			}
+			else if (this->member_score_llist[i][this_current] > block.member_score_llist[i][block_current])
+			{
+				buffer_score_list[buffer_current] = block.member_score_llist[i][block_current];
+				buffer_index_list[buffer_current] = block.member_index_llist[i][block_current];
+				++buffer_current;
+				++block_current;
+			}
+			else
+			{
+				if (this->member_index_llist[i][this_current] == block.member_index_llist[i][block_current])
+					++block_current;
+
+				buffer_score_list[buffer_current] = this->member_score_llist[i][this_current];
+				buffer_index_list[buffer_current] = this->member_index_llist[i][this_current];
+				++buffer_current;
+				++this_current;
+			}
+		}
+
+		while (this_current < this_size)
+		{
+			if (buffer_current == buffer_size)
+			{
+				if (max_list_size > 0)
+					break;
+
+				buffer_size *= 2;
+
+				buffer_score_list.resize(buffer_size);
+				buffer_index_list.resize(buffer_size);
+			}
+
+			buffer_score_list[buffer_current] = this->member_score_llist[i][this_current];
+            buffer_index_list[buffer_current] = this->member_index_llist[i][this_current];
+            ++buffer_current;
+            ++this_current;
+		}
+
+		while (block_current < block_size)
+		{
+			if (buffer_current == buffer_size)
+			{
+				if (max_list_size > 0)
+					break;
+
+				buffer_size *= 2;
+
+				buffer_score_list.resize(buffer_size);
+				buffer_index_list.resize(buffer_size);
+			}
+
+			buffer_score_list[buffer_current] = block.member_score_llist[i][block_current];
+            buffer_index_list[buffer_current] = block.member_index_llist[i][block_current];
+            ++buffer_current;
+            ++block_current;
+		}
+
+		this->member_size_list[i] = buffer_current;
+
+		for (auto j = 0u; j < buffer_current; ++j)
+		{
+			this->member_score_llist[i][j] = buffer_score_list[j];
+			this->member_index_llist[i][j] = buffer_index_list[j];
 		}
 	}
 
@@ -584,27 +732,30 @@ int MemberBlock<ScoreType>::merge_members(const MemberBlock<ScoreType>& block, c
 template<typename ScoreType>
 bool MemberBlock<ScoreType>::set_id(const boost::optional<std::string>& prefix, const boost::optional<unsigned int>& block)
 {
+	if (this->filename_prefix || !this->data_block)
+		return false;
+
 	std::stringstream buffer;
 
-	if (prefix)
+	if (!prefix)
 	{
 		this->filename_prefix = this->data_block->get_filename_prefix();
 		return true;
 	}
-	else if (this->sample_level == -2)
+	else if (*this->sample_level == -2)
 	{
 		if (!block) buffer << *prefix << "_micro";
 		else buffer << *prefix << "-b" << *block << "_micro";
 	}
-	else if (this->sample_level == -1)
+	else if (*this->sample_level == -1)
 	{
-		if (!block) buffer << *prefix << "_mini";
-		else buffer << *prefix << "-b" << *block << "_mini";
+		if (!block) buffer << *prefix << "_smini";
+		else buffer << *prefix << "-b" << *block << "_smini";
 	}
-	else if (this->sample_level >= 0)
+	else if (*this->sample_level >= 0)
 	{
-		if (!block) buffer << *prefix << "_s" << *this->sample_level << "_mini";
-		else buffer << *prefix << "-b" << *block << "_s" << *this->sample_level << "_mini";
+		if (!block) buffer << *prefix << "_s" << *this->sample_level;
+		else buffer << *prefix << "-b" << *block << "_s" << *this->sample_level;
 	}
 	
 	this->filename_prefix = buffer.str();
@@ -613,7 +764,7 @@ bool MemberBlock<ScoreType>::set_id(const boost::optional<std::string>& prefix, 
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-bool MemberBlock<ScoreType>::limit_to_sample(const std::shared_ptr<InvertedMemberBlock<ScoreType>>& inverted_member_block)
+bool MemberBlock<ScoreType>::limit_to_sample(const boost::shared_ptr<InvertedMemberBlock<ScoreType>>& inverted_member_block)
 {
 	for (auto i = 0u; i < this->number_of_items; ++i)
 	{
@@ -625,6 +776,51 @@ bool MemberBlock<ScoreType>::limit_to_sample(const std::shared_ptr<InvertedMembe
 	}
 
 	return true;
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename ScoreType>
+bool MemberBlock<ScoreType>::verify_savefile(const boost::optional<unsigned int>& index)
+{
+	std::ostringstream str;
+
+	if (index == boost::none)
+		str << *this->filename_prefix <<  "-n" << index << ".mem";
+	else
+		str << *this->filename_prefix << ".mem";
+
+	std::ifstream file;
+	FileUtil::open_read(str.str(), file);
+
+	auto temp_number_of_items = FileUtil::read_from_file<unsigned int>(file);
+	auto temp_sample_level    = FileUtil::read_from_file<int>(file);
+
+	file.close();
+
+	if ((this->number_of_items && temp_number_of_items != *this->number_of_items)
+     || (this->sample_level && temp_sample_level != *this->sample_level))
+		return false;
+
+	return true;
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename ScoreType>
+void MemberBlock<ScoreType>::shrink_to_fit()
+{
+	this->member_index_llist.resize(*this->number_of_items);
+	this->member_score_llist.resize(*this->number_of_items);
+	this->member_size_list.resize(*this->number_of_items);
+
+	this->member_index_llist.shrink_to_fit();
+	this->member_score_llist.shrink_to_fit();
+	this->member_size_list.shrink_to_fit();
+
+	for (auto i = 0u; i < *this->number_of_items; ++i)
+	{
+		this->member_index_llist[i].resize(this->member_size_list[i]);
+		this->member_score_llist[i].resize(this->member_size_list[i]);
+		this->member_index_llist[i].shrink_to_fit();
+		this->member_score_llist[i].shrink_to_fit();
+	}
 }
 /*-----------------------------------------------------------------------------------------------*/
 #endif

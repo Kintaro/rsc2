@@ -122,15 +122,15 @@ private:
 
 	std::vector<unsigned int> count_list;
 
-	std::shared_ptr<AbstractSetManager> set_manager;
-	std::shared_ptr<AbstractSetManager> trim_manager;
-	std::shared_ptr<AbstractSetManager> soft_rsc_cluster_manager;
+	boost::shared_ptr<AbstractSetManager> set_manager;
+	boost::shared_ptr<AbstractSetManager> trim_manager;
+	boost::shared_ptr<AbstractSetManager> soft_rsc_cluster_manager;
 	
-	std::vector<std::shared_ptr<ClusterData>> cluster_data_list;
+	std::vector<boost::shared_ptr<ClusterData>> cluster_data_list;
 
 	ListStyle list_style;
 public:
-	RscClusterer(const std::shared_ptr<AbstractSetManager> set_manager);
+	RscClusterer(const boost::shared_ptr<AbstractSetManager> set_manager);
 	/**
 	 * Accepts a data set for soft clustering.
 	 *
