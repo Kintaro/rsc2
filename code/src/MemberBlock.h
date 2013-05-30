@@ -333,8 +333,6 @@ bool MemberBlock<ScoreType>::identify_save_file(std::ofstream& file) const
 {
 	if (!this->filename_prefix || !file.is_open())
 		return false;
-	std::string buffer = "%% " + *this->filename_prefix + ".mem\n";
-	FileUtil::write_to_file<std::string>(file, buffer, true);
 	return true;
 }
 /*-----------------------------------------------------------------------------------------------*/
@@ -525,6 +523,7 @@ int MemberBlock<ScoreType>::internal_build_neighbourhood_store(IndexStructure<Di
 
 	this->member_index_llist[adjusted_item_index].resize(num_members);
 	this->member_score_llist[adjusted_item_index].resize(num_members);
+	this->member_size_list[adjusted_item_index] = num_members;
 
 	if (num_members <= 0)
 		return result_distance_comparisons;
