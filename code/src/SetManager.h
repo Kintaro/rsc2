@@ -157,7 +157,7 @@ private:
 template<typename DataBlock, typename ScoreType>
 SetManager<DataBlock, ScoreType>::SetManager() 
 {
-	auto ptr = boost::shared_ptr<ChunkManager<DataBlock, ScoreType>>(new ChunkManager<DataBlock, ScoreType>());
+	auto ptr = boost::shared_ptr<ChunkManager<DataBlock, ScoreType>>(new ChunkManager<DataBlock, ScoreType>(Daemon::comm().rank()));
 	this->maximum_number_of_micro_members = boost::none;
 	this->maximum_number_of_mini_members = boost::none;
 	this->chunk_ptr = ptr;
@@ -266,7 +266,7 @@ bool SetManager<DataBlock, ScoreType>::build_members(const bool can_load_from_di
 	{
 		// The member lists for the current chunk already reside on disk,
 		// and we are allowed to use them.
-		Daemon::info("member lists already saved to disk for");
+		Daemon::info("member lists already computed and saved to disk");
 		outcome = true;
 	}
 	else if (this->data_original)
@@ -282,7 +282,7 @@ bool SetManager<DataBlock, ScoreType>::build_members(const bool can_load_from_di
 				auto transmission_mode = Daemon::comm().rank() == i ? TransmissionMode::TransmissionSend : TransmissionMode::TransmissionReceive;	
 				if (transmission_mode == TransmissionMode::TransmissionSend)
 					Daemon::info("processing chunk %i", i);
-				outcome = this->chunk_ptr->build_approximate_neighborhoods(sash_degree, scale_factor, true, true, transmission_mode, i);
+				outcome &= this->chunk_ptr->build_approximate_neighborhoods(sash_degree, scale_factor, true, true, transmission_mode, i);
 			}
 			Daemon::comm().barrier();
 		}
