@@ -77,7 +77,7 @@ size_t VecDataBlock::load_data()
 	std::string filename = this->get_filename_prefix() + ".dvf";// + Options::get_option_as<std::string>("vecdata-filename-extension");
 	std::ifstream file;
 	
-	if (!FileUtil::open_read(filename, file))
+	if (!FileUtil::open_read(filename, file, false))
 		Daemon::error("error opening file %s", filename.c_str());
 	
 	auto num_loaded = this->internal_load_block(file);
@@ -130,7 +130,7 @@ bool VecDataBlock::verify_savefile()
 	
 	Daemon::debug("verifying file %s", filename.c_str());
 	
-	if (!FileUtil::open_read(filename, file))
+	if (!FileUtil::open_read(filename, file, false))
 		return false;
 	
 	this->number_of_items = FileUtil::read_from_file<unsigned int>(file);

@@ -250,6 +250,7 @@ bool MemberBlock<ScoreType>::internal_load_members(std::ifstream& file)
 
 	this->member_score_llist.resize(*this->number_of_items);
 	this->member_index_llist.resize(*this->number_of_items);
+	this->member_size_list.resize(*this->number_of_items);
 
 	for (auto i = 0u; i < this->number_of_items; ++i)
 	{
@@ -258,6 +259,7 @@ bool MemberBlock<ScoreType>::internal_load_members(std::ifstream& file)
 
 		this->member_index_llist[item_index].resize(num_members);
 		this->member_score_llist[item_index].resize(num_members);
+		this->member_size_list[item_index] = num_members;
 
 		for (auto j = 0; j < num_members; ++j)
 		{
@@ -428,6 +430,8 @@ const std::vector<ScoreType> MemberBlock<ScoreType>::extract_member_scores(const
 template<typename ScoreType>
 const std::vector<unsigned int> MemberBlock<ScoreType>::extract_member_indices(const unsigned int item_index)
 {
+	if (item_index - *this->global_offset >= this->number_of_items || this->member_size_list[item_index - *this->global_offset] == 0u)
+		return std::vector<unsigned int>();
 	std::vector<unsigned int> result = std::vector<unsigned int>(this->member_index_llist[item_index - *this->global_offset]);
 	this->member_index_llist[item_index - *this->global_offset] = std::vector<unsigned int>();
 	return result;
@@ -436,7 +440,7 @@ const std::vector<unsigned int> MemberBlock<ScoreType>::extract_member_indices(c
 template<typename ScoreType>
 unsigned int MemberBlock<ScoreType>::get_number_of_members(const unsigned int item_index) const
 {
-	return this->member_index_llist[item_index].size();
+	return this->member_size_list[item_index - *this->global_offset];
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
@@ -604,8 +608,8 @@ int MemberBlock<ScoreType>::merge_members(const MemberBlock<ScoreType>& block, c
 	{
 		std::vector<std::pair<unsigned int, ScoreType> > this_list, mb_list, result_list;
 
-		this_list.resize(this->member_index_llist[i].size());
-		mb_list.resize(block.member_index_llist[i].size());
+		this_list.resize(this->member_size_list[i]);
+		mb_list.resize(block.member_size_list[i]);
 
 		for (auto j = 0u; j < this->member_size_list[i]; ++j)
 			this_list[j] = std::make_pair(this->member_index_llist[i][j], this->member_score_llist[i][j]);
@@ -793,7 +797,7 @@ bool MemberBlock<ScoreType>::verify_savefile(const boost::optional<unsigned int>
 {
 	std::ostringstream str;
 
-	if (!index)
+	if (index)
 		str << *this->filename_prefix <<  "-n" << index << ".mem";
 	else
 		str << *this->filename_prefix << ".mem";

@@ -54,7 +54,7 @@ private:
 	{
 		static bool sort(const std::pair<K, V>& a, const std::pair<K, V>& b)  
 		{
-			return a.first < b.first;
+			return a.first <= b.first;
 		}
 	};
 public:
@@ -93,17 +93,20 @@ public:
 	static unsigned int sort(std::vector<K>& a, std::vector<V>& b, const unsigned int from, const unsigned int to)
 	{
 		if (a.size() != b.size())
+		{
+			Daemon::error("sizes differ [%i, %i]", a.size(), b.size());
 			throw new std::exception();
+		}
 
 		std::vector<std::pair<K, V> > temp;
 		temp.resize(a.size());
 
-		for (auto i = 0u; i < a.size(); ++i)
+		for (auto i = from; i <= to; ++i)
 			temp[i] = std::make_pair(a[i], b[i]);
 
 		std::sort(temp.begin() + from, temp.begin() + to, sort_helper<K, V>::sort);
 
-		for (auto i = 0u; i < temp.size(); ++i)
+		for (auto i = from; i <= to; ++i)
 		{
 			a[i] = temp[i].first;
 			b[i] = temp[i].second;

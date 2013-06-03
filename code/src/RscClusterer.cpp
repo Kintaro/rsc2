@@ -96,7 +96,7 @@ bool RscClusterer::initialize_soft_rsc()
 			return false;
 		}
 	}
-	exit(0);
+	//exit(0);
 	if (!this->set_manager->build_inverted_members(false))
 	{
 		//this->set_manager->purge_inverted_members();

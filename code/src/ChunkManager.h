@@ -360,18 +360,15 @@ unsigned int ChunkManager<DataBlock, ScoreType>::find_block_for_item(const unsig
 {
 	int low = 0;
 	int high = this->number_of_blocks - 1;
-	Daemon::error(" [-] find_block_for_item %i", item_index);
 
 	if (item_index < *this->global_offset + this->offset_list[low])
 		throw new std::exception();
 	else if (item_index >= *this->global_offset + this->offset_list[high] + this->block_size_list[high])
 		return this->number_of_blocks;
 
-	Daemon::error(" [-] still here");
-
 	while (low < high)
 	{
-		unsigned int mid = (low + high + 1) / 2;
+		int mid = (low + high + 1) / 2;
 
 		if (item_index < *this->global_offset + this->offset_list[mid])
 			high = mid - 1;
@@ -427,7 +424,7 @@ bool ChunkManager<DataBlock, ScoreType>::build_members_from_disk()
 	{
 		this->member_block_list[block].resize(this->number_of_samples + this->number_of_tiny_samples);
 
-		for (int sample = -this->number_of_tiny_samples; sample < static_cast<int>(this->number_of_samples); ++sample)
+		for (auto sample = -static_cast<int>(this->number_of_tiny_samples); sample < static_cast<int>(this->number_of_samples); ++sample)
 		{
 			auto s = sample + this->number_of_tiny_samples;
 
@@ -791,7 +788,7 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood_send_stage3
 template<typename DataBlock, class ScoreType>
 bool ChunkManager<DataBlock, ScoreType>::build_inverted_members(const TransmissionMode transmission_mode, const unsigned int sender_id)
 {
-	Daemon::debug("building inverted members [%i]", this->number_of_blocks);
+	Daemon::debug("building inverted members [%s]", transmission_mode == TransmissionMode::TransmissionSend ? "master" : "slave");
 	
 	// For each of the chunks in the list, fetch their member list lists
 	// and identify those items which belong to this chunk.
@@ -809,7 +806,8 @@ bool ChunkManager<DataBlock, ScoreType>::build_inverted_members(const Transmissi
 		this->inverted_member_block_list[block].resize(this->number_of_samples + this->number_of_tiny_samples);
 		if (!this->sampling_flag)
 		{
-			this->inverted_member_block_list[block][0] = boost::shared_ptr<InvertedMemberBlock<ScoreType>>(new InvertedMemberBlock<ScoreType>(this->data_block_list[block]));
+			this->inverted_member_block_list[block][0] = boost::shared_ptr<InvertedMemberBlock<ScoreType>>(new InvertedMemberBlock<ScoreType>(this->data_block_list[block], 
+				Options::get_option_as<unsigned int>("rsc-small-buffsize")));
 
 			if (this->unchunked_flag)
 				this->inverted_member_block_list[block][0]->set_id(this->filename_prefix);
@@ -821,7 +819,8 @@ bool ChunkManager<DataBlock, ScoreType>::build_inverted_members(const Transmissi
 			for (auto sample = -static_cast<int>(this->number_of_tiny_samples); sample < static_cast<int>(this->number_of_samples); ++sample)
 			{
 				auto s = sample + this->number_of_tiny_samples;
-				this->inverted_member_block_list[block][s] = boost::shared_ptr<InvertedMemberBlock<ScoreType>>(new InvertedMemberBlock<ScoreType>(this->data_block_list[block]));
+				this->inverted_member_block_list[block][s] = boost::shared_ptr<InvertedMemberBlock<ScoreType>>(new InvertedMemberBlock<ScoreType>(this->data_block_list[block],
+					Options::get_option_as<unsigned int>("rsc-small-buffsize"), sample));
 
 				if (this->unchunked_flag)
 					this->inverted_member_block_list[block][s]->set_id(this->filename_prefix);
@@ -851,7 +850,6 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 
 				if (target_processor == Daemon::comm().rank())
 				{
-					Daemon::error(" [-] got block by access");
 					if (this->sampling_flag)
 						member_block = this->access_member_block(block, sample);
 					else
@@ -859,16 +857,13 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 				}
 				else
 				{
-					Daemon::error(" [-] got block via mpi");
 					auto block_ptr = this->data_block_list[block];
 					member_block = boost::shared_ptr<MemberBlock<ScoreType>>(new MemberBlock<ScoreType>(block_ptr, Options::get_option_as<unsigned int>("rsc-small-buffsize")));
-					Daemon::comm().recv(target_processor, 0, *member_block);
-					Daemon::comm().send(target_processor, 0, target_processor);
+					Daemon::comm().recv(target_processor, target_processor, *member_block);
+					Daemon::comm().send(target_processor, target_processor, target_processor);
 				}
 
-				Daemon::error(" [-] send load_members start");
 				member_block->load_members();
-				Daemon::error(" [-] send load_members end");
 
 				auto member_block_size = member_block->get_number_of_items();
 				auto member_offset = member_block->get_offset();
@@ -877,7 +872,6 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 				{
 					auto member_index_list = member_block->extract_member_indices(i);
 					auto number_of_members = member_block->get_number_of_members(i);
-					Daemon::error("[-] number_of_members %i", number_of_members);
 
 					if (member_index_list.empty())
 						continue;
@@ -886,25 +880,23 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 					{
 						auto member = member_index_list[j];
 						auto target_block = this->find_block_for_item(member);
-						Daemon::error(" [-] target_block %i", target_block);
 
-						if (target_block < this->member_block_list.size())
+						if (target_block < this->number_of_blocks)
 							this->inverted_member_block_list[target_block][s]->add_to_inverted_members(member, i, j);
 					}
 				}
 
 				auto combo = block * Daemon::comm().size() + target_processor;
 
-				for (auto blck = 0u; blck < this->member_block_list.size(); ++blck)
+				for (auto blck = 0u; blck < this->number_of_blocks; ++blck)
 				{
+					Daemon::error("finalizing block %i", blck);
 					this->inverted_member_block_list[blck][s]->finalize_inverted_members();
 					this->inverted_member_block_list[blck][s]->save_inverted_members(combo);
 				}
 
 				this->clear_inverted_member_blocks();
 				member_block->clear_members();
-				if (target_processor != Daemon::comm().rank())
-					member_block.reset();
 			}
 
 			for (auto blck = 0u; blck < this->number_of_blocks; ++blck)
@@ -954,9 +946,9 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_receive
 			auto member_block = this->sampling_flag ? this->access_member_block(block, sample) : this->access_member_block(block);
 
 			member_block->load_members();
-			Daemon::comm().send(sender_id, 0, *member_block);
+			Daemon::comm().send(sender_id, Daemon::comm().rank(), *member_block);
 			unsigned int tmp;
-			Daemon::comm().recv(sender_id, 0, tmp);
+			Daemon::comm().recv(sender_id, Daemon::comm().rank(), tmp);
 			member_block->clear_members();
 		}
 	}
