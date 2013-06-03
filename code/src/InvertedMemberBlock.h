@@ -73,7 +73,7 @@ public:
 	bool finalize_inverted_members();
 	void clear_inverted_members();
 	void merge_inverted_members(const boost::shared_ptr<InvertedMemberBlock<ScoreType>>& block);
-	void purge_inverted_members_from_disk(const unsigned int index);
+	void purge_inverted_members_from_disk(const boost::optional<unsigned int>& index);
 	unsigned int get_number_of_inverted_members(const unsigned int index) { return this->inverted_member_size_list[index]; }
 
 	unsigned int load_inverted_members(const boost::optional<unsigned int>& index = boost::none);
@@ -114,6 +114,11 @@ InvertedMemberBlock<ScoreType>::InvertedMemberBlock(const boost::shared_ptr<VecD
 template<typename ScoreType>
 InvertedMemberBlock<ScoreType>::InvertedMemberBlock(const InvertedMemberBlock<ScoreType>& inverted_member_block)
 {
+	this->default_buffer_size = inverted_member_block.default_buffer_size;
+	this->data_block = inverted_member_block.data_block;
+	this->global_offset = inverted_member_block.global_offset;
+	this->sample_level = inverted_member_block.sample_level;
+	this->number_of_items = inverted_member_block.number_of_items;
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
@@ -314,6 +319,12 @@ template<typename ScoreType>
 unsigned int InvertedMemberBlock<ScoreType>::load_inverted_members(const boost::optional<unsigned int>& index)
 {
 	std::ostringstream str;
+
+	if (!this->filename_prefix)
+	{
+		Daemon::debug("filename_prefix empty");
+		return false;
+	}
 	
 	if (index)
 		str << *this->filename_prefix <<  "-n" << *index << ".imem";
@@ -346,7 +357,7 @@ bool InvertedMemberBlock<ScoreType>::internal_load_inverted_members(std::ifstrea
 		if (item_index != i)
 			return false;
 
-		if (number_of_inverted_members > 0)
+		if (number_of_inverted_members > 0u)
 		{
 			this->inverted_member_index_list[i].resize(number_of_inverted_members, 0u);
 			this->inverted_member_rank_list[i].resize(number_of_inverted_members, 0u);
@@ -385,11 +396,114 @@ bool InvertedMemberBlock<ScoreType>::initialize_inverted_members()
 template<typename ScoreType>
 void InvertedMemberBlock<ScoreType>::merge_inverted_members(const boost::shared_ptr<InvertedMemberBlock<ScoreType>>& block)
 {
+	auto max_this_size = 0u;
+	auto max_block_size = 0u;
+
+	for (auto i = 0u; i < *this->number_of_items; ++i)
+	{
+		max_this_size = std::max(max_this_size, this->inverted_member_size_list[i]);
+		max_block_size = std::max(max_this_size, block->inverted_member_size_list[i]);
+	}
+
+	auto temp_rank_list = std::vector<unsigned int>(max_this_size + max_block_size, 0u);
+	auto temp_index_list = std::vector<unsigned int>(max_this_size + max_block_size, 0u);
+
+	for (auto i = 0u; i < *this->number_of_items; ++i)
+    {
+        auto temp_current = 0u;
+        auto this_current = 0u;
+        auto block_current = 0u;
+        auto this_size = this->inverted_member_size_list[i];
+        auto block_size = block->inverted_member_size_list[i];
+
+        // The merge loop iterates until one of the lists is exhausted.
+        while ((this_current < this_size) && (block_current < block_size))
+        {
+            if (this->inverted_member_index_list[i][this_current] < block->inverted_member_index_list[i][block_current])
+            {
+                // This object's inverted member index is smaller,
+                //   so copy it over.
+
+                temp_rank_list[temp_current] = this->inverted_member_rank_list[i][this_current];
+                temp_index_list[temp_current] = this->inverted_member_index_list[i][this_current];
+                ++temp_current;
+                ++this_current;
+            }
+            else if (this->inverted_member_index_list[i][this_current] > block->inverted_member_index_list[i][block_current])
+            {
+				// The other object's inverted member index is smaller,
+				// so copy it over.
+
+                temp_rank_list[temp_current] = block->inverted_member_rank_list[i][block_current];
+                temp_index_list[temp_current] = block->inverted_member_index_list[i][block_current];
+                ++temp_current;
+                ++block_current;
+            }
+            else
+            {
+				// The indices are equal.
+				// To avoid having identical copies in the result list, copy one,
+				// and skip over the other inverted member without copying it.
+
+                temp_rank_list[temp_current] = this->inverted_member_rank_list[i][this_current];
+                temp_index_list[temp_current] = this->inverted_member_index_list[i][this_current];
+                ++temp_current;
+                ++this_current;
+                ++block_current;
+            }
+        }
+
+        while (this_current < this_size)
+        {
+			// There are still inverted members in this object's list,
+			// so copy them over (until the maximum inverted member list
+			// size limit is reached).
+
+            temp_rank_list[temp_current] = this->inverted_member_rank_list[i][this_current];
+            temp_index_list[temp_current] = this->inverted_member_index_list[i][this_current];
+            ++temp_current;
+            ++this_current;
+        }
+
+        while (block_current < block_size)
+        {
+            // There are still inverted members in the other object's list,
+            //   so copy them over (until the maximum inverted member list
+            //   size limit is reached).
+
+            temp_rank_list[temp_current] = block->inverted_member_rank_list[i][block_current];
+            temp_index_list[temp_current] = block->inverted_member_index_list[i][block_current];
+            ++temp_current;
+            ++block_current;
+        }
+
+        // Replace the old inverted member lists by the new ones.
+        this->inverted_member_rank_list[i] = std::vector<unsigned int>();
+        this->inverted_member_index_list[i] = std::vector<unsigned int>();
+
+        this->inverted_member_rank_list[i].resize(temp_current, 0u);
+        this->inverted_member_index_list[i].resize(temp_current, 0u);
+        this->inverted_member_size_list[i] = temp_current;
+
+        for (auto j = 0u; j < temp_current; ++j)
+        {
+            this->inverted_member_rank_list[i][j] = temp_rank_list[j];
+            this->inverted_member_index_list[i][j] = temp_index_list[j];
+        }
+    }
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-void InvertedMemberBlock<ScoreType>::purge_inverted_members_from_disk(const unsigned int index)
+void InvertedMemberBlock<ScoreType>::purge_inverted_members_from_disk(const boost::optional<unsigned int>& index)
 {
+	std::ostringstream str;
+	
+	if (index)
+		str << *this->filename_prefix <<  "-n" << *index << ".imem";
+	else
+		str << *this->filename_prefix << ".imem";
+
+	remove(str.str().c_str());
 }
 /*-----------------------------------------------------------------------------------------------*/
 

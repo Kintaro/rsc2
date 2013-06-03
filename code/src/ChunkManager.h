@@ -106,7 +106,7 @@ public:
 	const boost::shared_ptr<DistanceData> access_item(const unsigned int index) const;
 	std::vector<boost::shared_ptr<DistanceData>>& access_items() { return this->data_item_list; }
 	
-	unsigned int find_block_for_item(const unsigned int item_index) const;
+	unsigned int find_block_for_item(const unsigned int item_index, bool& found) const;
 	unsigned int setup_samples(const unsigned int sample_limit, const unsigned int maximum_number_of_members, const boost::optional<unsigned int> maximum_number_of_mini_members = boost::none, const boost::optional<unsigned int> maximum_number_of_micro_members = boost::none);
 	
 	bool build_members_from_disk();
@@ -207,7 +207,7 @@ ChunkManager<DataBlock, ScoreType>::ChunkManager(const boost::optional<unsigned 
 	}
 
 
-	this->filename_prefix = Options::get_option_as<std::string>("temp-directory") + Options::get_option_as<std::string>("dataset");
+	this->filename_prefix = Options::get_option_as<std::string>("temp-directory") + std::to_string(Daemon::comm().rank()) + "/" + Options::get_option_as<std::string>("dataset");
 
 	//if (!this->unchunked_flag)
 		this->filename_prefix += "_c" + std::to_string(Daemon::comm().rank());
@@ -356,13 +356,18 @@ const boost::shared_ptr<DistanceData> ChunkManager<DataBlock, ScoreType>::access
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
-unsigned int ChunkManager<DataBlock, ScoreType>::find_block_for_item(const unsigned int item_index) const
+unsigned int ChunkManager<DataBlock, ScoreType>::find_block_for_item(const unsigned int item_index, bool& found) const
 {
 	int low = 0;
 	int high = this->number_of_blocks - 1;
 
+	found = true;
+
 	if (item_index < *this->global_offset + this->offset_list[low])
-		throw new std::exception();
+	{
+		found = false;
+		return 0u;
+	}
 	else if (item_index >= *this->global_offset + this->offset_list[high] + this->block_size_list[high])
 		return this->number_of_blocks;
 
@@ -788,7 +793,7 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood_send_stage3
 template<typename DataBlock, class ScoreType>
 bool ChunkManager<DataBlock, ScoreType>::build_inverted_members(const TransmissionMode transmission_mode, const unsigned int sender_id)
 {
-	Daemon::debug("building inverted members [%s]", transmission_mode == TransmissionMode::TransmissionSend ? "master" : "slave");
+	Daemon::info("building inverted members [%s]", transmission_mode == TransmissionMode::TransmissionSend ? "master" : "slave");
 	
 	// For each of the chunks in the list, fetch their member list lists
 	// and identify those items which belong to this chunk.
@@ -879,9 +884,10 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 					for (auto j = 0u; j < number_of_members; ++j)
 					{
 						auto member = member_index_list[j];
-						auto target_block = this->find_block_for_item(member);
+						auto found = true;
+						auto target_block = this->find_block_for_item(member, found);
 
-						if (target_block < this->number_of_blocks)
+						if (found && target_block < this->number_of_blocks)
 							this->inverted_member_block_list[target_block][s]->add_to_inverted_members(member, i, j);
 					}
 				}
