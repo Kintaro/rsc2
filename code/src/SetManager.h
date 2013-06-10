@@ -95,7 +95,7 @@ public:
 	 */
 	virtual bool build_members(const bool can_load_from_disk, 
 							   const boost::optional<unsigned int>& sash_degree = boost::none, 
-							   const boost::optional<double>& scale_factor = boost::none);
+							   const boost::optional<RscAccuracyType>& scale_factor = boost::none);
 							   
 	virtual bool build_inverted_members(const bool can_load_from_disk);
 	virtual boost::shared_ptr<AbstractSetManager> build_trim_set(const bool can_load_from_disk);
@@ -248,7 +248,7 @@ boost::shared_ptr<AbstractSetManager> SetManager<DataBlock, ScoreType>::build_tr
 template<typename DataBlock, typename ScoreType>
 bool SetManager<DataBlock, ScoreType>::build_members(const bool can_load_from_disk, 
 							   const boost::optional<unsigned int>& sash_degree, 
-							   const boost::optional<double>& scale_factor)
+							   const boost::optional<RscAccuracyType>& scale_factor)
 {
 	// For each chunk, load member lists from disk if they are available.
     // If this fails, and if the data set is the original data to be
@@ -313,7 +313,11 @@ bool SetManager<DataBlock, ScoreType>::build_inverted_members(const bool can_loa
 	auto result = true;
 	
 	if (this->chunk_ptr->build_inverted_members_from_disk())
+	{
+		Daemon::info("inverted member lists already computed and saved to disk");
 		return true;
+	}
+	Daemon::info("inverted member lists not found on disk. building from scratch");
 	
 	for (auto i = 0; i < Daemon::comm().size(); ++i)
 	{

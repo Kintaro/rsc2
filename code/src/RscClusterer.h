@@ -51,6 +51,7 @@
 #include "AbstractSetManager.h"
 #include "ListStyle.h"
 #include "ClusterData.h"
+#include "Daemon.h"
 
 class RscClusterer
 {
@@ -76,11 +77,11 @@ private:
 	unsigned int maximum_microlist_accept_limit;
 	unsigned int maximum_list_accept_limit;
 
-	double minimum_cluster_squared_significance_threshold;
-	double minimum_member_significance_threshold;
-	double cluster_epsilon;
+	RscAccuracyType minimum_cluster_squared_significance_threshold;
+	RscAccuracyType minimum_member_significance_threshold;
+	RscAccuracyType cluster_epsilon;
 
-	double maximum_edge_significance_threshold;
+	RscAccuracyType maximum_edge_significance_threshold;
 
 	int pattern_level_ready;
 	int pattern_level_selected;
@@ -95,11 +96,11 @@ private:
 	std::vector<std::vector<unsigned int>> inverted_member_rank_list;
 	std::vector<unsigned int> inverted_member_size_list;
 
-	std::vector<std::vector<double>> squared_significance_accumulation_list;
+	std::vector<std::vector<RscAccuracyType>> squared_significance_accumulation_list;
 	std::vector<std::vector<unsigned int>> intersection_accumulation_list;
 
-	std::vector<double> pattern_squared_significance_list;
-	std::vector<double> pattern_sconfidence_list;
+	std::vector<RscAccuracyType> pattern_squared_significance_list;
+	std::vector<RscAccuracyType> pattern_sconfidence_list;
 
 	std::vector<unsigned int> pattern_index_to_rank_list;
 	std::vector<unsigned int> pattern_rank_to_index_list;
@@ -115,9 +116,9 @@ private:
 	std::vector<std::vector<unsigned int>> cluster_member_index_list;
 	std::vector<std::vector<unsigned int>> cluster_member_rs_overlap_list;
 	std::vector<unsigned int> cluster_member_size_list;
-	std::vector<std::vector<double>> cluster_member_distance_list;
-	std::vector<double> cluster_squared_significance_list;
-	std::vector<double> cluster_sconfidence_list;
+	std::vector<std::vector<RscAccuracyType>> cluster_member_distance_list;
+	std::vector<RscAccuracyType> cluster_squared_significance_list;
+	std::vector<RscAccuracyType> cluster_sconfidence_list;
 	// --- [ /TODO ] --- //
 
 	std::vector<unsigned int> count_list;

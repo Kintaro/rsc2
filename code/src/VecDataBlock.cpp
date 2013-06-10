@@ -77,7 +77,7 @@ size_t VecDataBlock::load_data()
 	std::string filename = this->get_filename_prefix() + ".dvf";// + Options::get_option_as<std::string>("vecdata-filename-extension");
 	std::ifstream file;
 	
-	if (!FileUtil::open_read(filename, file, false))
+	if (!FileUtil::open_read(filename, file, Options::get_option_as<bool>("use-binary-data-files")))
 		Daemon::error("error opening file %s", filename.c_str());
 	
 	auto num_loaded = this->internal_load_block(file);
@@ -109,9 +109,9 @@ DistanceData VecDataBlock::internal_load_item(std::ifstream& file)
 {
 	auto length = FileUtil::read_from_file<unsigned int>(file);
 	
-	auto vector_data = std::vector<double>(length, 0.0);
+	auto vector_data = std::vector<RscAccuracyType>(length, 0.0);
 	for (auto &x : vector_data)
-		x = FileUtil::read_from_file<double>(file);
+		x = FileUtil::read_from_file<RscAccuracyType>(file);
 	
 	return DistanceData(vector_data);
 }
@@ -130,7 +130,7 @@ bool VecDataBlock::verify_savefile()
 	
 	Daemon::debug("verifying file %s", filename.c_str());
 	
-	if (!FileUtil::open_read(filename, file, false))
+	if (!FileUtil::open_read(filename, file, Options::get_option_as<bool>("use-binary-data-files")))
 		return false;
 	
 	this->number_of_items = FileUtil::read_from_file<unsigned int>(file);

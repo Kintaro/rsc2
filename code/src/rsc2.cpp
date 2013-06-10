@@ -98,12 +98,12 @@ int main(int argc, char** argv)
 	parse_options_and_start_daemon(argc, argv);
 
 	if (world.rank() != 0) {
-		SetManager<VecDataBlock, double> set;
+		SetManager<VecDataBlock, RscAccuracyType> set;
 		set.set_list_hierarchy_parameters(ListStyle::Medium, 7, 60, 20, 20);
 		set.setup_samples();
-		RscClusterer* rsc = new RscClusterer(boost::shared_ptr<SetManager<VecDataBlock, double>>(&set));
+		RscClusterer* rsc = new RscClusterer(boost::shared_ptr<SetManager<VecDataBlock, RscAccuracyType>>(&set));
 		rsc->cluster_soft_rsc();
-		//ChunkManager<VecDataBlock, double> chunk;
+		//ChunkManager<VecDataBlock, RscAccuracyType> chunk;
 		//chunk.load_chunk_data();
 		//chunk.setup_samples(7, 100);
 		

@@ -51,7 +51,7 @@
 class VecData : public DistanceData
 {
 private:
-	std::vector<double> data;
+	std::vector<RscAccuracyType> data;
 public:
 	VecData() {}
 	VecData(const VecData& vec)
@@ -64,12 +64,12 @@ public:
 		this->data = vec.data;
 	}
 
-	VecData(const std::vector<double>& data)
+	VecData(const std::vector<RscAccuracyType>& data)
 	{
 		this->data = data;
 	}
 	
-	virtual double distance_to(const boost::shared_ptr<DistanceData>& to) 
+	virtual RscAccuracyType distance_to(const boost::shared_ptr<DistanceData>& to) 
 	{
 		auto other = boost::static_pointer_cast<VecData>(to);
 		auto sum = 0.0;

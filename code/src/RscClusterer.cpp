@@ -77,7 +77,7 @@ bool RscClusterer::initialize_soft_rsc()
 		}
 	}
 
-	auto speed_accuracy = Options::get_option_as<double>("speed-accuracy");
+	auto speed_accuracy = Options::get_option_as<RscAccuracyType>("speed-accuracy");
 	auto sash_degree = Options::get_option_as<unsigned int>("sash-degree");
 
 	if (speed_accuracy > 0.0)
@@ -102,6 +102,8 @@ bool RscClusterer::initialize_soft_rsc()
 		//this->set_manager->purge_inverted_members();
 		return false;
 	}
+
+	Daemon::comm().barrier();
 
 	//this->set_manager->clear_all();
 
@@ -222,7 +224,7 @@ void RscClusterer::generate_patterns_for_sample(const int sample_id, const Trans
 		Daemon::comm().recv(Daemon::comm().size() - 1, 0, pattern_squared_significance_list);
 		Daemon::comm().recv(Daemon::comm().size() - 1, 0, pattern_sconfidence_list);
 
-		std::vector<double> squared_significance_list;
+		std::vector<RscAccuracyType> squared_significance_list;
 		squared_significance_list.resize(number_of_items);
 
 		for (auto item = 0u; item < number_of_items; ++item)
@@ -266,7 +268,7 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 	unsigned int start = 0u;
 	unsigned int finish = 0u; 
 
-	double maximum_squared_significance;
+	RscAccuracyType maximum_squared_significance;
 	unsigned int maximum_squared_significance_location = 0;
 
 	if (chunk > 0u)
@@ -369,7 +371,7 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 
 	for (auto item = start; item <= finish; ++item)
 	{
-		std::vector<double>& local_squared_significance_accumulation_list = squared_significance_accumulation_list[item - start];
+		std::vector<RscAccuracyType>& local_squared_significance_accumulation_list = squared_significance_accumulation_list[item - start];
 		std::vector<unsigned int>& local_intersection_accumulation_list = intersection_accumulation_list[item - start];
 
 		auto list_size = sample_id == -1 ? maximum_minilist_range_limit : (sample_id == -2 ? maximum_microlist_range_limit : maximum_list_range_limit);
@@ -379,13 +381,13 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 		for (auto i = 0u; i < list_size; ++i)
 		{
 			const int k = i + 1;
-			const double squared_significance = ((((double)local_intersection_accumulation_list[i] / (k * k)) * sample_size) - k) / (sample_size - k);
+			const RscAccuracyType squared_significance = ((((RscAccuracyType)local_intersection_accumulation_list[i] / (k * k)) * sample_size) - k) / (sample_size - k);
 			local_squared_significance_accumulation_list[i] = squared_significance * squared_significance * k;
 		}
 
 		for (auto i = scan_start; i < list_size; ++i)
 		{
-			const double squared_significance = local_squared_significance_accumulation_list[i];
+			const RscAccuracyType squared_significance = local_squared_significance_accumulation_list[i];
 
 			if (squared_significance > maximum_squared_significance)
 			{
@@ -563,8 +565,8 @@ void RscClusterer::select_trim_patterns_for_sample_send(const int sample_id, con
 
 		auto item = this->pattern_rank_to_index_list[i];
 		auto squared_significance = this->pattern_squared_significance_list[item];
-		// This is stored as a double to prevent later casting
-		double this_cluster_size = this->pattern_size_list[item];
+		// This is stored as a RscAccuracyType to prevent later casting
+		RscAccuracyType this_cluster_size = this->pattern_size_list[item];
 
 		// If the pattern squared significance is below the threshold, then
 		// we don't need to process any more candidates.
@@ -598,8 +600,8 @@ void RscClusterer::select_trim_patterns_for_sample_send(const int sample_id, con
 				continue;
 
 			this_cluster_size  = this->pattern_size_list[item];
-			double other_cluster_size = this->pattern_size_list[adjacent_items_list[j]];
-			double adjacent_item_size = adjacent_int_size_list[j];
+			RscAccuracyType other_cluster_size = this->pattern_size_list[adjacent_items_list[j]];
+			RscAccuracyType adjacent_item_size = adjacent_int_size_list[j];
 
 			// Break calculation of correlation down into its subparts...
 			auto a = (this_cluster_size / sample_size) * (other_cluster_size / sample_size);
@@ -849,7 +851,7 @@ void RscClusterer::select_final_patterns_for_sample_send(const int sample_id, co
 		for (auto j = 0u; j < number_of_adjacencies; ++j)
 		{
 			auto &cluster_index = adjacent_items_list[j];
-			//auto confidence = (double)adjacent_int_size_list[j] / (double)this->pattern_size_list[this->selected_pattern_base_index_list[cluster_index]];
+			//auto confidence = (RscAccuracyType)adjacent_int_size_list[j] / (RscAccuracyType)this->pattern_size_list[this->selected_pattern_base_index_list[cluster_index]];
 			auto list_size = this->cluster_member_size_list[cluster_index];
 
 			if (list_size == 0)
@@ -868,7 +870,7 @@ void RscClusterer::select_final_patterns_for_sample_send(const int sample_id, co
 				if (list_size == Options::get_option_as<unsigned int>("rsc-small-buffsize"))
 				{
 					// The pattern member buffers are full.
-					// Double their capacities.
+					// RscAccuracyType their capacities.
 					list_size = this->cluster_member_size_list[cluster_index];
 					auto buffer_size = 2 * list_size;
 					
@@ -937,8 +939,8 @@ void RscClusterer::select_final_patterns_for_sample_send(const int sample_id, co
 		auto last_correlation = 0.0;
 		auto squared_significance = 0.0;
 		auto cluster_size = minimum_cluster_size;
-		auto best_squared_confidence = ((double)total_overlap / (double)tentative_cluster_size) / cluster_size;
-		auto best_squared_significance = (((double)total_overlap / (double)tentative_cluster_size) * sample_size);
+		auto best_squared_confidence = ((RscAccuracyType)total_overlap / (RscAccuracyType)tentative_cluster_size) / cluster_size;
+		auto best_squared_significance = (((RscAccuracyType)total_overlap / (RscAccuracyType)tentative_cluster_size) * sample_size);
 		best_squared_significance *= best_squared_significance / cluster_size;
 
 		for (auto j = minimum_cluster_size; j < this->cluster_member_size_list[i]; ++j)
@@ -960,7 +962,7 @@ void RscClusterer::select_final_patterns_for_sample_send(const int sample_id, co
 
 			best_squared_significance = squared_significance;
 			cluster_size = j + 1;
-			best_squared_confidence = ((double)total_overlap / (double)tentative_cluster_size) / cluster_size;
+			best_squared_confidence = ((RscAccuracyType)total_overlap / (RscAccuracyType)tentative_cluster_size) / cluster_size;
 			last_correlation = (((-this->cluster_member_rs_overlap_list[i][j] / tentative_cluster_size) * sample_size) - tentative_cluster_size) / (sample_size - tentative_cluster_size);
 		}
 
@@ -1081,7 +1083,7 @@ void RscClusterer::select_final_patterns_for_sample_send(const int sample_id, co
 				if (list_size == Options::get_option_as<unsigned int>("rsc-small-buffsize"))
 				{
 					// The inverted list buffer is full.
-					// Double its capacity.
+					// RscAccuracyType its capacity.
 					list_size = this->inverted_member_size_list[item];
 					auto buffer_size = 2 * list_size;
 					
@@ -1176,9 +1178,9 @@ void RscClusterer::select_final_patterns_for_sample_send(const int sample_id, co
 				// cluster candidates are over-similar.
 				if (this->count_list[adjacent_items_list[j]] != 0)
 				{
-					auto this_cluster_size = static_cast<double>(this->cluster_member_size_list[i]);
-					auto that_cluster_size = static_cast<double>(this->cluster_member_size_list[adjacent_items_list[j]]);
-					auto num_items = static_cast<double>(this->number_of_items);
+					auto this_cluster_size = static_cast<RscAccuracyType>(this->cluster_member_size_list[i]);
+					auto that_cluster_size = static_cast<RscAccuracyType>(this->cluster_member_size_list[adjacent_items_list[j]]);
+					auto num_items = static_cast<RscAccuracyType>(this->number_of_items);
 					
 					auto correlation_squared = 
 					(

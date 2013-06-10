@@ -63,11 +63,11 @@ public:
 	virtual int get_number_of_levels() const = 0;
 	virtual const std::vector<unsigned int> get_sample_sizes() const = 0;
 	virtual const std::vector<unsigned int> get_result_indices() const = 0;
-	virtual const std::vector<double> get_result_distances() const = 0;
+	virtual const std::vector<RscAccuracyType> get_result_distances() const = 0;
 	virtual int get_result_distance_comparisons() const = 0;
-	virtual int find_all_in_range(const boost::shared_ptr<T> query, const double limit, const int sample_rate = 0) = 0;
-	virtual int find_most_in_range(const boost::shared_ptr<T> query, const double limit, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0) = 0;
-	virtual int find_near(const boost::shared_ptr<T> query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0) = 0;
+	virtual int find_all_in_range(const boost::shared_ptr<T> query, const RscAccuracyType limit, const int sample_rate = 0) = 0;
+	virtual int find_most_in_range(const boost::shared_ptr<T> query, const RscAccuracyType limit, const boost::optional<int>& sampleRate = 0, const boost::optional<RscAccuracyType>& scaleFactor = 1.0) = 0;
+	virtual int find_near(const boost::shared_ptr<T> query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<RscAccuracyType>& scaleFactor = 1.0) = 0;
 	virtual int find_nearest(const boost::shared_ptr<T> query, const int howMany, const boost::optional<int>& sampleRate = 0) = 0;
 
 	static IndexStructure<T>* create_from_plugin(const std::string& plugin_name)

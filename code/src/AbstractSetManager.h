@@ -44,13 +44,14 @@
 #include <vector>
 #include <boost/serialization/optional.hpp>
 #include "ListStyle.h"
+#include "Daemon.h"
 
 class AbstractSetManager
 {
 public:
 	virtual bool build_members(const bool can_load_from_disk, 
 							   const boost::optional<unsigned int>& sash_degree = boost::none, 
-							   const boost::optional<double>& scale_factor = boost::none) = 0;
+							   const boost::optional<RscAccuracyType>& scale_factor = boost::none) = 0;
 	virtual bool build_inverted_members(const bool can_load_from_disk) = 0;
 	virtual boost::shared_ptr<AbstractSetManager> build_trim_set(const bool can_load_from_disk) = 0;
 	virtual unsigned int setup_samples() = 0;
@@ -65,7 +66,7 @@ public:
 											const unsigned int sample_id, 
 											const unsigned int block) = 0;
 	virtual unsigned int extract_members_from_block(std::vector<std::vector<unsigned int>>& member_index_list, 
-											std::vector<std::vector<double>>& member_score_list,
+											std::vector<std::vector<RscAccuracyType>>& member_score_list,
 											std::vector<unsigned int>& member_size_list,
 											const unsigned int sample_id, 
 											const unsigned int block) = 0;

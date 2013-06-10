@@ -76,8 +76,12 @@ public:
 	void purge_inverted_members_from_disk(const boost::optional<unsigned int>& index);
 	unsigned int get_number_of_inverted_members(const unsigned int index) { return this->inverted_member_size_list[index]; }
 
+	bool verify_savefile(const boost::optional<unsigned int>& index = boost::none);
+
 	unsigned int load_inverted_members(const boost::optional<unsigned int>& index = boost::none);
 	unsigned int save_inverted_members(const boost::optional<unsigned int>& index = boost::none);
+
+	unsigned int sum_size() { auto sum = 0u; for (auto i = 0u; i < *this->number_of_items; ++i) sum += this->inverted_member_size_list[i]; return sum; }
 private:
 	bool internal_load_inverted_members(std::ifstream& file);
 	bool internal_save_inverted_members(std::ofstream& file);
@@ -124,7 +128,7 @@ InvertedMemberBlock<ScoreType>::InvertedMemberBlock(const InvertedMemberBlock<Sc
 template<typename ScoreType>
 bool InvertedMemberBlock<ScoreType>::set_id(const boost::optional<std::string>& prefix, const boost::optional<unsigned int>& block)
 {
-	if (/*this->filename_prefix || */!this->data_block)
+	if (this->filename_prefix || !this->data_block)
 		return false;
 
 	std::stringstream buffer;
@@ -206,7 +210,7 @@ bool InvertedMemberBlock<ScoreType>::add_to_inverted_members(const unsigned int 
 	// list, create buffers for all inverted lists.
 	if (this->initialize_inverted_members())
 	{
-		for (auto i = 0u; i < this->number_of_items; ++i)
+		for (auto i = 0u; i < *this->number_of_items; ++i)
 		{
 			this->inverted_member_rank_list[i] = std::vector<unsigned int>(this->default_buffer_size, 0u);
 			this->inverted_member_index_list[i] = std::vector<unsigned int>(this->default_buffer_size, 0u);
@@ -230,8 +234,17 @@ bool InvertedMemberBlock<ScoreType>::add_to_inverted_members(const unsigned int 
 	if (temp == this->default_buffer_size)
 	{
 		// The inverted list buffers are full, so we must resize.
-		this->inverted_member_rank_list[index].resize(2 * number_of_inverted_members);
-		this->inverted_member_index_list[index].resize(2 * number_of_inverted_members);
+		auto temp_rank_list = std::vector<unsigned int>(2 * number_of_inverted_members, 0u);
+		auto temp_index_list = std::vector<unsigned int>(2 * number_of_inverted_members, 0u);
+
+		for (auto i = 0u; i < number_of_inverted_members; ++i)
+		{
+			temp_rank_list[i] = this->inverted_member_rank_list[index][i];
+			temp_index_list[i] = this->inverted_member_index_list[index][i];
+		}
+
+		this->inverted_member_rank_list[index] = temp_rank_list;
+		this->inverted_member_index_list[index] = temp_index_list;
 	}
 
 	// The inverted member lists are now large enough to
@@ -246,6 +259,9 @@ bool InvertedMemberBlock<ScoreType>::add_to_inverted_members(const unsigned int 
 template<typename ScoreType>
 unsigned int InvertedMemberBlock<ScoreType>::save_inverted_members(const boost::optional<unsigned int>& index)
 {
+	if (!this->is_finalized)
+		return 0u;
+
 	std::ostringstream str;
 	
 	if (index)
@@ -283,6 +299,7 @@ bool InvertedMemberBlock<ScoreType>::internal_save_inverted_members(std::ofstrea
 			FileUtil::write_to_file<unsigned int>(file, i);
 			FileUtil::space(file);
 			FileUtil::write_to_file<unsigned int>(file, 0u);
+			FileUtil::newline(file);
 		}
 	}
 	else
@@ -295,8 +312,8 @@ bool InvertedMemberBlock<ScoreType>::internal_save_inverted_members(std::ofstrea
 			FileUtil::space(file);
 			FileUtil::write_to_file<unsigned int>(file, num_members);
 
-			auto temp_rank_list = this->inverted_member_rank_list[i];
-			auto temp_index_list = this->inverted_member_index_list[i];
+			const auto& temp_rank_list = this->inverted_member_rank_list[i];
+			const auto& temp_index_list = this->inverted_member_index_list[i];
 
 			for (auto j = 0u; j < num_members; ++j)
 			{
@@ -322,7 +339,13 @@ unsigned int InvertedMemberBlock<ScoreType>::load_inverted_members(const boost::
 
 	if (!this->filename_prefix)
 	{
-		Daemon::debug("filename_prefix empty");
+		Daemon::error("filename_prefix empty");
+		return false;
+	}
+
+	if (!this->inverted_member_rank_list.empty())
+	{
+		Daemon::error("inverted_member_rank_list not empty");
 		return false;
 	}
 	
@@ -351,16 +374,20 @@ bool InvertedMemberBlock<ScoreType>::internal_load_inverted_members(std::ifstrea
 
 	for (auto i = 0u; i < *this->number_of_items; ++i)
 	{
-		auto item_index = FileUtil::read_from_file<unsigned int>(file);
-		auto number_of_inverted_members = FileUtil::read_from_file<unsigned int>(file);
+		const auto item_index = FileUtil::read_from_file<unsigned int>(file);
+		const auto number_of_inverted_members = FileUtil::read_from_file<unsigned int>(file);
 
 		if (item_index != i)
+		{
+			Daemon::error("encountered wrong index while loading inverted members");
 			return false;
+		}
 
 		if (number_of_inverted_members > 0u)
 		{
-			this->inverted_member_index_list[i].resize(number_of_inverted_members, 0u);
-			this->inverted_member_rank_list[i].resize(number_of_inverted_members, 0u);
+			this->inverted_member_index_list[i] = std::vector<unsigned int>(number_of_inverted_members, 0u);
+			this->inverted_member_rank_list[i] = std::vector<unsigned int>(number_of_inverted_members, 0u);
+			this->inverted_member_size_list[i] = 0u;
 		}
 
 		for (auto j = 0u; j < number_of_inverted_members; ++j)
@@ -368,6 +395,8 @@ bool InvertedMemberBlock<ScoreType>::internal_load_inverted_members(std::ifstrea
 			this->inverted_member_index_list[i][j] = FileUtil::read_from_file<unsigned int>(file);
 			this->inverted_member_rank_list[i][j] = FileUtil::read_from_file<unsigned int>(file);
 		}
+
+		this->inverted_member_size_list[i] = number_of_inverted_members;
 	}
 
 	this->is_finalized = true;
@@ -383,8 +412,10 @@ bool InvertedMemberBlock<ScoreType>::initialize_inverted_members()
 	if (this->is_finalized || !data_block || !this->inverted_member_rank_list.empty())
 		return false;
 
-	this->inverted_member_rank_list = std::vector<std::vector<unsigned int>>(*this->number_of_items, std::vector<unsigned int>());
-	this->inverted_member_index_list = std::vector<std::vector<unsigned int>>(*this->number_of_items, std::vector<unsigned int>());
+	this->inverted_member_rank_list = std::vector<std::vector<unsigned int>>();
+	this->inverted_member_rank_list.resize(*this->number_of_items);
+	this->inverted_member_index_list = std::vector<std::vector<unsigned int>>();
+	this->inverted_member_index_list.resize(*this->number_of_items);
 	this->inverted_member_size_list = std::vector<unsigned int>(*this->number_of_items, 0u);
 	this->finger_list = std::vector<unsigned int>(*this->number_of_items, 0u);
 
@@ -402,7 +433,7 @@ void InvertedMemberBlock<ScoreType>::merge_inverted_members(const boost::shared_
 	for (auto i = 0u; i < *this->number_of_items; ++i)
 	{
 		max_this_size = std::max(max_this_size, this->inverted_member_size_list[i]);
-		max_block_size = std::max(max_this_size, block->inverted_member_size_list[i]);
+		max_block_size = std::max(max_block_size, block->inverted_member_size_list[i]);
 	}
 
 	auto temp_rank_list = std::vector<unsigned int>(max_this_size + max_block_size, 0u);
@@ -491,6 +522,8 @@ void InvertedMemberBlock<ScoreType>::merge_inverted_members(const boost::shared_
             this->inverted_member_index_list[i][j] = temp_index_list[j];
         }
     }
+
+    this->is_finalized = true;
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
@@ -504,6 +537,38 @@ void InvertedMemberBlock<ScoreType>::purge_inverted_members_from_disk(const boos
 		str << *this->filename_prefix << ".imem";
 
 	remove(str.str().c_str());
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename ScoreType>
+bool InvertedMemberBlock<ScoreType>::verify_savefile(const boost::optional<unsigned int>& index)
+{
+	std::ostringstream str;
+
+	if (index)
+		str << *this->filename_prefix <<  "-n" << index << ".imem";
+	else
+		str << *this->filename_prefix << ".imem";
+
+	std::ifstream file;
+	if (!FileUtil::open_read(str.str(), file))
+	{
+		Daemon::error("verify_savefile failed for %s", str.str().c_str());
+		return false;
+	}
+
+	auto temp_number_of_items = FileUtil::read_from_file<unsigned int>(file);
+	auto temp_sample_level    = FileUtil::read_from_file<int>(file);
+
+	file.close();
+
+	if ((this->number_of_items && temp_number_of_items != *this->number_of_items)
+     || (this->sample_level && temp_sample_level != *this->sample_level))
+	{
+		Daemon::error("verify_savefile* failed for %s", str.str().c_str());
+		return false;
+	}
+
+	return true;
 }
 /*-----------------------------------------------------------------------------------------------*/
 

@@ -101,7 +101,7 @@ public:
 	const std::vector<unsigned int> extract_member_indices(const unsigned int item_index);
 	unsigned int get_number_of_members(const unsigned int item_index) const;
 
-	int build_approximate_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const double scale_factor, const size_t item_index);
+	int build_approximate_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const RscAccuracyType scale_factor, const size_t item_index);
 	int build_exact_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const size_t item_index);
 
 	int merge_members(const MemberBlock<ScoreType>& block, const int max_list_size);
@@ -111,9 +111,9 @@ public:
 
 	void shrink_to_fit();
 private:
-	int internal_build_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const double scale_factor, const size_t item_index);
-	int internal_build_neighbourhood_compute_query(IndexStructure<DistanceData>& data_index, const int offset, const double scale_factor, const int item_index);
-	int internal_build_neighbourhood_store(IndexStructure<DistanceData>& data_index, const int offset, const double scale_factor, const int item_index, int num_members);
+	int internal_build_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const RscAccuracyType scale_factor, const size_t item_index);
+	int internal_build_neighbourhood_compute_query(IndexStructure<DistanceData>& data_index, const int offset, const RscAccuracyType scale_factor, const int item_index);
+	int internal_build_neighbourhood_store(IndexStructure<DistanceData>& data_index, const int offset, const RscAccuracyType scale_factor, const int item_index, int num_members);
 	bool identify_save_file(std::ofstream& file) const;
 private:
 	friend class boost::serialization::access;
@@ -444,7 +444,7 @@ unsigned int MemberBlock<ScoreType>::get_number_of_members(const unsigned int it
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-int MemberBlock<ScoreType>::build_approximate_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const double scale_factor, const size_t item_index)
+int MemberBlock<ScoreType>::build_approximate_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const RscAccuracyType scale_factor, const size_t item_index)
 {
 	return internal_build_neighbourhood(data_index, offset, scale_factor, item_index);
 }
@@ -456,14 +456,14 @@ int MemberBlock<ScoreType>::build_exact_neighbourhood(IndexStructure<DistanceDat
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-int MemberBlock<ScoreType>::internal_build_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const double scale_factor, const size_t item_index)
+int MemberBlock<ScoreType>::internal_build_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const RscAccuracyType scale_factor, const size_t item_index)
 {
 	const int num_members = internal_build_neighbourhood_compute_query(data_index, offset, scale_factor, item_index);	
 	return internal_build_neighbourhood_store(data_index, offset, scale_factor, item_index, num_members);	
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-int MemberBlock<ScoreType>::internal_build_neighbourhood_compute_query(IndexStructure<DistanceData>& data_index, const int offset, const double scale_factor, const int item_index)
+int MemberBlock<ScoreType>::internal_build_neighbourhood_compute_query(IndexStructure<DistanceData>& data_index, const int offset, const RscAccuracyType scale_factor, const int item_index)
 {
 	const int adjusted_item_index = item_index - *this->global_offset;
 	const int effective_sample_level = sample_level && *this->sample_level > 0 ? *this->sample_level : 0;
@@ -501,7 +501,7 @@ int MemberBlock<ScoreType>::internal_build_neighbourhood_compute_query(IndexStru
 	// We didn't find enough neighbours!
 	// This is probably due to a overoptimistically-low setting for
 	// the scale factor.
-	// Double the scale factor and try again.
+	// RscAccuracyType the scale factor and try again.
 	//if (num_members >= this->member_list_size_limit)
 		//return num_members;
 		
@@ -524,7 +524,7 @@ int MemberBlock<ScoreType>::internal_build_neighbourhood_compute_query(IndexStru
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-int MemberBlock<ScoreType>::internal_build_neighbourhood_store(IndexStructure<DistanceData>& data_index, const int offset, const double scale_factor, 
+int MemberBlock<ScoreType>::internal_build_neighbourhood_store(IndexStructure<DistanceData>& data_index, const int offset, const RscAccuracyType scale_factor, 
 		const int item_index, const int num_members)
 {
 	const auto result_distance_comparisons = data_index.get_result_distance_comparisons();
@@ -636,104 +636,6 @@ int MemberBlock<ScoreType>::merge_members(const MemberBlock<ScoreType>& block, c
 			this->member_score_llist[i][j] = result_list[j].second;
 		}
 	}
-
-	/*auto buffer_size = max_list_size > 0 ? max_list_size : this->member_list_buffer_size;
-	auto buffer_score_list = std::vector<ScoreType>(buffer_size, ScoreType());
-	auto buffer_index_list = std::vector<unsigned int>(buffer_size, 0u);
-
-	for (auto i = 0u; i < *this->number_of_items; ++i)
-	{
-		auto buffer_current = 0u;
-		auto this_current = 0u;
-		auto block_current = 0u;
-		auto this_size = this->member_size_list[i];
-		auto block_size = block.member_size_list[i];
-
-		while (this_current < this_size && block_current < block_size)
-		{
-			if (buffer_current == buffer_size)
-			{
-				if (max_list_size > 0)
-					break;
-
-				buffer_size *= 2;
-
-				buffer_score_list.resize(buffer_size);
-				buffer_index_list.resize(buffer_size);
-			}
-
-			if (this->member_score_llist[i][this_current] < block.member_score_llist[i][block_current])
-			{
-				buffer_score_list[buffer_current] = this->member_score_llist[i][this_current];
-				buffer_index_list[buffer_current] = this->member_index_llist[i][this_current];
-				++buffer_current;
-				++this_current;
-			}
-			else if (this->member_score_llist[i][this_current] > block.member_score_llist[i][block_current])
-			{
-				buffer_score_list[buffer_current] = block.member_score_llist[i][block_current];
-				buffer_index_list[buffer_current] = block.member_index_llist[i][block_current];
-				++buffer_current;
-				++block_current;
-			}
-			else
-			{
-				if (this->member_index_llist[i][this_current] == block.member_index_llist[i][block_current])
-					++block_current;
-
-				buffer_score_list[buffer_current] = this->member_score_llist[i][this_current];
-				buffer_index_list[buffer_current] = this->member_index_llist[i][this_current];
-				++buffer_current;
-				++this_current;
-			}
-		}
-
-		while (this_current < this_size)
-		{
-			if (buffer_current == buffer_size)
-			{
-				if (max_list_size > 0)
-					break;
-
-				buffer_size *= 2;
-
-				buffer_score_list.resize(buffer_size);
-				buffer_index_list.resize(buffer_size);
-			}
-
-			buffer_score_list[buffer_current] = this->member_score_llist[i][this_current];
-			buffer_index_list[buffer_current] = this->member_index_llist[i][this_current];
-			++buffer_current;
-			++this_current;
-		}
-
-		while (block_current < block_size)
-		{
-			if (buffer_current == buffer_size)
-			{
-				if (max_list_size > 0)
-					break;
-
-				buffer_size *= 2;
-
-				buffer_score_list.resize(buffer_size);
-				buffer_index_list.resize(buffer_size);
-			}
-
-			buffer_score_list[buffer_current] = block.member_score_llist[i][block_current];
-			buffer_index_list[buffer_current] = block.member_index_llist[i][block_current];
-			++buffer_current;
-			++block_current;
-		}
-
-		this->member_size_list[i] = buffer_current;
-
-		for (auto j = 0u; j < buffer_current; ++j)
-		{
-		this->member_score_llist[i][j] = buffer_score_list[j];
-		this->member_index_llist[i][j] = buffer_index_list[j];
-		}
-	}*/
 
 	return true;
 }

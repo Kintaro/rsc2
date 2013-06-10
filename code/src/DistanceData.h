@@ -43,11 +43,12 @@
 
 #include <boost/serialization/export.hpp>
 #include <boost/serialization/shared_ptr.hpp>
+#include "Daemon.h"
 
 class DistanceData
 {
 private:
-	std::vector<double> data;
+	std::vector<RscAccuracyType> data;
 public:
 	DistanceData() {}
 	DistanceData(const DistanceData& vec)
@@ -60,12 +61,12 @@ public:
 		this->data = vec.data;
 	}
 
-	DistanceData(const std::vector<double>& data)
+	DistanceData(const std::vector<RscAccuracyType>& data)
 	{
 		this->data = data;
 	}
 	
-	virtual double distance_to(const boost::shared_ptr<DistanceData>& to) 
+	virtual RscAccuracyType distance_to(const boost::shared_ptr<DistanceData>& to) 
 	{
 		auto sum = 0.0;
 

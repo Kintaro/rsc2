@@ -111,7 +111,7 @@ public:
 	
 	bool build_members_from_disk();
 	bool build_approximate_neighborhoods(const boost::optional<unsigned int> sash_degree, 
-										 const boost::optional<double> scale_factor, 
+										 const boost::optional<RscAccuracyType> scale_factor, 
 									  const bool load_flag, 
 									  const bool save_flag, 
 									  const TransmissionMode transmission_mode, 
@@ -120,7 +120,7 @@ public:
 	void clear_member_blocks();
 	void clear_inverted_member_blocks();
 	void purge_member_blocks();
-	bool build_inverted_members_from_disk() { return false; }
+	bool build_inverted_members_from_disk();
 	bool build_inverted_members(const TransmissionMode transmission_mode, const unsigned int sender_id);
 
 	boost::shared_ptr<ChunkManager<DataBlock, ScoreType>> build_trim_member_chunk(const bool can_build_from_disk);
@@ -128,19 +128,19 @@ private:
 	int internal_setup_samples(const unsigned int sample_limit);
 	
 	bool internal_build_neighborhood(const boost::optional<unsigned int>& sash_degree, 
-									 const boost::optional<double>& scale_factor, 
+									 const boost::optional<RscAccuracyType>& scale_factor, 
 								  const bool load_flag, const bool save_flag, 
 								  const TransmissionMode transmission_mode, unsigned int sender_id);
 	bool internal_build_neighborhood_send_stage1(const boost::optional<unsigned int>& sash_degree, 
-										  const boost::optional<double>& scale_factor, 
+										  const boost::optional<RscAccuracyType>& scale_factor, 
 									   const bool load_flag, const bool save_flag, const unsigned int sender_id);
 
 	bool internal_build_neighborhood_receive_stage1(const boost::optional<unsigned int>& sash_degree, 
-											 const boost::optional<double>& scale_factor, 
+											 const boost::optional<RscAccuracyType>& scale_factor, 
 									   const bool load_flag, const bool save_flag, const unsigned int sender_id);
 	
 	void internal_build_neighborhood_send_stage2(const boost::optional<unsigned int>& sash_degree, 
-												 const boost::optional<double>& scale_factor, 
+												 const boost::optional<RscAccuracyType>& scale_factor, 
 											  const bool load_flag, const bool save_flag, 
 											  const unsigned int sender_id, 
 											  std::vector<bool>& pending_sample_list, 
@@ -149,7 +149,7 @@ private:
 											  const unsigned int block,
 											  const unsigned int index_structure_offset);
 	void internal_build_neighborhood_receive_stage2(const boost::optional<unsigned int>& sash_degree, 
-												 const boost::optional<double>& scale_factor, 
+												 const boost::optional<RscAccuracyType>& scale_factor, 
 											  const bool load_flag, const bool save_flag, 
 											  const unsigned int sender_id, 
 											  std::vector<bool>& pending_sample_list, 
@@ -159,10 +159,10 @@ private:
 											  const unsigned int index_structure_offset);
 	
 	bool internal_build_neighborhood_send_stage3(const boost::optional<unsigned int>& sash_degree, 
-										  const boost::optional<double>& scale_factor, 
+										  const boost::optional<RscAccuracyType>& scale_factor, 
 									   const bool load_flag, const bool save_flag, const unsigned int sender_id);
 	bool internal_build_neighborhood_receive_stage3(boost::optional<unsigned int>& sash_degree, 
-											 const boost::optional<double>& scale_factor, 
+											 const boost::optional<RscAccuracyType>& scale_factor, 
 									   const bool load_flag, const bool save_flag, const unsigned int sender_id);
 
 	bool internal_build_inverted_members_send(const unsigned int i);
@@ -491,7 +491,7 @@ bool ChunkManager<DataBlock, ScoreType>::build_members_from_disk()
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
 bool ChunkManager<DataBlock, ScoreType>::build_approximate_neighborhoods(const boost::optional<unsigned int> sash_degree, 
-																		 const boost::optional<double> scale_factor, 
+																		 const boost::optional<RscAccuracyType> scale_factor, 
 																		 const bool load_flag, 
 																		 const bool save_flag, 
 																		 const TransmissionMode transmission_mode, 
@@ -505,7 +505,7 @@ bool ChunkManager<DataBlock, ScoreType>::build_approximate_neighborhoods(const b
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
 bool ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood(const boost::optional<unsigned int>& sash_degree, 
-									 const boost::optional<double>& scale_factor, 
+									 const boost::optional<RscAccuracyType>& scale_factor, 
 								  const bool load_flag, const bool save_flag, 
 								  const TransmissionMode transmission_mode, unsigned int sender_id)
 {
@@ -578,7 +578,7 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood(const boost
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
 bool ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood_send_stage1(const boost::optional<unsigned int>& sash_degree, 
-										  const boost::optional<double>& scale_factor, 
+										  const boost::optional<RscAccuracyType>& scale_factor, 
 									   const bool load_flag, const bool save_flag, const unsigned int sender_id)
 {
 	// Clear any previously-existing member list blocks
@@ -619,7 +619,7 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood_send_stage1
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
 void ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood_send_stage2(const boost::optional<unsigned int>& sash_degree, 
-												 const boost::optional<double>& scale_factor, 
+												 const boost::optional<RscAccuracyType>& scale_factor, 
 											  const bool load_flag, const bool save_flag, 
 											  const unsigned int sender_id, 
 											  std::vector<bool>& pending_sample_list, 
@@ -687,7 +687,7 @@ void ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood_send_stage2
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
 void ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood_receive_stage2(const boost::optional<unsigned int>& sash_degree, 
-												 const boost::optional<double>& scale_factor, 
+												 const boost::optional<RscAccuracyType>& scale_factor, 
 											  const bool load_flag, const bool save_flag, 
 											  const unsigned int sender_id, 
 											  std::vector<bool>& pending_sample_list, 
@@ -759,7 +759,7 @@ void ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood_receive_sta
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
 bool ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood_send_stage3(const boost::optional<unsigned int>& sash_degree, 
-										  const boost::optional<double>& scale_factor, 
+										  const boost::optional<RscAccuracyType>& scale_factor, 
 									   const bool load_flag, const bool save_flag, const unsigned int sender_id)
 {	
 	for (auto block = 0u; block < this->number_of_blocks; ++block)
@@ -845,7 +845,7 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 {
 	for (auto sample = -static_cast<int>(this->number_of_tiny_samples); sample < static_cast<int>(this->number_of_samples); ++sample)
 	{
-		auto s = sample + this->number_of_tiny_samples;
+		const auto s = sample + this->number_of_tiny_samples;
 		
 		for (auto block = 0u; block < this->number_of_blocks; block++)
 		{
@@ -862,7 +862,7 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 				}
 				else
 				{
-					auto block_ptr = this->data_block_list[block];
+					const auto block_ptr = this->data_block_list[block];
 					member_block = boost::shared_ptr<MemberBlock<ScoreType>>(new MemberBlock<ScoreType>(block_ptr, Options::get_option_as<unsigned int>("rsc-small-buffsize")));
 					Daemon::comm().recv(target_processor, target_processor, *member_block);
 					Daemon::comm().send(target_processor, target_processor, target_processor);
@@ -870,33 +870,32 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 
 				member_block->load_members();
 
-				auto member_block_size = member_block->get_number_of_items();
-				auto member_offset = member_block->get_offset();
+				const auto member_block_size = member_block->get_number_of_items();
+				const auto member_offset = member_block->get_offset();
 
 				for (auto i = static_cast<int>(member_offset + member_block_size) - 1; i >= static_cast<int>(member_offset); i--)
 				{
-					auto member_index_list = member_block->extract_member_indices(i);
-					auto number_of_members = member_block->get_number_of_members(i);
+					const auto member_index_list = member_block->extract_member_indices(i);
+					const auto number_of_members = member_block->get_number_of_members(i);
 
 					if (member_index_list.empty())
 						continue;
 
 					for (auto j = 0u; j < number_of_members; ++j)
 					{
-						auto member = member_index_list[j];
+						const auto member = member_index_list[j];
 						auto found = true;
-						auto target_block = this->find_block_for_item(member, found);
+						const auto target_block = this->find_block_for_item(member, found);
 
 						if (found && target_block < this->number_of_blocks)
 							this->inverted_member_block_list[target_block][s]->add_to_inverted_members(member, i, j);
 					}
 				}
 
-				auto combo = block * Daemon::comm().size() + target_processor;
+				const auto combo = block * Daemon::comm().size() + target_processor;
 
 				for (auto blck = 0u; blck < this->number_of_blocks; ++blck)
 				{
-					Daemon::error("finalizing block %i", blck);
 					this->inverted_member_block_list[blck][s]->finalize_inverted_members();
 					this->inverted_member_block_list[blck][s]->save_inverted_members(combo);
 				}
@@ -907,6 +906,8 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 
 			for (auto blck = 0u; blck < this->number_of_blocks; ++blck)
 			{
+				this->inverted_member_block_list[blck][s]->load_inverted_members(0u);
+
 				for (auto i = block * Daemon::comm().size(); i < block * Daemon::comm().size() + Daemon::comm().size(); ++i)
 				{
 					if (i == 0)
@@ -919,14 +920,13 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 					else
 						inverted_member_block->set_id(this->filename_prefix, blck);
 
-					this->inverted_member_block_list[blck][s]->load_inverted_members(0u);
 					inverted_member_block->load_inverted_members(i);
 					this->inverted_member_block_list[blck][s]->merge_inverted_members(inverted_member_block);
-					this->inverted_member_block_list[blck][s]->save_inverted_members(0u);
-					this->inverted_member_block_list[blck][s]->clear_inverted_members();
+					//this->inverted_member_block_list[blck][s]->clear_inverted_members();
 					inverted_member_block->clear_inverted_members();
 					inverted_member_block->purge_inverted_members_from_disk(i);
 				}
+				this->inverted_member_block_list[blck][s]->save_inverted_members(0u);
 			}
 		}
 
@@ -956,6 +956,73 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_receive
 			unsigned int tmp;
 			Daemon::comm().recv(sender_id, Daemon::comm().rank(), tmp);
 			member_block->clear_members();
+		}
+	}
+
+	return true;
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+bool ChunkManager<DataBlock, ScoreType>::build_inverted_members_from_disk()
+{
+	// If the chunk has not been properly initialized,
+	// or if member list blocks have already been built
+	// for this chunk, then abort.
+	if (this->number_of_blocks == 0u || !this->inverted_member_block_list.empty() || this->number_of_samples == 0u)
+	{
+		Daemon::error("building inverted members from disk failed with [%i, %i, %i]", this->number_of_blocks, this->member_block_list.size(), this->number_of_samples);
+		return false;
+	}
+
+	// Create a new (empty) set of member list blocks.
+	// The member lists are loaded and then cleared,
+	// so as to properly set up their list sizes, etc.
+	this->inverted_member_block_list.resize(this->number_of_blocks);
+
+	for (auto block = 0u; block < this->number_of_blocks; ++block)
+	{
+		this->inverted_member_block_list[block].resize(this->number_of_samples + this->number_of_tiny_samples);
+
+		for (auto sample = -static_cast<int>(this->number_of_tiny_samples); sample < static_cast<int>(this->number_of_samples); ++sample)
+		{
+			auto s = sample + this->number_of_tiny_samples;
+			auto max_list_size = 0u;
+			auto sample_id = this->sampling_flag ? boost::optional<int>(sample) : boost::none;
+
+			if (sample == -1)
+				max_list_size = this->maximum_number_of_mini_members;
+			else if (sample == -2)
+				max_list_size = this->maximum_number_of_micro_members;
+			else
+				max_list_size = this->maximum_number_of_members;
+
+			this->inverted_member_block_list[block][s] = 
+				boost::shared_ptr<InvertedMemberBlock<ScoreType>>(new InvertedMemberBlock<ScoreType>(this->data_block_list[block],
+							max_list_size, sample_id));
+
+			if (this->unchunked_flag)
+				this->inverted_member_block_list[block][s]->set_id(this->filename_prefix);
+			else
+				this->inverted_member_block_list[block][s]->set_id(this->filename_prefix, block);
+		}
+	}
+
+	for (auto block = 0u; block < this->number_of_blocks; ++block)
+	{
+		for (auto sample = -static_cast<int>(this->number_of_tiny_samples); sample < static_cast<int>(this->number_of_samples); ++sample)
+		{
+			auto s = sample + this->number_of_tiny_samples;
+
+			// Verify the member lists for the current block.
+			// As a side effect, the block will be informed of its size
+			// and its sample level.
+			// If this fails, then abort.
+			if (!this->inverted_member_block_list[block][s]->verify_savefile())
+			{
+				Daemon::error("building inverted members from disk failed for b%i-s%i", block, sample);
+				//this->purge_member_blocks();
+				return false;
+			}
 		}
 	}
 

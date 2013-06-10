@@ -45,7 +45,7 @@
 
 int Sash::partialQuickSort
 (int howMany,
- std::vector<double>& distList, std::vector<int>& indexList,
+ std::vector<RscAccuracyType>& distList, std::vector<int>& indexList,
  int rangeFirst, int rangeLast)
 //
 // Sorts the smallest items in the supplied list ranges, in place,
@@ -61,9 +61,9 @@ int Sash::partialQuickSort
     int i;
     int pivotLoc = 0;
     int pivotIndex = 0;
-    double pivotDist = 0.0;
+    RscAccuracyType pivotDist = 0.0;
     int tempIndex = 0;
-    double tempDist = 0.0;
+    RscAccuracyType tempDist = 0.0;
     int low = 0;
     int high = 0;
     int numFound = 0;
@@ -668,7 +668,7 @@ unsigned int Sash::build (const std::string& filename, std::vector<boost::shared
 	return this->size;
 }
 /*-----------------------------------------------------------------------------------------------*/
-int Sash::find_all_in_range (const boost::shared_ptr<DistanceData> query, const double limit, const int sampleRate)
+int Sash::find_all_in_range (const boost::shared_ptr<DistanceData> query, const RscAccuracyType limit, const int sampleRate)
 {
 	this->query_result_size = 0;
 	this->query_result_sample_size = 0;
@@ -687,7 +687,7 @@ int Sash::find_all_in_range (const boost::shared_ptr<DistanceData> query, const 
 	return internal_find_all_in_range (limit, sampleRate);
 }
 /*-----------------------------------------------------------------------------------------------*/
-int Sash::find_most_in_range(const boost::shared_ptr<DistanceData> query, const double limit, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
+int Sash::find_most_in_range(const boost::shared_ptr<DistanceData> query, const RscAccuracyType limit, const boost::optional<int>& sampleRate, const boost::optional<RscAccuracyType>& scaleFactor)
 {
 	this->query_result_size = 0;
 	this->query_result_sample_size = 0;
@@ -707,7 +707,7 @@ int Sash::find_most_in_range(const boost::shared_ptr<DistanceData> query, const 
 	return internal_find_most_in_range(limit, *sampleRate, *scaleFactor);
 }
 /*-----------------------------------------------------------------------------------------------*/
-int Sash::find_near(const boost::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate, const boost::optional<double>& scaleFactor)
+int Sash::find_near(const boost::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate, const boost::optional<RscAccuracyType>& scaleFactor)
 {
 	this->query_result_size = 0;
 	this->query_result_sample_size = 0;
@@ -799,7 +799,7 @@ int Sash::get_number_of_orphans () const
 	return number_of_orphans;
 }
 /*-----------------------------------------------------------------------------------------------*/
-double Sash::get_result_accuracy (const std::vector<double>& exactDistList) const
+RscAccuracyType Sash::get_result_accuracy (const std::vector<RscAccuracyType>& exactDistList) const
 {
 	int loc = 0;
 
@@ -818,12 +818,12 @@ double Sash::get_result_accuracy (const std::vector<double>& exactDistList) cons
 			loc++;
 	}
 
-	return ((double) loc) / exactDistList.size();
+	return ((RscAccuracyType) loc) / exactDistList.size();
 }
 /*-----------------------------------------------------------------------------------------------*/
-const std::vector<double> Sash::get_result_distances () const
+const std::vector<RscAccuracyType> Sash::get_result_distances () const
 {
-	std::vector<double> result;
+	std::vector<RscAccuracyType> result;
 
 	for (auto i = 0; i < this->query_result_size; ++i)
 		result.push_back(this->query_result_distance_list[i]);
@@ -943,7 +943,7 @@ unsigned int Sash::save_to_file (const std::string& filename)
 	return this->data->size();
 }
 /*-----------------------------------------------------------------------------------------------*/
-double Sash::compute_distance_from_query(const int item_index)
+RscAccuracyType Sash::compute_distance_from_query(const int item_index)
 {
 	if (this->distance_from_query_list[item_index] != -1.0)
 		return this->distance_from_query_list[item_index];
@@ -970,7 +970,7 @@ void Sash::internal_build (const int number_of_items)
 	// The SASH has grown by one level.
 	// Clean up and return.
 	for (auto parent = quarterSize; parent < halfSize; ++parent)
-		this->child_distance_list[parent] = boost::shared_ptr<std::vector<double>>();
+		this->child_distance_list[parent] = boost::shared_ptr<std::vector<RscAccuracyType>>();
 
 	++levels;
 	
@@ -1038,7 +1038,7 @@ int Sash::internal_build_recursively(const int number_of_items)
 
 		this->parent_size_list[child] = this->query_result_size;
 		this->parent_index_list[child] = std::vector<int>(maxParents, 0);
-		this->parent_distance_list[child] = std::vector<double>(maxParents, -1.0);
+		this->parent_distance_list[child] = std::vector<RscAccuracyType>(maxParents, -1.0);
 
 		for (auto i = 0; i < this->query_result_size; ++i)
 		{
@@ -1064,7 +1064,7 @@ int Sash::internal_build_reserve_tentative_storage(const int halfSize)
 			continue;
 		
 		this->child_index_list[parent] = std::vector<int>(this->child_size_list[parent], 0);
-		this->child_distance_list[parent] = boost::shared_ptr<std::vector<double>>(new std::vector<double>(this->child_size_list[parent], -1.0));
+		this->child_distance_list[parent] = boost::shared_ptr<std::vector<RscAccuracyType>>(new std::vector<RscAccuracyType>(this->child_size_list[parent], -1.0));
 		this->child_size_list[parent] = 0;
 	}
 
@@ -1093,7 +1093,7 @@ void Sash::internal_build_construct_child_lists(const int number_of_items, const
 			continue;
 		
 		this->parent_index_list[child] = std::vector<int>();
-		this->parent_distance_list[child] = std::vector<double>();
+		this->parent_distance_list[child] = std::vector<RscAccuracyType>();
 		this->parent_size_list[child] = 0;
 	}
 }
@@ -1111,13 +1111,13 @@ void Sash::internal_build_trim_child_lists(const int quarterSize, const int half
 	{
 		if (this->child_size_list[parent] > maxChildren)
 		{
-			auto temp_distance_list = std::vector<double>(*this->child_distance_list[parent]);
+			auto temp_distance_list = std::vector<RscAccuracyType>(*this->child_distance_list[parent]);
 			auto temp_index_list = std::vector<int>(this->child_index_list[parent]);
 
-			this->child_distance_list[parent] = boost::shared_ptr<std::vector<double>>();
+			this->child_distance_list[parent] = boost::shared_ptr<std::vector<RscAccuracyType>>();
 			this->child_index_list[parent] = std::vector<int>(maxChildren, 0);
 
-			//this->child_size_list[parent] = Sort::partial_sort<double, unsigned int>(maxChildren, temp_distance_list, temp_index_list, 0, this->child_size_list[parent] - 1);
+			//this->child_size_list[parent] = Sort::partial_sort<RscAccuracyType, unsigned int>(maxChildren, temp_distance_list, temp_index_list, 0, this->child_size_list[parent] - 1);
 			this->child_size_list[parent] = partialQuickSort(maxChildren, temp_distance_list, temp_index_list, 0, this->child_size_list[parent] - 1);
 
 			// Connect the parent to its quota of children.
@@ -1137,7 +1137,7 @@ void Sash::internal_build_trim_child_lists(const int quarterSize, const int half
 		}
 
 		// Eliminate the edge distance information.
-		this->child_distance_list[parent] = boost::shared_ptr<std::vector<double>>();
+		this->child_distance_list[parent] = boost::shared_ptr<std::vector<RscAccuracyType>>();
 	}
 }
 /*-----------------------------------------------------------------------------------------------*/
@@ -1206,7 +1206,7 @@ void Sash::internal_build_connect_orphan(const int number_of_items, const int ch
 			// To indicate that the parent is now fostering orphans,
 			//   set its child edge distance list to anything non-null
 			//   (the list "distFromQueryList").
-			this->child_distance_list[parent] = boost::shared_ptr<std::vector<double>>(new std::vector<double>(this->distance_from_query_list));
+			this->child_distance_list[parent] = boost::shared_ptr<std::vector<RscAccuracyType>>(new std::vector<RscAccuracyType>(this->distance_from_query_list));
 			this->child_index_list[parent][this->child_size_list[parent]] = child;
 			++this->child_size_list[parent];
 			not_found = false;
@@ -1218,7 +1218,7 @@ void Sash::internal_build_connect_orphan(const int number_of_items, const int ch
 	}
 }
 /*-----------------------------------------------------------------------------------------------*/
-int Sash::internal_find_all_in_range (const double limit, const int sampleRate)
+int Sash::internal_find_all_in_range (const RscAccuracyType limit, const int sampleRate)
 {
 	// Handle the singleton case separately.
 
@@ -1260,7 +1260,7 @@ int Sash::internal_find_all_in_range (const double limit, const int sampleRate)
 	return this->query_result_size;
 }
 /*-----------------------------------------------------------------------------------------------*/
-int Sash::internal_find_most_in_range (const double limit, const int sampleRate, const double scaleFactor)
+int Sash::internal_find_most_in_range (const RscAccuracyType limit, const int sampleRate, const RscAccuracyType scaleFactor)
 {
 	auto activeLevelFirst = 0;
 	auto activeLevelLast = 0;
@@ -1329,7 +1329,7 @@ int Sash::internal_find_most_in_range (const double limit, const int sampleRate,
 		// Sort the source lists in place, according to distance.
 		// The requested number of edges with smallest distances are preserved,
 		//   but other entries may be destroyed.
-		//const auto numFound = Sort::partial_sort<unsigned int, double>(this->scratch_size, this->scratch_index_list, this->scratch_distance_list, 0, this->scratch_size - 1);
+		//const auto numFound = Sort::partial_sort<unsigned int, RscAccuracyType>(this->scratch_size, this->scratch_index_list, this->scratch_distance_list, 0, this->scratch_size - 1);
 		const auto numFound = this->partialQuickSort(this->scratch_size, this->scratch_distance_list, this->scratch_index_list, 0, this->scratch_size - 1);
 
 		// Copy over the extracted edges to the output lists,
@@ -1371,13 +1371,13 @@ int Sash::internal_find_most_in_range (const double limit, const int sampleRate,
 
 	// Sort those items within the range by their distances,
 	//   returning the number of elements actually found.
-	//this->query_result_size = Sort::partial_sort<double, unsigned int>(activeLevelNext, this->query_result_distance_list, this->query_result_index_list, 0, activeLevelNext - 1);
+	//this->query_result_size = Sort::partial_sort<RscAccuracyType, unsigned int>(activeLevelNext, this->query_result_distance_list, this->query_result_index_list, 0, activeLevelNext - 1);
 	this->query_result_size = partialQuickSort(activeLevelNext, this->query_result_distance_list, this->query_result_index_list, 0, activeLevelNext - 1);
 
 	return this->query_result_size;
 }
 /*-----------------------------------------------------------------------------------------------*/
-int Sash::internal_find_near (const int howMany, const int sampleRate, const double scaleFactor)
+int Sash::internal_find_near (const int howMany, const int sampleRate, const RscAccuracyType scaleFactor)
 {
 	auto activeLevelFirst = 0;
 	auto activeLevelLast = 0;
@@ -1405,12 +1405,12 @@ int Sash::internal_find_near (const int howMany, const int sampleRate, const dou
 	const auto reductionFactor = 1.0
 		/
 		pow (
-				(double) howMany,
+				(RscAccuracyType) howMany,
 				1.0
 				/
 				(
 				 (
-				  log ((double) this->size)
+				  log ((RscAccuracyType) this->size)
 				  /
 				  log (2.0)
 				 )
@@ -1471,7 +1471,7 @@ int Sash::internal_find_near (const int howMany, const int sampleRate, const dou
 
 	// Sort the items by distances, returning the number of
 	// elements actually found.
-	//this->query_result_size = Sort::partial_sort<double, unsigned int>(howMany, this->query_result_distance_list, query_result_index_list, 0, this->query_result_size - 1);
+	//this->query_result_size = Sort::partial_sort<RscAccuracyType, unsigned int>(howMany, this->query_result_distance_list, query_result_index_list, 0, this->query_result_size - 1);
 	this->query_result_size = partialQuickSort(howMany, this->query_result_distance_list, query_result_index_list, 0, this->query_result_size - 1);
 
 	return this->query_result_size;
@@ -1501,7 +1501,7 @@ int Sash::internal_find_nearest (const int howMany, const int sampleRate)
 
 	// Sort the items by distances, returning the number of
 	//   elements actually found.
-	//this->query_result_size = Sort::partial_sort<double, unsigned int>(howMany, this->query_result_distance_list, this->query_result_index_list, 0, this->query_result_size - 1);
+	//this->query_result_size = Sort::partial_sort<RscAccuracyType, unsigned int>(howMany, this->query_result_distance_list, this->query_result_index_list, 0, this->query_result_size - 1);
 	this->query_result_size = partialQuickSort(howMany, this->query_result_distance_list, this->query_result_index_list, 0, this->query_result_size - 1);
 
 	return this->query_result_size;
@@ -1547,8 +1547,8 @@ int Sash::internal_find_parents (const int howMany)
 /*-----------------------------------------------------------------------------------------------*/
 int Sash::extract_best_edges
 (int howMany,
- std::vector<double>& to_distance_list, std::vector<int>& to_index_list, int toFirst, int toCapacity,
- std::vector<double>& from_distance_list, std::vector<int>& from_index_list, int fromFirst, int fromLast)
+ std::vector<RscAccuracyType>& to_distance_list, std::vector<int>& to_index_list, int toFirst, int toCapacity,
+ std::vector<RscAccuracyType>& from_distance_list, std::vector<int>& from_index_list, int fromFirst, int fromLast)
 {
 	// Make sure that we don't extract more edges than currently exist.
 	if (howMany > toCapacity - toFirst)
@@ -1557,7 +1557,7 @@ int Sash::extract_best_edges
 	// Sort the source lists in place, according to distance.
 	// The requested number of edges with smallest distances are preserved,
 	//   but other entries may be destroyed.
-	//const auto num_extracted = Sort::partial_sort<double, unsigned int>(howMany, from_distance_list, from_index_list, fromFirst, fromLast);
+	//const auto num_extracted = Sort::partial_sort<RscAccuracyType, unsigned int>(howMany, from_distance_list, from_index_list, fromFirst, fromLast);
 	const auto num_extracted = this->partialQuickSort(howMany, from_distance_list, from_index_list, fromFirst, fromLast);
 
 	// Copy over the extracted edges to the output lists,
@@ -1654,7 +1654,7 @@ void Sash::reserve_storage (const int number_of_items, const int numParents)
 		this->parent_index_list[i].clear();
 		this->parent_distance_list[i].clear();
 		this->child_index_list[i].clear();
-		this->child_distance_list[i] = boost::shared_ptr<std::vector<double>>();
+		this->child_distance_list[i] = boost::shared_ptr<std::vector<RscAccuracyType>>();
 	}
 
 	// Set up storage for managing distance computations and

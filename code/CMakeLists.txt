@@ -16,7 +16,7 @@ include_directories(src)
 set(CMAKE_CXX_COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_COMPILE_FLAGS})
 set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${CMAKE_CXX_LINK_FLAGS})
 
-add_definitions(-std=c++0x -Wall -Wextra -Werror -pedantic -Wno-unused-parameter -g)
+add_definitions(-std=c++0x -Wall -Wextra -Werror -pedantic -Wno-unused-parameter)
 add_executable(rsc2 src/Daemon.cpp src/Options.cpp src/DefaultOptions.cpp src/FileUtil.cpp src/VecDataBlock.cpp src/AbstractSetManager.cpp src/rsc2.cpp src/RscClusterer.cpp)
 # link with mpi
 target_link_libraries(rsc2 ${Boost_LIBRARIES})

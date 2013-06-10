@@ -86,7 +86,7 @@ public:
     /* For each SASH item, distances to parents. 
        This storage is deallocated after the SASH construction
        is complete */
-    std::vector<std::vector<double> > parent_distance_list; 
+    std::vector<std::vector<RscAccuracyType> > parent_distance_list; 
     std::vector<int> parent_size_list;
 
     /* For each SASH item, lists of indices to children.
@@ -96,7 +96,7 @@ public:
     /* For each SASH item, lists of distances to children.
        This storage is deallocated after the SASH construction
        is complete */
-    std::vector<boost::shared_ptr<std::vector<double>>> child_distance_list;
+    std::vector<boost::shared_ptr<std::vector<RscAccuracyType>>> child_distance_list;
     std::vector<int> child_size_list;
 
     /* Storage supporting distance computation. */
@@ -104,7 +104,7 @@ public:
     
     /* The distance themselves are stored
        in the array "distFromQueryList". */
-    std::vector<double> distance_from_query_list; 
+    std::vector<RscAccuracyType> distance_from_query_list; 
     /* The "storedDistIndexList" array holds 
        the(internal) indices of items */
     std::vector<int> stored_distance_index_list; 
@@ -121,7 +121,7 @@ public:
     //   based on the number of neighbours sought.
 
     std::vector<int> query_result_index_list; // Lists storing the indices and query
-    std::vector<double> query_result_distance_list; //   distances of items in the most recent
+    std::vector<RscAccuracyType> query_result_distance_list; //   distances of items in the most recent
     int query_result_size;
 
     int query_result_sample_size;    // The number of sample items within which
@@ -131,7 +131,7 @@ public:
     // This storage is allocated only once,
     //   here, to improve search efficiency.
     std::vector<int> scratch_index_list;
-    std::vector<double> scratch_distance_list;
+    std::vector<RscAccuracyType> scratch_distance_list;
     int scratch_size;
 
 
@@ -225,7 +225,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_all_in_range(const boost::shared_ptr<DistanceData> query, const double limit, const int sample_rate = 0);
+    virtual int find_all_in_range(const boost::shared_ptr<DistanceData> query, const RscAccuracyType limit, const int sample_rate = 0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -255,7 +255,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_most_in_range(const boost::shared_ptr<DistanceData> query, const double limit, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
+    virtual int find_most_in_range(const boost::shared_ptr<DistanceData> query, const RscAccuracyType limit, const boost::optional<int>& sampleRate = 0, const boost::optional<RscAccuracyType>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -286,7 +286,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_near(const boost::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<double>& scaleFactor = 1.0);
+    virtual int find_near(const boost::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<RscAccuracyType>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -404,7 +404,7 @@ public:
      *   items found in the query result.
      * If unsuccessful, a negative value is returned.
      */
-    double get_result_accuracy(const std::vector<double>& exactDistList) const;
+    RscAccuracyType get_result_accuracy(const std::vector<RscAccuracyType>& exactDistList) const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -417,7 +417,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    virtual const std::vector<double> get_result_distances() const;
+    virtual const std::vector<RscAccuracyType> get_result_distances() const;
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -551,7 +551,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    double compute_distance_from_query(const int itemIndex);
+    RscAccuracyType compute_distance_from_query(const int itemIndex);
     //
     // Returns the distance from the current query object to the
     //   specified data object.
@@ -581,7 +581,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    int internal_find_all_in_range(const double limit, const int sampleRate);
+    int internal_find_all_in_range(const RscAccuracyType limit, const int sampleRate);
     //
     // Performs an exact range query from the current query object,
     //   with respect to a subset of the items.
@@ -594,7 +594,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    int internal_find_most_in_range(const double limit, const int sampleRate, const double scaleFactor);
+    int internal_find_most_in_range(const RscAccuracyType limit, const int sampleRate, const RscAccuracyType scaleFactor);
     //
     // Performs an approximate range query from the current query object,
     //   with respect to a subset of the items.
@@ -624,7 +624,7 @@ private:
      *   would be expected to be more accurate than those with "scaleFactor=1.0",
      *   but would take roughly twice as much time to process.i
      */
-    int internal_find_near(const int howMany, const int sampleRate, const double scaleFactor);
+    int internal_find_near(const int howMany, const int sampleRate, const RscAccuracyType scaleFactor);
 /*-----------------------------------------------------------------------------------------------*/
 
 
@@ -653,8 +653,8 @@ private:
 
     int extract_best_edges
    (int howMany,
- std::vector<double>& to_distance_list, std::vector<int>& to_index_list, int toFirst, int toCapacity,
- std::vector<double>& from_distance_list, std::vector<int>& from_index_list, int fromFirst, int fromLast);
+ std::vector<RscAccuracyType>& to_distance_list, std::vector<int>& to_index_list, int toFirst, int toCapacity,
+ std::vector<RscAccuracyType>& from_distance_list, std::vector<int>& from_index_list, int fromFirst, int fromLast);
     //
     // Copies a requested number of directed edges having minimum distances
     //   to their targets.
@@ -699,7 +699,7 @@ private:
 
     int partialQuickSort
 (int howMany,
- std::vector<double>& distList, std::vector<int>& indexList,
+ std::vector<RscAccuracyType>& distList, std::vector<int>& indexList,
  int rangeFirst, int rangeLast);
 
 

@@ -48,6 +48,7 @@
 void DefaultOptions::set_default_options()
 {
 	Options::set_option("use-binary-files", "false");
+	Options::set_option("use-binary-data-files", "false");
 	Options::set_option("info-output", "true");
 	Options::set_option("debug-output", "false");
 	
