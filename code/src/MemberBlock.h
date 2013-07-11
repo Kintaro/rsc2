@@ -87,10 +87,10 @@ public:
 	void set_offset(const unsigned int offset) { this->global_offset = offset; }
 	unsigned int get_number_of_items() { return *this->number_of_items; }
 
-	bool internal_load_members(std::ifstream& file);
+	unsigned int internal_load_members(std::ifstream& file);
 	bool internal_save_members(std::ofstream& file);
 	bool save_members(const boost::optional<unsigned int>& index = boost::none);
-	bool load_members(const boost::optional<unsigned int>& index = boost::none);
+	unsigned int load_members(const boost::optional<unsigned int>& index = boost::none);
 	bool load_members(std::vector<std::vector<unsigned int> >& member_index_llist,
 			std::vector<std::vector<ScoreType> >& member_score_llist,
 			std::vector<unsigned int>& member_size_list,
@@ -165,7 +165,7 @@ MemberBlock<ScoreType>::MemberBlock(boost::shared_ptr<MemberBlock<ScoreType>>& b
 
 	auto freshly_loaded = false;
 
-	if (block->load_members(boost::none) >= 0)
+	if (block->load_members(boost::none) > 0)
 		freshly_loaded = true;
 	else if (this->member_index_llist.empty())
 		return;
@@ -241,10 +241,8 @@ bool MemberBlock<ScoreType>::send_members_data(const int target) const
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-bool MemberBlock<ScoreType>::internal_load_members(std::ifstream& file)
+unsigned int MemberBlock<ScoreType>::internal_load_members(std::ifstream& file)
 {
-	Daemon::debug("loading member block");
-
 	this->number_of_items = FileUtil::read_from_file<unsigned int>(file);
 	this->sample_level    = FileUtil::read_from_file<int>(file);
 
@@ -270,7 +268,7 @@ bool MemberBlock<ScoreType>::internal_load_members(std::ifstream& file)
 
 	file.close();
 
-	return this->number_of_items;
+	return *this->number_of_items;
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
@@ -342,7 +340,7 @@ bool MemberBlock<ScoreType>::identify_save_file(std::ofstream& file) const
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-bool MemberBlock<ScoreType>::load_members(const boost::optional<unsigned int>& index)
+unsigned int MemberBlock<ScoreType>::load_members(const boost::optional<unsigned int>& index)
 {
 	std::ostringstream str;
 
@@ -353,14 +351,14 @@ bool MemberBlock<ScoreType>::load_members(const boost::optional<unsigned int>& i
 		str << *this->filename_prefix <<  "-n" << *index << ".mem";
 	else
 		str << *this->filename_prefix << ".mem";
-	
-	Daemon::debug(" [-] loading from file %s", str.str().c_str());
+
+	Daemon::debug("loading member block from file %s", str.str().c_str());
 	
 	std::ifstream file;
 	if (!FileUtil::open_read(str.str(), file))
 	{
 		Daemon::error(" [-] error opening file %s", str.str().c_str());
-		return false;
+		return 0u;
 	}
 
 	return internal_load_members(file);
@@ -689,6 +687,7 @@ bool MemberBlock<ScoreType>::limit_to_sample(const boost::shared_ptr<InvertedMem
 
 		this->member_score_llist[i].clear();
 		this->member_index_llist[i].clear();
+		this->member_size_list[i] = 0u;
 	}
 
 	return true;
@@ -700,7 +699,7 @@ bool MemberBlock<ScoreType>::verify_savefile(const boost::optional<unsigned int>
 	std::ostringstream str;
 
 	if (index)
-		str << *this->filename_prefix <<  "-n" << index << ".mem";
+		str << *this->filename_prefix <<  "-n" << *index << ".mem";
 	else
 		str << *this->filename_prefix << ".mem";
 

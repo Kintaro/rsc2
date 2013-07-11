@@ -70,6 +70,8 @@ public:
 	size_t load_data();
 	bool is_valid();
 	bool verify_savefile();
+
+	void clear_data();
 	
 	void extract_all_items(std::vector<boost::shared_ptr<DistanceData>>& item_list, const unsigned int start_index);
 private:

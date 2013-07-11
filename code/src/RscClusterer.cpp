@@ -111,8 +111,8 @@ bool RscClusterer::initialize_soft_rsc()
 	//this->set_manager->build_trim_set(true);
 	//
 	
-	//this->trim_manager->clear_all();
-	//this->set_manager->clear_all();
+	this->trim_manager->clear_all();
+	this->set_manager->clear_all();
 
 	this->set_manager->exchange_information();
 	this->number_of_items = this->set_manager->get_number_of_items_across_processors();
@@ -138,13 +138,33 @@ bool RscClusterer::initialize_soft_rsc()
 	Daemon::info("Maximum chunk size: %i", this->maximum_chunk_size);
 	Daemon::info("Maximum block size: %i", this->maximum_block_size);
 
+	this->member_index_list.resize(this->number_of_items);
+	this->member_rank_list.resize(this->number_of_items);
+	this->member_size_list.resize(this->number_of_items);
+	this->inverted_member_index_list.resize(this->number_of_items);
+	this->inverted_member_rank_list.resize(this->number_of_items);
+	this->inverted_member_size_list.resize(this->number_of_items);
+	this->pattern_size_list.resize(this->number_of_items);
+	this->pattern_squared_significance_list.resize(this->number_of_items);
+	this->pattern_sconfidence_list.resize(this->number_of_items);
+	this->pattern_index_to_rank_list.resize(this->number_of_items);
+	this->pattern_rank_to_index_list.resize(this->number_of_items);
+	this->pattern_adjacent_items_list.resize(this->number_of_items);
+	this->pattern_adjacent_int_size_list.resize(this->number_of_items);
+	this->pattern_number_of_adjacencies.resize(this->number_of_items);
+	this->selected_pattern_member_index_list.resize(this->number_of_items);
+	this->selected_pattern_base_index_list.resize(this->number_of_items);
 	this->squared_significance_accumulation_list.resize(this->maximum_chunk_size);
 	this->intersection_accumulation_list.resize(this->maximum_chunk_size);
+	this->count_list.resize(this->number_of_items);
+
 
 	for (auto &x : this->squared_significance_accumulation_list)
 		x.clear();
 	for (auto &x : this->intersection_accumulation_list)
 		x.clear();
+	for (auto &x : this->count_list)
+		x = 0u;
 
 	this->setup_cluster_storage();
 
@@ -170,11 +190,11 @@ void RscClusterer::cluster_soft_rsc()
 		
 		auto transmission_mode = 0 == Daemon::comm().rank() ? TransmissionMode::TransmissionSend : TransmissionMode::TransmissionReceive;
 		
-		for (auto sender = 0; sender < Daemon::comm().size(); ++sender)
-			this->generate_patterns_for_sample(sample, transmission_mode, sender);
+		// for (auto sender = 0; sender < Daemon::comm().size(); ++sender)
+			this->generate_patterns_for_sample(sample, transmission_mode, 0u);
 		Daemon::comm().barrier();
 
-		for (auto sender = 0; sender < Daemon::comm().size(); ++sender)
+		// for (auto sender = 0; sender < Daemon::comm().size(); ++sender)
 			this->generate_patterns_for_sample(sample, transmission_mode, boost::none);
 		Daemon::comm().barrier();
 
@@ -275,8 +295,10 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 	{
 		Daemon::comm().send(chunk, 0, member_index_list);
 		Daemon::comm().send(chunk, 0, member_size_list);
+		Daemon::comm().send(chunk, 0, number_of_items);
 		Daemon::comm().recv(chunk, 0, member_index_list);
 		Daemon::comm().recv(chunk, 0, member_size_list);
+		Daemon::comm().recv(chunk, 0, number_of_items);
 		Daemon::comm().recv(chunk, 0, start);
 		Daemon::comm().recv(chunk, 0, finish);
 	}
@@ -286,6 +308,8 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 		start = this->trim_manager->get_offset();
 		finish = start - 1 + this->trim_manager->get_number_of_items();
 	}
+
+	this->trim_manager->extract_members(this->member_index_list, this->member_size_list, sample_id);
 
 	for (auto target_processor = 0u; target_processor < (unsigned int)Daemon::comm().size(); ++target_processor)
 	{
@@ -300,23 +324,22 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 		// based at items in the current chunk neighbourhood lists.
 		for (auto block = 0u; block < number_of_blocks_in_chunk; ++block)
 		{
-			Daemon::debug("  [+] send block %i", block);
 			unsigned int alt_start;
 			unsigned int alt_finish;
 
 			// Fetch (where necessary) the block neighbourhood lists and
 			// the inverted neighbourhood lists.
-			if (target_processor == 0)
+			if (target_processor == 0u)
 			{
 				alt_start = this->trim_manager->get_block_offset(block);
-				alt_finish = alt_start - 1 + this->trim_manager->get_number_of_items_in_block(block);
+				alt_finish = alt_start - 1u + this->trim_manager->get_number_of_items_in_block(block);
 
-				if (target_processor != chunk)
+				//if (target_processor != chunk)
 					this->trim_manager->extract_members_from_block(this->member_index_list, this->member_size_list, sample_id, block);
 				this->trim_manager->extract_inverted_members_from_block(this->inverted_member_index_list, 
 																		this->inverted_member_rank_list, 
 																		this->inverted_member_size_list, 
-																		sample_id, chunk, block);
+																		sample_id, 0, block);
 			}
 			else
 			{
@@ -335,18 +358,20 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 
 			for (auto alt_item = alt_start; alt_item <= alt_finish; ++alt_item)
 			{
-				const std::vector<unsigned int> alt_inverted_member_index_list = inverted_member_index_list[alt_item];
-				const std::vector<unsigned int> alt_inverted_member_rank_list = inverted_member_rank_list[alt_item];
+				Daemon::error("accessing [%i, %i] %i / %i", alt_start, alt_finish, alt_item, inverted_member_size_list[alt_item]);
+				auto list_size = inverted_member_size_list[alt_item];
+				const std::vector<unsigned int>& alt_inverted_member_index_list = inverted_member_index_list[alt_item];
+				const std::vector<unsigned int>& alt_inverted_member_rank_list = inverted_member_rank_list[alt_item];
 
-				for (auto i = 0u; i < inverted_member_index_list[alt_item].size(); ++i)
+				for (auto i = 0u; i < list_size; ++i)
 				{
-					auto item = alt_inverted_member_index_list[i];
-					auto rank = alt_inverted_member_rank_list[i];
+					const auto item = alt_inverted_member_index_list[i];
+					const auto rank = alt_inverted_member_rank_list[i];
 
 					if (item < start || item > finish)
 						continue;
 
-					if (intersection_accumulation_list[item - start].size() == 0)
+					if (intersection_accumulation_list[item - start].empty())
 					{
 						intersection_accumulation_list[item - start].resize(maximum_list_range_limit);
 						squared_significance_accumulation_list[item - start].resize(maximum_list_range_limit);
@@ -360,7 +385,7 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 					this->update_confidence_intersection_counts(intersection_accumulation_list[item - start], 
 																member_index_list[item], 
 																member_index_list[alt_item], 
-																member_index_list[item].size(), rank);
+																member_size_list[item], rank);
 				}
 			}
 		}
@@ -438,9 +463,11 @@ void RscClusterer::generate_patterns_for_sample_receive(const int sample_id, con
 		{
 			Daemon::comm().recv(0, 0, member_index_list);
 			Daemon::comm().recv(0, 0, member_size_list);
+			Daemon::comm().recv(0, 0, number_of_items);
 			this->trim_manager->extract_members(member_index_list, member_size_list, sample_id);
 			Daemon::comm().send(0, 0, member_index_list);
 			Daemon::comm().send(0, 0, member_size_list);
+			Daemon::comm().send(0, 0, number_of_items);
 			Daemon::comm().send(0, 0, start);
 			Daemon::comm().send(0, 0, finish);
 		}
@@ -1345,6 +1372,11 @@ void RscClusterer::setup_list_ranges()
 /*-----------------------------------------------------------------------------------------------*/
 void RscClusterer::setup_cluster_storage()
 {
+	this->cluster_member_index_list.resize(this->number_of_items);
+	this->cluster_member_rs_overlap_list.resize(this->number_of_items);
+	this->cluster_member_size_list.resize(this->number_of_items);
+	this->cluster_sconfidence_list.resize(this->number_of_items);
+	this->cluster_squared_significance_list.resize(this->number_of_items);
 }
 /*-----------------------------------------------------------------------------------------------*/
 void RscClusterer::clear_cluster_storage()
@@ -1884,15 +1916,20 @@ void RscClusterer::update_confidence_intersection_counts(std::vector<unsigned in
 	// in each list).
 	for (auto i = 0u; i < size; ++i)
 	{
+		Daemon::error("updating index %i / %i [%i] %i", i, cluster_member_list.size(), cluster_member_list[i], count_list.size());
 		count_list[cluster_member_list[i]]++;
 
 		if (count_list[cluster_member_list[i]] == 2)
 			intersections++;
 
+		Daemon::error("still here %i / %i", i, constituent_member_list.size());
+
 		count_list[constituent_member_list[i]]++;
 
 		if (count_list[constituent_member_list[i]] == 2)
 			intersections++;
+
+		Daemon::error("still here 2");
 
         // The accumulator values can change only at ranks at least as large
         // as the item at which the constituent neighbourhood is based.

@@ -154,3 +154,8 @@ const boost::shared_ptr<DistanceData> VecDataBlock::access_item_by_block_offset(
 	//return boost::shared_ptr<DistanceData>(const_cast<VecData*>(&(*(this->data.begin() + index))));
 }
 /*-----------------------------------------------------------------------------------------------*/
+void VecDataBlock::clear_data()
+{
+	data.clear();
+}
+/*-----------------------------------------------------------------------------------------------*/

@@ -44,7 +44,7 @@
 #include <string>
 #include <boost/mpi/communicator.hpp>
 
-typedef float RscAccuracyType;
+typedef double RscAccuracyType;
 
 class Daemon
 {

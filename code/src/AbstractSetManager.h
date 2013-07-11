@@ -81,6 +81,8 @@ public:
 	
 	virtual void exchange_information();
 
+	virtual void clear_all() = 0;
+
 	virtual unsigned int get_number_of_items() = 0;
 	virtual unsigned int get_number_of_items_in_block(const unsigned int block) = 0;
 	virtual unsigned int get_number_of_blocks() = 0;

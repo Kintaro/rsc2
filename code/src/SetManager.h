@@ -125,7 +125,7 @@ public:
 													 std::vector<unsigned int>& inverted_member_size_list, 
 													 const int sample_id, 
 													 const unsigned int chunk,
-													 const unsigned int block) {};
+													 const unsigned int block);
 
 	virtual unsigned int get_number_of_items();
 	virtual unsigned int get_number_of_items_in_block(const unsigned int block);
@@ -135,6 +135,8 @@ public:
 	virtual unsigned int get_sample_size(const int sample_level);
 	virtual unsigned int get_offset();
 	virtual unsigned int get_block_offset(const unsigned int block);
+
+	virtual void clear_all();
 	
 	virtual bool set_list_hierarchy_parameters(const ListStyle list_style, const unsigned int sample_limit,
 											   const unsigned int maximum_number_of_members,
@@ -149,7 +151,12 @@ private:
 	virtual unsigned int internal_extract_members_from_block(std::vector<std::vector<unsigned int>>& member_index_list,
 			std::vector<std::vector<ScoreType>>& member_score_list,
 			std::vector<unsigned int>& member_size_list,
-			const unsigned int sample_id,
+			const int sample_id,
+			const unsigned int block);
+	virtual unsigned int internal_extract_inverted_members_from_block(std::vector<std::vector<unsigned int>>& inverted_member_index_list,
+			std::vector<std::vector<unsigned int>>& inverted_member_score_list,
+			std::vector<unsigned int>& inverted_member_size_list,
+			const int sample_id,
 			const unsigned int block);
 };
 
@@ -229,16 +236,20 @@ boost::shared_ptr<AbstractSetManager> SetManager<DataBlock, ScoreType>::build_tr
 
 	trim_set_manager->chunk_ptr = this->chunk_ptr->build_trim_member_chunk(can_load_from_disk);
 
-	for (auto i = 0; i < Daemon::comm().size(); ++i)
-	{	
-		auto transmission_mode = i == Daemon::comm().rank() ? TransmissionMode::TransmissionSend : TransmissionMode::TransmissionReceive;
-		trim_set_manager->chunk_ptr->build_inverted_members(transmission_mode, i);
-		Daemon::comm().barrier();
+	if (trim_set_manager->chunk_ptr->build_inverted_members_from_disk())
+	{
+		Daemon::info("inverted member lists already computed and saved to disk");
+		return trim_set_manager;
 	}
-
-	Daemon::comm().barrier();
-
-	trim_set_manager->chunk_ptr->build_inverted_members(TransmissionMode::TransmissionSend, Daemon::comm().rank());
+	else
+	{
+		for (auto i = 0; i < Daemon::comm().size(); ++i)
+		{	
+			auto transmission_mode = i == Daemon::comm().rank() ? TransmissionMode::TransmissionSend : TransmissionMode::TransmissionReceive;
+			trim_set_manager->chunk_ptr->build_inverted_members(transmission_mode, i);
+			Daemon::comm().barrier();
+		}
+	}
 
 	Daemon::comm().barrier();
 	
@@ -375,6 +386,7 @@ unsigned int SetManager<DataBlock, ScoreType>::internal_extract_members(std::vec
 		
 		member_size_list.resize(stop_index);
 		member_index_list.resize(stop_index);
+		member_score_list.resize(stop_index);
 		
 		for (auto i = start_index; i < stop_index; ++i)
 		{
@@ -419,7 +431,7 @@ template<typename DataBlock, typename ScoreType>
 unsigned int SetManager<DataBlock, ScoreType>::internal_extract_members_from_block(std::vector<std::vector<unsigned int>>& member_index_list, 
 								 std::vector<std::vector<ScoreType>>& member_score_list,
 								 std::vector<unsigned int>& member_size_list,
-								 const unsigned int sample_id,
+								 const int sample_id,
 								 const unsigned int block)
 {
 	auto num_loaded = 0u;
@@ -428,7 +440,7 @@ unsigned int SetManager<DataBlock, ScoreType>::internal_extract_members_from_blo
 
 	boost::shared_ptr<MemberBlock<ScoreType>> block_ptr;
 	
-	if (sample_id < -this->number_of_tiny_samples)
+	if (sample_id < -static_cast<int>(this->number_of_tiny_samples))
 		block_ptr = this->chunk_ptr->access_member_block(block);
 	else
 		block_ptr = this->chunk_ptr->access_member_block(block, sample_id);
@@ -436,28 +448,93 @@ unsigned int SetManager<DataBlock, ScoreType>::internal_extract_members_from_blo
 	auto block_size = block_ptr->load_members();
 	auto start_index = block_ptr->get_offset();
 	auto stop_index = start_index + block_size;
+	Daemon::error("Extracted members %i", block_size);
 		
 	member_size_list.resize(stop_index);
 	member_index_list.resize(stop_index);
+	member_score_list.resize(stop_index);
 		
 	for (auto i = start_index; i < stop_index; ++i)
 	{
-		member_size_list[i] = block_ptr->get_number_of_items();
+		member_size_list[i] = block_ptr->get_number_of_members(i);
 			
-		if (member_size_list[i] == 0u)
-			continue;
-			
-		member_index_list[i] = block_ptr->extract_member_indices(i);
-		member_score_list[i] = block_ptr->extract_member_scores(i);
-			
-		++num_loaded;
+		if (member_size_list[i] > 0u)
+		{
+			member_index_list[i] = block_ptr->extract_member_indices(i);
+			member_score_list[i] = block_ptr->extract_member_scores(i);
+			++num_loaded;
+		}
+		else
+		{
+			member_index_list[i] = std::vector<unsigned int>();
+			member_score_list[i] = std::vector<ScoreType>();
+			member_size_list[i] = 0u;
+		}
+		Daemon::error(" [%i] %i / %i", i, member_index_list[i].size(), member_size_list[i]);
 	}
 		
 	block_ptr->clear_members();
 	
 	return num_loaded;
 }
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, typename ScoreType>
+void SetManager<DataBlock, ScoreType>::extract_inverted_members_from_block(std::vector<std::vector<unsigned int>>& inverted_member_index_list, 
+													 std::vector<std::vector<unsigned int>>& inverted_member_rank_list, 
+													 std::vector<unsigned int>& inverted_member_size_list, 
+													 const int sample_id, 
+													 const unsigned int chunk,
+													 const unsigned int block)
+{
+	internal_extract_inverted_members_from_block(inverted_member_index_list, inverted_member_rank_list, inverted_member_size_list, sample_id, block);
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, typename ScoreType>
+unsigned int SetManager<DataBlock, ScoreType>::internal_extract_inverted_members_from_block(std::vector<std::vector<unsigned int>>& inverted_member_index_list,
+			std::vector<std::vector<unsigned int>>& inverted_member_rank_list,
+			std::vector<unsigned int>& inverted_member_size_list,
+			const int sample_id,
+			const unsigned int block)
+{
+	boost::shared_ptr<InvertedMemberBlock<ScoreType>> block_ptr;
 
+	if (sample_id < -static_cast<int>(this->number_of_tiny_samples))
+		block_ptr = this->chunk_ptr->access_inverted_member_block(block);
+	else
+		block_ptr = this->chunk_ptr->access_inverted_member_block(block, sample_id);
+
+	auto block_size = block_ptr->load_inverted_members();
+	auto start_index = block_ptr->get_offset();
+	auto stop_index = start_index + block_size;
+
+	auto num_loaded = 0u;
+
+	// inverted_member_size_list.resize(stop_index);
+	// inverted_member_index_list.resize(stop_index);
+	// inverted_member_rank_list.resize(stop_index);
+
+	for (auto i = start_index; i < stop_index; ++i)
+	{
+		inverted_member_size_list[i] = block_ptr->get_number_of_inverted_members(i);
+
+		if (inverted_member_size_list[i] > 0u)
+		{
+			inverted_member_index_list[i] = block_ptr->extract_inverted_member_indices(i);
+			inverted_member_rank_list[i] = block_ptr->extract_inverted_member_ranks(i);
+			++num_loaded;
+		}
+		else
+		{
+			inverted_member_index_list[i] = std::vector<unsigned int>();
+			inverted_member_rank_list[i] = std::vector<unsigned int>();
+			inverted_member_size_list[i] = 0u;
+		}
+	}
+
+	block_ptr->clear_inverted_members();
+
+	return num_loaded;
+}
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, typename ScoreType>
 bool SetManager<DataBlock, ScoreType>::set_list_hierarchy_parameters(const ListStyle list_style, const unsigned int sample_limit,
@@ -537,6 +614,14 @@ template<typename DataBlock, typename ScoreType>
 unsigned int SetManager<DataBlock, ScoreType>::get_offset()
 {
 	return this->chunk_ptr->get_offset();
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, typename ScoreType>
+void SetManager<DataBlock, ScoreType>::clear_all()
+{
+	return this->chunk_ptr->clear_inverted_member_blocks();
+	return this->chunk_ptr->clear_member_blocks();
+	return this->chunk_ptr->clear_chunk_data();
 }
 /*-----------------------------------------------------------------------------------------------*/
 

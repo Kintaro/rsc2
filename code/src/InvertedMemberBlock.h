@@ -67,6 +67,7 @@ public:
 	InvertedMemberBlock(const InvertedMemberBlock<ScoreType>& inverted_member_block);
 
 	bool set_id(const boost::optional<std::string>& prefix, const boost::optional<unsigned int>& block = boost::none);
+	unsigned int get_offset() const { return *this->global_offset; }
 
 	bool initialize_inverted_members();
 	bool add_to_inverted_members(const unsigned int item_index, const unsigned int inverted_item_index, const unsigned int rank);
@@ -78,12 +79,15 @@ public:
 
 	bool verify_savefile(const boost::optional<unsigned int>& index = boost::none);
 
+	const std::vector<unsigned int> extract_inverted_member_ranks(const unsigned int item_index);
+	const std::vector<unsigned int> extract_inverted_member_indices(const unsigned int item_index);
+
 	unsigned int load_inverted_members(const boost::optional<unsigned int>& index = boost::none);
 	unsigned int save_inverted_members(const boost::optional<unsigned int>& index = boost::none);
 
 	unsigned int sum_size() { auto sum = 0u; for (auto i = 0u; i < *this->number_of_items; ++i) sum += this->inverted_member_size_list[i]; return sum; }
 private:
-	bool internal_load_inverted_members(std::ifstream& file);
+	unsigned int internal_load_inverted_members(std::ifstream& file);
 	bool internal_save_inverted_members(std::ofstream& file);
 private:
 	friend class boost::serialization::access;
@@ -191,6 +195,24 @@ void InvertedMemberBlock<ScoreType>::clear_inverted_members()
 	this->inverted_member_size_list.clear();
 
 	this->is_finalized = false;
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename ScoreType>
+const std::vector<unsigned int> InvertedMemberBlock<ScoreType>::extract_inverted_member_ranks(const unsigned int item_index)
+{	
+	std::vector<unsigned int> result = this->inverted_member_rank_list[item_index - *this->global_offset];
+	this->inverted_member_rank_list[item_index - *this->global_offset].clear();
+	return result;
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename ScoreType>
+const std::vector<unsigned int> InvertedMemberBlock<ScoreType>::extract_inverted_member_indices(const unsigned int item_index)
+{
+	if (item_index - *this->global_offset >= this->number_of_items || this->inverted_member_size_list[item_index - *this->global_offset] == 0u)
+		return std::vector<unsigned int>();
+	std::vector<unsigned int> result = std::vector<unsigned int>(this->inverted_member_index_list[item_index - *this->global_offset]);
+	this->inverted_member_index_list[item_index - *this->global_offset] = std::vector<unsigned int>();
+	return result;
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
@@ -362,7 +384,7 @@ unsigned int InvertedMemberBlock<ScoreType>::load_inverted_members(const boost::
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-bool InvertedMemberBlock<ScoreType>::internal_load_inverted_members(std::ifstream& file)
+unsigned int InvertedMemberBlock<ScoreType>::internal_load_inverted_members(std::ifstream& file)
 {
 
 	this->number_of_items = FileUtil::read_from_file<unsigned int>(file);

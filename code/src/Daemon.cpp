@@ -136,6 +136,8 @@ void Daemon::internal_log(const std::string& level, const int rank, const std::s
 	buffer << "\33[0;3" << std::to_string(rank + 1) << "m" << rank << " :: " << level << "] " << message << "\33[0m";
 	std::string formatted_string = buffer.str();
 
+	
+
 	world.send(0, 0, 0);
 	world.send(0, 0, formatted_string);
 }

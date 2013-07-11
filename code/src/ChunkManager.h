@@ -67,6 +67,7 @@ private:
 	bool unchunked_flag;
 	bool is_original;
 	boost::optional<unsigned int> global_offset;
+	boost::optional<unsigned int> chunk_id;
 	unsigned int number_of_items;
 	unsigned int number_of_tiny_samples;
 	unsigned int number_of_samples;
@@ -103,6 +104,8 @@ public:
 	const boost::shared_ptr<DataBlock> access_data_block(const unsigned int index);
 	const boost::shared_ptr<MemberBlock<ScoreType>> access_member_block(const unsigned int index);
 	const boost::shared_ptr<MemberBlock<ScoreType>> access_member_block(const unsigned int index, const int sample_level);
+	const boost::shared_ptr<InvertedMemberBlock<ScoreType>> access_inverted_member_block(const unsigned int index);
+	const boost::shared_ptr<InvertedMemberBlock<ScoreType>> access_inverted_member_block(const unsigned int index, const int sample_level);
 	const boost::shared_ptr<DistanceData> access_item(const unsigned int index) const;
 	std::vector<boost::shared_ptr<DistanceData>>& access_items() { return this->data_item_list; }
 	
@@ -181,6 +184,7 @@ ChunkManager<DataBlock, ScoreType>::ChunkManager(const boost::optional<unsigned 
 	this->is_original = false;
 	this->sampling_flag = false;
 	this->member_block_list.clear();
+	this->chunk_id = chunk_id;
 	
 	while (true)
 	{
@@ -209,7 +213,7 @@ ChunkManager<DataBlock, ScoreType>::ChunkManager(const boost::optional<unsigned 
 
 	this->filename_prefix = Options::get_option_as<std::string>("temp-directory") + std::to_string(Daemon::comm().rank()) + "/" + Options::get_option_as<std::string>("dataset");
 
-	//if (!this->unchunked_flag)
+	if (!this->unchunked_flag)
 		this->filename_prefix += "_c" + std::to_string(Daemon::comm().rank());
 	
 	Daemon::debug("created chunk manager");
@@ -347,6 +351,18 @@ template<typename DataBlock, class ScoreType>
 const boost::shared_ptr<MemberBlock<ScoreType>> ChunkManager<DataBlock, ScoreType>::access_member_block(const unsigned int index, const int sample_level)
 {
 	return this->member_block_list[index][sample_level + this->number_of_tiny_samples];
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+const boost::shared_ptr<InvertedMemberBlock<ScoreType>> ChunkManager<DataBlock, ScoreType>::access_inverted_member_block(const unsigned int index)
+{
+	return this->access_inverted_member_block(index, -static_cast<int>(this->number_of_tiny_samples));
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename DataBlock, class ScoreType>
+const boost::shared_ptr<InvertedMemberBlock<ScoreType>> ChunkManager<DataBlock, ScoreType>::access_inverted_member_block(const unsigned int index, const int sample_level)
+{
+	return this->inverted_member_block_list[index][sample_level + this->number_of_tiny_samples];
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
@@ -1064,18 +1080,20 @@ boost::shared_ptr<ChunkManager<DataBlock, ScoreType>> ChunkManager<DataBlock, Sc
 {
 	Daemon::debug("building trim member chunk");
 
-	auto buffer = Options::get_option_as<std::string>("temp-directory") + Options::get_option_as<std::string>("dataset") + std::string("_trim");
-	auto trim_chunk_manager = boost::shared_ptr<ChunkManager<DataBlock, ScoreType>>(new ChunkManager());
+	auto buffer = Options::get_option_as<std::string>("temp-directory") + std::to_string(Daemon::comm().rank()) + "/" + Options::get_option_as<std::string>("dataset") + std::string("_trim");
+	auto trim_chunk_manager = boost::shared_ptr<ChunkManager<DataBlock, ScoreType>>(new ChunkManager(this->chunk_id));
 
-	if (this->unchunked_flag)
-		buffer = buffer + std::to_string(Daemon::comm().rank());
+	if (!this->unchunked_flag)
+		buffer = buffer + "_c" + std::to_string(Daemon::comm().rank());
 
 	trim_chunk_manager->number_of_samples = this->number_of_samples;
 	trim_chunk_manager->number_of_tiny_samples = this->number_of_tiny_samples;
 	trim_chunk_manager->maximum_number_of_members = this->maximum_number_of_members;
 	trim_chunk_manager->maximum_number_of_mini_members = this->maximum_number_of_mini_members;
 	trim_chunk_manager->maximum_number_of_micro_members = this->maximum_number_of_micro_members;
-	trim_chunk_manager->sample_size_list = std::vector<unsigned int>(this->sample_size_list.begin(), this->sample_size_list.end());
+	trim_chunk_manager->sample_size_list = std::vector<unsigned int>(this->sample_size_list);
+	trim_chunk_manager->filename_prefix = buffer;
+	trim_chunk_manager->sampling_flag = true;
 
 	trim_chunk_manager->set_offset(*this->global_offset);
 	
@@ -1088,9 +1106,8 @@ boost::shared_ptr<ChunkManager<DataBlock, ScoreType>> ChunkManager<DataBlock, Sc
 
 	for (auto block = 0u; block < this->number_of_blocks; ++block)
 	{
-		for (int sample = -this->number_of_tiny_samples; sample < static_cast<int>(this->number_of_samples); ++sample)
+		for (auto sample = -static_cast<int>(this->number_of_tiny_samples); sample < static_cast<int>(this->number_of_samples); ++sample)
 		{
-			Daemon::debug(" [-] building trim member chunk for %i-%i", block, sample);
 			auto s = static_cast<int>(sample + this->number_of_tiny_samples);
 
 			boost::shared_ptr<MemberBlock<ScoreType>> member_block;
@@ -1108,8 +1125,6 @@ boost::shared_ptr<ChunkManager<DataBlock, ScoreType>> ChunkManager<DataBlock, Sc
 			else
 				member_block = boost::shared_ptr<MemberBlock<ScoreType>>(new MemberBlock<ScoreType>(this->member_block_list[block][s], this->maximum_number_of_members));
 
-			Daemon::debug("-------------");
-
 			this->member_block_list[block][s]->clear_members();
 
 			if (this->unchunked_flag)
@@ -1123,17 +1138,11 @@ boost::shared_ptr<ChunkManager<DataBlock, ScoreType>> ChunkManager<DataBlock, Sc
 				continue;
 			}
 
-			Daemon::debug("-------------A %i", this->inverted_member_block_list.size());
-
 			this->inverted_member_block_list[block][s]->load_inverted_members();
-			Daemon::debug("-------------A.1");
 			member_block->limit_to_sample(this->inverted_member_block_list[block][s]);
-			Daemon::debug("-------------B");
 			member_block->save_members();
 			this->inverted_member_block_list[block][s]->clear_inverted_members();
 			member_block->clear_members();
-
-			Daemon::debug("-------------C");
 		}
 	}
 
@@ -1185,7 +1194,7 @@ void ChunkManager<DataBlock, ScoreType>::clear_chunk_data()
 	this->data_item_list.clear();
 
 	for (auto &x : this->data_block_list)
-		;//x.clear_data();
+		x->clear_data();
 }
 /*-----------------------------------------------------------------------------------------------*/
 #endif
