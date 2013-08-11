@@ -98,6 +98,6 @@ void FileUtil::newline(std::ofstream& file)
 		is_binary = Options::get_option_as<bool>("use-binary-files");
 	
 	if (!*is_binary)
-		file << std::endl;
+		file << "\n";
 }
 /*-----------------------------------------------------------------------------------------------*/

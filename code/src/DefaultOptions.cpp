@@ -51,6 +51,9 @@ void DefaultOptions::set_default_options()
 	Options::set_option("use-binary-data-files", "false");
 	Options::set_option("info-output", "true");
 	Options::set_option("debug-output", "false");
+	Options::set_option("time-output", "true");
+	Options::set_option("log", "false");
+	Options::set_option("logfile", "");
 	
 	Options::set_option("vecdata-filename-extension", "dvf");
 

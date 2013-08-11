@@ -38,59 +38,34 @@
 // Contact e-mail address: meh@nii.ac.jp, meh@acm.org
 //                         mail.wollwage@gmail.com
 
-#ifndef __VEC_DATA_H__
-#define __VEC_DATA_H__
+#ifndef __PARALLEL_H__
+#define __PARALLEL_H__
 
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/shared_ptr.hpp>
-#include <memory>
-#include "DistanceData.h"
-#include "Daemon.h"
+#include <vector>
+#include <thread>
 
-class VecData : public DistanceData
+class Parallel 
 {
-private:
-	std::vector<RscAccuracyType> data;
 public:
-	VecData() {}
-	VecData(const VecData& vec) : DistanceData(vec)
+	/*-----------------------------------------------------------------------------------------------*/
+	static void parallel_for(const unsigned int start, const unsigned int stop, std::function<void(const unsigned int)> func) 
 	{
-		this->data = vec.data;
+		const auto number_of_threads = std::thread::hardware_concurrency();
+		std::vector <std::thread> threads;
+
+		for (auto thread_id = start; thread_id < number_of_threads; ++thread_id) 
+		{
+			auto threadFunc = [=, &threads]() 
+			{
+				for (auto i = thread_id; i < stop; i += number_of_threads) 
+					func(i);
+			};
+			threads.push_back(std::thread(threadFunc));
+		}
+		for (auto & t : threads) 
+			t.join();
 	}
-
-	VecData(VecData& vec) : DistanceData(vec)
-	{
-		this->data = vec.data;
-	}
-
-	VecData(const std::vector<RscAccuracyType>& data)
-	{
-		this->data = data;
-	}
-	
-	virtual RscAccuracyType distance_to(const boost::shared_ptr<DistanceData>& to) 
-	{
-		auto other = boost::static_pointer_cast<VecData>(to);
-		auto sum = 0.0;
-
-		for (auto i = 0u; i < this->data.size(); ++i)
-			sum += (this->data[i] - other->data[i]) * (this->data[i] - other->data[i]);
-
-		return sqrt(sum);
-	};
-	
-private:
-	friend class boost::serialization::access;
-
-	template<class Archive>
-	void serialize(Archive &ar, const unsigned int version)
-	{
-		ar.template register_type<DistanceData>();
-		//ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(DistanceData);
-		ar & boost::serialization::base_object<DistanceData>(*this);
-		ar &data;
-	}
+	/*-----------------------------------------------------------------------------------------------*/
 };
 
 #endif

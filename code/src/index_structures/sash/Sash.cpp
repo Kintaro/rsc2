@@ -41,6 +41,7 @@
 #include "../../Daemon.h"
 #include "../../FileUtil.h"
 #include "../../Sort.h"
+#include "../../Timer.h"
 #include "Sash.h"
 
 int Sash::partialQuickSort
@@ -541,6 +542,7 @@ Sash::~Sash ()
 /*-----------------------------------------------------------------------------------------------*/
 int Sash::build (std::vector<boost::shared_ptr<DistanceData>>& inputData, const int number_of_items, const boost::optional<int>& numParents)
 {
+    auto timer = create_timer();
 	// If the data set is empty, then abort.
 	if (number_of_items <= 1)
 	{
@@ -582,6 +584,7 @@ int Sash::build (std::vector<boost::shared_ptr<DistanceData>>& inputData, const 
 /*-----------------------------------------------------------------------------------------------*/
 unsigned int Sash::build (const std::string& filename, std::vector<boost::shared_ptr<DistanceData>>& inputData, const int number_of_items)
 {
+    auto timer = create_timer();
 	// If the data set is empty, then abort.
 	if (filename.empty() || (number_of_items <= 0))
 	{
@@ -912,7 +915,7 @@ unsigned int Sash::save_to_file (const std::string& filename)
 	FileUtil::write_to_file<int>(out_file, levels); FileUtil::space(out_file);
 	FileUtil::write_to_file<int>(out_file, maxParents); FileUtil::space(out_file);
 	FileUtil::write_to_file<int>(out_file, number_of_orphans); FileUtil::space(out_file);
-	FileUtil::write_to_file<int>(out_file, seed); FileUtil::space(out_file);
+    FileUtil::write_to_file<int>(out_file, this->seed);
 	FileUtil::newline(out_file);
 
 	// For each item, write out:
@@ -927,7 +930,7 @@ unsigned int Sash::save_to_file (const std::string& filename)
 
 		FileUtil::write_to_file<int>(out_file, i); FileUtil::space(out_file);
 		FileUtil::write_to_file<int>(out_file, intern_to_extern_mapping[i]); FileUtil::space(out_file);
-		FileUtil::write_to_file<int>(out_file, numChildren); FileUtil::space(out_file);
+		FileUtil::write_to_file<int>(out_file, numChildren);
 
 		for (auto j = 0; j < numChildren; ++j)
 		{

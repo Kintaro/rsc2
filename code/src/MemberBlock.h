@@ -158,7 +158,7 @@ MemberBlock<ScoreType>::MemberBlock(boost::shared_ptr<MemberBlock<ScoreType>>& b
 	if (sample_level)
 		this->sample_level = *sample_level;
 	else
-		this->sample_level = block->sample_level;
+		this->sample_level = *block->sample_level;
 
 	if (member_list_size_limit == 0)
 		return;
@@ -250,7 +250,7 @@ unsigned int MemberBlock<ScoreType>::internal_load_members(std::ifstream& file)
 	this->member_index_llist.resize(*this->number_of_items);
 	this->member_size_list.resize(*this->number_of_items);
 
-	for (auto i = 0u; i < this->number_of_items; ++i)
+	for (auto i = 0u; i < *this->number_of_items; ++i)
 	{
 		const int item_index = FileUtil::read_from_file<unsigned int>(file);
 		const int num_members = FileUtil::read_from_file<unsigned int>(file);
@@ -400,12 +400,9 @@ bool MemberBlock<ScoreType>::load_members(std::vector<std::vector<unsigned int>>
 template<typename ScoreType>
 void MemberBlock<ScoreType>::clear_members ()
 {
-	for (auto &x : this->member_score_llist) 
-		x.clear();
 	member_score_llist.clear();
-	for (auto &x : this->member_index_llist) 
-		x.clear();
 	member_index_llist.clear();
+	member_size_list.clear();
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
@@ -428,8 +425,8 @@ const std::vector<ScoreType> MemberBlock<ScoreType>::extract_member_scores(const
 template<typename ScoreType>
 const std::vector<unsigned int> MemberBlock<ScoreType>::extract_member_indices(const unsigned int item_index)
 {
-	if (item_index - *this->global_offset >= this->number_of_items || this->member_size_list[item_index - *this->global_offset] == 0u)
-		return std::vector<unsigned int>();
+	if (item_index - *this->global_offset >= *this->number_of_items || this->member_size_list[item_index - *this->global_offset] == 0u)
+		return std::vector<unsigned int>(0);
 	std::vector<unsigned int> result = std::vector<unsigned int>(this->member_index_llist[item_index - *this->global_offset]);
 	this->member_index_llist[item_index - *this->global_offset] = std::vector<unsigned int>();
 	return result;
@@ -472,7 +469,7 @@ int MemberBlock<ScoreType>::internal_build_neighbourhood_compute_query(IndexStru
 		this->member_score_llist.resize(*this->number_of_items);
 		this->member_size_list.resize(*this->number_of_items);
 
-		for (auto i = 0u; i < this->number_of_items; ++i)
+		for (auto i = 0u; i < *this->number_of_items; ++i)
 		{
 			this->member_score_llist[i] = std::vector<ScoreType>();
 			this->member_index_llist[i] = std::vector<unsigned int>();
@@ -680,7 +677,7 @@ bool MemberBlock<ScoreType>::set_id(const boost::optional<std::string>& prefix, 
 template<typename ScoreType>
 bool MemberBlock<ScoreType>::limit_to_sample(const boost::shared_ptr<InvertedMemberBlock<ScoreType>>& inverted_member_block)
 {
-	for (auto i = 0u; i < this->number_of_items; ++i)
+	for (auto i = 0u; i < *this->number_of_items; ++i)
 	{
 		if (inverted_member_block->get_number_of_inverted_members(i + *this->global_offset) > 0u)
 			continue;

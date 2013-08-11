@@ -50,7 +50,7 @@
 #include "InvertedMemberBlock.h"
 #include "Daemon.h"
 
-BOOST_CLASS_EXPORT(VecDataBlock); 
+BOOST_CLASS_EXPORT(VecDataBlock)
 
 /*-----------------------------------------------------------------------------------------------*/
 enum class Stage
@@ -541,13 +541,13 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood(const boost
 		
 		for (auto sample = 0u; sample < this->number_of_samples; ++sample)
 		{
-			//auto s = sample + this->number_of_tiny_samples;
+			// const auto s = sample + this->number_of_tiny_samples;
 		
 			// If the member lists for this block have not already been
 			// computed and saved, then we must build them from scratch.
-			//if (this->member_block_list[block][s]->verify_savefile())
-			//	pending_sample_list[sample] = false;
-			//else
+			// if (this->member_block_list[block][s]->verify_savefile())
+				// pending_sample_list[sample] = false;
+			// else
 			{
 				pending_sample_list[sample] = true;
 				at_least_one_sample_pending = true;
@@ -886,19 +886,30 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 
 				member_block->load_members();
 
+				// Find out the number of items in the new block, and
+				// the position of its first item in the global ordering.
 				const auto member_block_size = member_block->get_number_of_items();
 				const auto member_offset = member_block->get_offset();
 
+				// For each member list of the new block, and each data sample,
+				// examine each of its elements to see whether it lies in
+				// this chunk.
+				// If so, add an inverted member to the appropriate list.
 				for (auto i = static_cast<int>(member_offset + member_block_size) - 1; i >= static_cast<int>(member_offset); i--)
 				{
+					// Extract a member list list.
 					const auto member_index_list = member_block->extract_member_indices(i);
 					const auto number_of_members = member_block->get_number_of_members(i);
 
+					// If the lists are complete, then add them to the
+					// inverted member lists.
 					if (member_index_list.empty())
 						continue;
 
 					for (auto j = 0u; j < number_of_members; ++j)
 					{
+						// For each member, find out which of this chunk's
+						// blocks (if any) contain it.
 						const auto member = member_index_list[j];
 						auto found = true;
 						const auto target_block = this->find_block_for_item(member, found);
@@ -922,7 +933,7 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 
 			for (auto blck = 0u; blck < this->number_of_blocks; ++blck)
 			{
-				this->inverted_member_block_list[blck][s]->load_inverted_members(0u);
+				// this->inverted_member_block_list[blck][s]->load_inverted_members(0u);
 
 				for (auto i = block * Daemon::comm().size(); i < block * Daemon::comm().size() + Daemon::comm().size(); ++i)
 				{
@@ -936,13 +947,14 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 					else
 						inverted_member_block->set_id(this->filename_prefix, blck);
 
+					this->inverted_member_block_list[blck][s]->load_inverted_members(0u);
 					inverted_member_block->load_inverted_members(i);
 					this->inverted_member_block_list[blck][s]->merge_inverted_members(inverted_member_block);
-					//this->inverted_member_block_list[blck][s]->clear_inverted_members();
+					this->inverted_member_block_list[blck][s]->save_inverted_members(0u);
+					this->inverted_member_block_list[blck][s]->clear_inverted_members();
 					inverted_member_block->clear_inverted_members();
 					inverted_member_block->purge_inverted_members_from_disk(i);
 				}
-				this->inverted_member_block_list[blck][s]->save_inverted_members(0u);
 			}
 		}
 
@@ -1100,15 +1112,20 @@ boost::shared_ptr<ChunkManager<DataBlock, ScoreType>> ChunkManager<DataBlock, Sc
 	if (this->number_of_blocks != trim_chunk_manager->get_number_of_blocks())
 		return boost::shared_ptr<ChunkManager<DataBlock, ScoreType>>();
 
+	// Test whether the member lists already reside on disk.
+	// If so, we are happy!
 	if (can_build_from_disk)
 		if (trim_chunk_manager->build_members_from_disk())
 			return trim_chunk_manager;
 
+	// Trim member lists for this chunk must be created from
+	// the full member lists.
+	// This happens within the member block copy constructor itself.
 	for (auto block = 0u; block < this->number_of_blocks; ++block)
 	{
 		for (auto sample = -static_cast<int>(this->number_of_tiny_samples); sample < static_cast<int>(this->number_of_samples); ++sample)
 		{
-			auto s = static_cast<int>(sample + this->number_of_tiny_samples);
+			const auto s = static_cast<int>(sample + this->number_of_tiny_samples);
 
 			boost::shared_ptr<MemberBlock<ScoreType>> member_block;
 
@@ -1118,6 +1135,8 @@ boost::shared_ptr<ChunkManager<DataBlock, ScoreType>> ChunkManager<DataBlock, Sc
 				throw new std::exception();
 			}
 
+			// Make a copy of this chunk's member block for the current
+			// block-sample combination.
 			if (sample == -2)
 				member_block = boost::shared_ptr<MemberBlock<ScoreType>>(new MemberBlock<ScoreType>(this->member_block_list[block][s], this->maximum_number_of_micro_members));
 			else if (sample == -1)
@@ -1127,18 +1146,25 @@ boost::shared_ptr<ChunkManager<DataBlock, ScoreType>> ChunkManager<DataBlock, Sc
 
 			this->member_block_list[block][s]->clear_members();
 
+			// Record the file name of the new member list block.
 			if (this->unchunked_flag)
 				member_block->set_id(buffer);
 			else
 				member_block->set_id(buffer, block);
 
+			// If it doesn't already exist on disk, then save the block to disk.
 			if (member_block->verify_savefile())
 			{
 				member_block->clear_members();
 				continue;
 			}
 
+			// If we can't find the inverted member list on disk, then abort.
 			this->inverted_member_block_list[block][s]->load_inverted_members();
+
+			// Remove those lists that do not belong to the current
+			// sample level, and save the block.
+			// If the save fails, then abort.
 			member_block->limit_to_sample(this->inverted_member_block_list[block][s]);
 			member_block->save_members();
 			this->inverted_member_block_list[block][s]->clear_inverted_members();
@@ -1160,7 +1186,7 @@ void ChunkManager<DataBlock, ScoreType>::purge_member_blocks()
 template<typename DataBlock, class ScoreType>
 bool ChunkManager<DataBlock, ScoreType>::set_offset(const unsigned int offset)
 {
-	if (this->global_offset && this->global_offset == offset)
+	if (this->global_offset && *this->global_offset == offset)
 		return true;
 
 	for (auto block = 0u; block < this->number_of_blocks; ++block)
@@ -1174,17 +1200,31 @@ bool ChunkManager<DataBlock, ScoreType>::set_offset(const unsigned int offset)
 template<typename DataBlock, class ScoreType>
 void ChunkManager<DataBlock, ScoreType>::clear_member_blocks()
 {
-	for (auto &x : this->member_block_list)
-		for (auto &y : x)
-			y->clear_members();
+	if (this->member_block_list.empty())
+		return;
+	for (auto block = 0u; block < this->number_of_blocks; ++block)
+	{
+		for (auto sample = -static_cast<int>(this->number_of_tiny_samples); sample < static_cast<int>(this->number_of_samples); ++sample)
+		{
+			const auto s = sample + this->number_of_tiny_samples;
+			this->member_block_list[block][s]->clear_members();
+		}
+	}
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>
 void ChunkManager<DataBlock, ScoreType>::clear_inverted_member_blocks()
 {
-	for (auto &x : this->inverted_member_block_list)
-		for (auto &y : x)
-			y->clear_inverted_members();
+	if (this->inverted_member_block_list.empty())
+		return;
+	for (auto block = 0u; block < this->number_of_blocks; ++block)
+	{
+		for (auto sample = -static_cast<int>(this->number_of_tiny_samples); sample < static_cast<int>(this->number_of_samples); ++sample)
+		{
+			const auto s = sample + this->number_of_tiny_samples;
+			this->inverted_member_block_list[block][s]->clear_inverted_members();
+		}
+	}
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>

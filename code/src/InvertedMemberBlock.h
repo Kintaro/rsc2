@@ -106,7 +106,11 @@ private:
 template<typename ScoreType>
 InvertedMemberBlock<ScoreType>::InvertedMemberBlock(const MemberBlock<ScoreType>& member_block)
 {
-	
+	this->is_finalized = false;
+	this->data_block = member_block.data_block;
+	this->global_offset = member_block.global_offset;
+	this->number_of_items = member_block.number_of_items;
+	this->sample_level = member_block.sample_level;
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
@@ -117,6 +121,7 @@ InvertedMemberBlock<ScoreType>::InvertedMemberBlock(const boost::shared_ptr<VecD
 	this->global_offset = data_block->get_offset();
 	this->number_of_items = data_block->get_number_of_items();
 	this->sample_level = sample_level;
+	this->is_finalized = false;
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
@@ -124,9 +129,10 @@ InvertedMemberBlock<ScoreType>::InvertedMemberBlock(const InvertedMemberBlock<Sc
 {
 	this->default_buffer_size = inverted_member_block.default_buffer_size;
 	this->data_block = inverted_member_block.data_block;
-	this->global_offset = inverted_member_block.global_offset;
-	this->sample_level = inverted_member_block.sample_level;
-	this->number_of_items = inverted_member_block.number_of_items;
+	this->global_offset = *inverted_member_block.global_offset;
+	this->sample_level = *inverted_member_block.sample_level;
+	this->number_of_items = *inverted_member_block.number_of_items;
+	this->is_finalized = inverted_member_block.is_finalized;
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
@@ -179,6 +185,7 @@ bool InvertedMemberBlock<ScoreType>::finalize_inverted_members()
 		if (this->inverted_member_size_list[i] == 0u)
 			continue;
 
+		// Daemon::error("Sorting [%i] of size %i with size %i", i, this->inverted_member_index_list.size(), this->inverted_member_size_list[i] - 1);
 		Sort::sort(this->inverted_member_index_list[i], this->inverted_member_rank_list[i], 0, this->inverted_member_size_list[i] - 1);
 	}
 
@@ -208,7 +215,7 @@ const std::vector<unsigned int> InvertedMemberBlock<ScoreType>::extract_inverted
 template<typename ScoreType>
 const std::vector<unsigned int> InvertedMemberBlock<ScoreType>::extract_inverted_member_indices(const unsigned int item_index)
 {
-	if (item_index - *this->global_offset >= this->number_of_items || this->inverted_member_size_list[item_index - *this->global_offset] == 0u)
+	if (item_index - *this->global_offset >= *this->number_of_items || this->inverted_member_size_list[item_index - *this->global_offset] == 0u)
 		return std::vector<unsigned int>();
 	std::vector<unsigned int> result = std::vector<unsigned int>(this->inverted_member_index_list[item_index - *this->global_offset]);
 	this->inverted_member_index_list[item_index - *this->global_offset] = std::vector<unsigned int>();
@@ -256,17 +263,8 @@ bool InvertedMemberBlock<ScoreType>::add_to_inverted_members(const unsigned int 
 	if (temp == this->default_buffer_size)
 	{
 		// The inverted list buffers are full, so we must resize.
-		auto temp_rank_list = std::vector<unsigned int>(2 * number_of_inverted_members, 0u);
-		auto temp_index_list = std::vector<unsigned int>(2 * number_of_inverted_members, 0u);
-
-		for (auto i = 0u; i < number_of_inverted_members; ++i)
-		{
-			temp_rank_list[i] = this->inverted_member_rank_list[index][i];
-			temp_index_list[i] = this->inverted_member_index_list[index][i];
-		}
-
-		this->inverted_member_rank_list[index] = temp_rank_list;
-		this->inverted_member_index_list[index] = temp_index_list;
+		this->inverted_member_rank_list[index].resize(2 * number_of_inverted_members);
+		this->inverted_member_index_list[index].resize(2 * number_of_inverted_members);
 	}
 
 	// The inverted member lists are now large enough to
@@ -282,7 +280,10 @@ template<typename ScoreType>
 unsigned int InvertedMemberBlock<ScoreType>::save_inverted_members(const boost::optional<unsigned int>& index)
 {
 	if (!this->is_finalized)
+	{
+		Daemon::error("Not finalized [%i]", *index);
 		return 0u;
+	}
 
 	std::ostringstream str;
 	

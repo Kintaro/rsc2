@@ -82,19 +82,27 @@ void parse_options_and_start_daemon(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
+	// Used as a performance boost for file I/O
+	std::ios_base::sync_with_stdio(false);
+
+	// Create the MPI environment and communicators
 	boost::mpi::environment env(argc, argv);
 	boost::mpi::communicator world;
 	boost::mpi::group world_group = world.group();
 
+	// Create separate communicators for only the processing nodes (comm) and
+	// the processing nodes + master node (world)
 	std::list<int> excluded_ranks;
 	excluded_ranks.push_back(0);
 
 	boost::mpi::group computing_group = world_group.exclude(excluded_ranks.begin(), excluded_ranks.end());
 	boost::mpi::communicator *computing_communicator = new boost::mpi::communicator(world, computing_group);
 
+	// Tell the daemon which communicators to use
 	Daemon::set_world(&world);
 	Daemon::set_communicator(computing_communicator);
 
+	// Load options and run master daemon
 	parse_options_and_start_daemon(argc, argv);
 
 	if (world.rank() != 0) {
@@ -113,15 +121,19 @@ int main(int argc, char** argv)
 			//chunk.build_approximate_neighborhoods(4, 1.0, false, true, TransmissionMode::TransmissionReceive, computing_communicator->rank());
 	}
 
+	// Wait for all nodes except master to finish work
 	if (world.rank() != 0)
 		computing_communicator->barrier();
 
+	// Node 1 tells the daemon to stop
 	if (world.rank() == 1)
 		Daemon::send_stop();
 
+	// Synchronize all nodes
 	if (world.rank() != 0)
 		computing_communicator->barrier();
 
+	// Clean up
 	MPI::Finalize();
 	delete computing_communicator;
 

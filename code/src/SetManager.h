@@ -50,6 +50,8 @@
 #include "AbstractSetManager.h"
 #include "ChunkManager.h"
 #include "ListStyle.h"
+#include "Timer.h"
+#include "Parallel.h"
 
 template<typename DataBlock, typename ScoreType>
 class SetManager : public AbstractSetManager
@@ -112,17 +114,20 @@ public:
 
 	virtual unsigned int extract_members_from_block(std::vector<std::vector<unsigned int>>& member_index_list, 
 											std::vector<unsigned int>& member_size_list,
+											const unsigned int number_of_items_local,
 											const unsigned int sample_id, 
 											const unsigned int block);
 	virtual unsigned int extract_members_from_block(std::vector<std::vector<unsigned int>>& member_index_list, 
 											std::vector<std::vector<ScoreType>>& member_score_list,
 											std::vector<unsigned int>& member_size_list,
+											const unsigned int number_of_items_local,
 											const unsigned int sample_id, 
 											const unsigned int block);
 
 	virtual void extract_inverted_members_from_block(std::vector<std::vector<unsigned int>>& inverted_member_index_list, 
 													 std::vector<std::vector<unsigned int>>& inverted_member_rank_list, 
 													 std::vector<unsigned int>& inverted_member_size_list, 
+													 const unsigned int number_of_items_local,
 													 const int sample_id, 
 													 const unsigned int chunk,
 													 const unsigned int block);
@@ -151,11 +156,13 @@ private:
 	virtual unsigned int internal_extract_members_from_block(std::vector<std::vector<unsigned int>>& member_index_list,
 			std::vector<std::vector<ScoreType>>& member_score_list,
 			std::vector<unsigned int>& member_size_list,
+			const unsigned int number_of_items_local,
 			const int sample_id,
 			const unsigned int block);
 	virtual unsigned int internal_extract_inverted_members_from_block(std::vector<std::vector<unsigned int>>& inverted_member_index_list,
 			std::vector<std::vector<unsigned int>>& inverted_member_score_list,
 			std::vector<unsigned int>& inverted_member_size_list,
+			const unsigned int number_of_items_local,
 			const int sample_id,
 			const unsigned int block);
 };
@@ -221,14 +228,17 @@ unsigned int SetManager<DataBlock, ScoreType>::setup_samples()
 template<typename DataBlock, typename ScoreType>
 boost::shared_ptr<AbstractSetManager> SetManager<DataBlock, ScoreType>::build_trim_set(const bool can_load_from_disk)
 {
+	auto timer = create_timer();
 	Daemon::info("building trim set manager...");
 	
 	auto trim_set_manager = boost::shared_ptr<SetManager<DataBlock, ScoreType>>(new SetManager<DataBlock, ScoreType>());
 	trim_set_manager->filename_prefix = this->filename_prefix + "_trim";
+	trim_set_manager->data_original = false;
 	trim_set_manager->list_style = this->list_style;
 	trim_set_manager->number_of_samples = this->number_of_samples;
 	trim_set_manager->number_of_tiny_samples = this->number_of_tiny_samples;
 	trim_set_manager->sample_limit = this->sample_limit;
+	trim_set_manager->sampling_flag = this->sampling_flag;
 	trim_set_manager->number_of_items = this->number_of_items;
 	trim_set_manager->maximum_number_of_members = this->maximum_number_of_members;
 	trim_set_manager->maximum_number_of_micro_members = this->maximum_number_of_micro_members;
@@ -300,8 +310,14 @@ bool SetManager<DataBlock, ScoreType>::build_members(const bool can_load_from_di
 		else
 		{
 			// Build exact member lists.
-			//outcome = this->chunk_ptr->build_exact_neighborhoods(true, true);
+			// outcome = this->chunk_ptr->build_exact_neighborhoods(true, true);
 		}
+	}
+	else
+	{
+		// No member lists are available, but since the data is not
+		// original, we can't build neighbourhoods.
+		outcome = false;
 	}
 	
 	// If we failed to find / build member lists for the current chunk,
@@ -384,13 +400,16 @@ unsigned int SetManager<DataBlock, ScoreType>::internal_extract_members(std::vec
 		auto start_index = block_ptr->get_offset();
 		auto stop_index = start_index + block_size;
 		
-		member_size_list.resize(stop_index);
-		member_index_list.resize(stop_index);
-		member_score_list.resize(stop_index);
+		if (stop_index >= member_size_list.size())
+		{
+			member_size_list.resize(stop_index);
+			member_index_list.resize(stop_index);
+			member_score_list.resize(stop_index);
+		}
 		
 		for (auto i = start_index; i < stop_index; ++i)
 		{
-			member_size_list[i] = block_ptr->get_number_of_items();
+			member_size_list[i] = block_ptr->get_number_of_members(i);
 			
 			if (member_size_list[i] == 0u)
 				continue;
@@ -410,27 +429,30 @@ unsigned int SetManager<DataBlock, ScoreType>::internal_extract_members(std::vec
 template<typename DataBlock, typename ScoreType>
 unsigned int SetManager<DataBlock, ScoreType>::extract_members_from_block(std::vector<std::vector<unsigned int>>& member_index_list, 
 											std::vector<unsigned int>& member_size_list,
+											const unsigned int number_of_items_local,
 											const unsigned int sample_id, 
 											const unsigned int block)
 {
 	std::vector<std::vector<ScoreType>> score;
-	return this->internal_extract_members_from_block(member_index_list, score, member_size_list, sample_id, block);
+	return this->internal_extract_members_from_block(member_index_list, score, member_size_list, number_of_items_local, sample_id, block);
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, typename ScoreType>
 unsigned int SetManager<DataBlock, ScoreType>::extract_members_from_block(std::vector<std::vector<unsigned int>>& member_index_list, 
 											std::vector<std::vector<ScoreType>>& member_score_list,
 											std::vector<unsigned int>& member_size_list,
+											const unsigned int number_of_items_local,
 											const unsigned int sample_id, 
 											const unsigned int block)
 {
-	return this->internal_extract_members_from_block(member_index_list, member_score_list, member_size_list, sample_id, block);
+	return this->internal_extract_members_from_block(member_index_list, member_score_list, member_size_list, number_of_items_local, sample_id, block);
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, typename ScoreType>
 unsigned int SetManager<DataBlock, ScoreType>::internal_extract_members_from_block(std::vector<std::vector<unsigned int>>& member_index_list, 
 								 std::vector<std::vector<ScoreType>>& member_score_list,
 								 std::vector<unsigned int>& member_size_list,
+								 const unsigned int number_of_items_local,
 								 const int sample_id,
 								 const unsigned int block)
 {
@@ -448,12 +470,11 @@ unsigned int SetManager<DataBlock, ScoreType>::internal_extract_members_from_blo
 	auto block_size = block_ptr->load_members();
 	auto start_index = block_ptr->get_offset();
 	auto stop_index = start_index + block_size;
-	Daemon::error("Extracted members %i", block_size);
 		
 	member_size_list.resize(stop_index);
 	member_index_list.resize(stop_index);
 	member_score_list.resize(stop_index);
-		
+	
 	for (auto i = start_index; i < stop_index; ++i)
 	{
 		member_size_list[i] = block_ptr->get_number_of_members(i);
@@ -462,6 +483,7 @@ unsigned int SetManager<DataBlock, ScoreType>::internal_extract_members_from_blo
 		{
 			member_index_list[i] = block_ptr->extract_member_indices(i);
 			member_score_list[i] = block_ptr->extract_member_scores(i);
+
 			++num_loaded;
 		}
 		else
@@ -470,7 +492,6 @@ unsigned int SetManager<DataBlock, ScoreType>::internal_extract_members_from_blo
 			member_score_list[i] = std::vector<ScoreType>();
 			member_size_list[i] = 0u;
 		}
-		Daemon::error(" [%i] %i / %i", i, member_index_list[i].size(), member_size_list[i]);
 	}
 		
 	block_ptr->clear_members();
@@ -482,17 +503,19 @@ template<typename DataBlock, typename ScoreType>
 void SetManager<DataBlock, ScoreType>::extract_inverted_members_from_block(std::vector<std::vector<unsigned int>>& inverted_member_index_list, 
 													 std::vector<std::vector<unsigned int>>& inverted_member_rank_list, 
 													 std::vector<unsigned int>& inverted_member_size_list, 
+													 const unsigned int number_of_items_local,
 													 const int sample_id, 
 													 const unsigned int chunk,
 													 const unsigned int block)
 {
-	internal_extract_inverted_members_from_block(inverted_member_index_list, inverted_member_rank_list, inverted_member_size_list, sample_id, block);
+	internal_extract_inverted_members_from_block(inverted_member_index_list, inverted_member_rank_list, inverted_member_size_list, number_of_items_local, sample_id, block);
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, typename ScoreType>
 unsigned int SetManager<DataBlock, ScoreType>::internal_extract_inverted_members_from_block(std::vector<std::vector<unsigned int>>& inverted_member_index_list,
 			std::vector<std::vector<unsigned int>>& inverted_member_rank_list,
 			std::vector<unsigned int>& inverted_member_size_list,
+			const unsigned int number_of_items_local,
 			const int sample_id,
 			const unsigned int block)
 {
