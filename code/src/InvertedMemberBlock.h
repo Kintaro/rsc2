@@ -41,6 +41,7 @@
 #ifndef __INVERTED_MEMBERBLOCK_H__
 #define __INVERTED_MEMBERBLOCK_H__
 
+#include "Daemon.h"
 #include "MemberBlock.h"
 #include "VecDataBlock.h"
 #include "Sort.h"
@@ -75,7 +76,7 @@ public:
 	void clear_inverted_members();
 	void merge_inverted_members(const boost::shared_ptr<InvertedMemberBlock<ScoreType>>& block);
 	void purge_inverted_members_from_disk(const boost::optional<unsigned int>& index);
-	unsigned int get_number_of_inverted_members(const unsigned int index) { return this->inverted_member_size_list[index]; }
+	unsigned int get_number_of_inverted_members(const unsigned int index) { return this->inverted_member_size_list[index - *this->global_offset]; }
 
 	bool verify_savefile(const boost::optional<unsigned int>& index = boost::none);
 

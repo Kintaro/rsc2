@@ -365,6 +365,7 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 
 				if (target_processor != chunk)
 					Daemon::comm().recv(target_processor, 0, member_index_list);
+
 				Daemon::comm().recv(target_processor, 0, inverted_member_index_list);
 				Daemon::comm().recv(target_processor, 0, inverted_member_rank_list);
 				Daemon::comm().recv(target_processor, 0, member_size_list);
@@ -372,12 +373,17 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 				Daemon::comm().recv(target_processor, 0, number_of_items);
 			}
 
+			// Scan through the block inverted lists.
+			// Whenever an item is found in the chunk range,
+			// use the corresponding block neighbourhood list to
+			// update the (all-to-one) neighbourhood intersection counts
+			// for the item.
 			for (auto alt_item = alt_start; alt_item <= alt_finish; ++alt_item)
 			{
 				Daemon::error("accessing [%i, %i] %i / %i", alt_start, alt_finish, alt_item, inverted_member_size_list[alt_item]);
 				auto list_size = inverted_member_size_list[alt_item];
-				const std::vector<unsigned int>& alt_inverted_member_index_list = inverted_member_index_list[alt_item];
-				const std::vector<unsigned int>& alt_inverted_member_rank_list = inverted_member_rank_list[alt_item];
+				const auto& alt_inverted_member_index_list = inverted_member_index_list[alt_item];
+				const auto& alt_inverted_member_rank_list = inverted_member_rank_list[alt_item];
 
 				for (auto i = 0u; i < list_size; ++i)
 				{
@@ -387,6 +393,8 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 					if (item < start || item > finish)
 						continue;
 
+					// If this the first entry for these particular
+					// accumulator lists, storage must be reserved.
 					if (intersection_accumulation_list[item - start].empty())
 					{
 						intersection_accumulation_list[item - start].resize(maximum_list_range_limit);
@@ -404,7 +412,29 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 																member_size_list[item], rank);
 				}
 			}
+
+			if (target_processor != chunk)
+			{
+				for (auto item = alt_start; item <= alt_finish; ++item)
+				{
+					member_index_list[item].clear();
+					member_size_list[item] = 0u;
+				}
+			}
+
+			for (auto item = alt_start; item <= alt_finish; ++item)
+			{
+				inverted_member_index_list[item].clear();
+				inverted_member_rank_list[item].clear();
+				inverted_member_size_list[item] = 0u;
+			}
 		}
+	}
+
+	for (auto item = start; item <= finish; ++item)
+	{
+		member_index_list[item].clear();
+		member_size_list[item] = 0u;
 	}
 
 	auto sample_size = this->trim_manager->get_sample_size(sample_id);
@@ -2014,7 +2044,15 @@ void RscClusterer::update_confidence_intersection_counts(std::vector<unsigned in
 	// in each list).
 	for (auto i = 0u; i < size; ++i)
 	{
-		// Daemon::error("updating index %i / %i [%i] %i for size %i", i, cluster_member_list.size(), cluster_member_list[i], count_list.size(), size);
+		if (i >= cluster_member_list.size() || i >= constituent_member_list.size())
+		{
+			Daemon::error("  [-] i = %i", i);
+			Daemon::error("  [-] cluster_member_list.size = %i", cluster_member_list.size());
+			Daemon::error("  [-] cluster_member_list[i] = %i", cluster_member_list[i]);
+			Daemon::error("  [-] constituent_member_list.size = %i", constituent_member_list.size());
+			Daemon::error("  [-] constituent_member_list[i] = %i", constituent_member_list[i]);
+			Daemon::error("  [-] count_list.size = %i", count_list.size());
+		}
 		count_list[cluster_member_list[i]]++;
 
 		if (count_list[cluster_member_list[i]] == 2)

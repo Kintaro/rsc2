@@ -57,7 +57,7 @@ bool FileUtil::open_read(const std::string& path, std::ifstream& file, const boo
 	}
 	else if (binary && *binary)
 		file.open(path, std::ios::in | std::ios::binary);
-	else
+	else if (binary && !*binary)
 		file.open(path, std::ios::in);
 	
 	return !file.fail();

@@ -87,10 +87,10 @@ void Daemon::process_message(const int command, const int from)
 	{
 		std::string message;
 		world.recv(from, boost::mpi::any_tag, message);		
-		std::cout << message << "\n";
+		std::cout << message << std::endl;
 
 		if (this->log_file.is_open())
-			this->log_file << message << "\n";
+			this->log_file << message << std::endl;
 	}
 	// temporary log
 	// else if (command == 1)
