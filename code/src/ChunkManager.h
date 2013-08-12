@@ -1143,7 +1143,7 @@ boost::shared_ptr<ChunkManager<DataBlock, ScoreType>> ChunkManager<DataBlock, Sc
 				member_block = boost::shared_ptr<MemberBlock<ScoreType>>(new MemberBlock<ScoreType>(this->member_block_list[block][s], this->maximum_number_of_mini_members));
 			else
 				member_block = boost::shared_ptr<MemberBlock<ScoreType>>(new MemberBlock<ScoreType>(this->member_block_list[block][s], this->maximum_number_of_members));
-
+			
 			this->member_block_list[block][s]->clear_members();
 
 			// Record the file name of the new member list block.

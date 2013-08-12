@@ -457,8 +457,6 @@ unsigned int SetManager<DataBlock, ScoreType>::internal_extract_members_from_blo
 								 const unsigned int block)
 {
 	auto num_loaded = 0u;
-	
-	member_size_list.clear();
 
 	boost::shared_ptr<MemberBlock<ScoreType>> block_ptr;
 	
@@ -470,10 +468,13 @@ unsigned int SetManager<DataBlock, ScoreType>::internal_extract_members_from_blo
 	auto block_size = block_ptr->load_members();
 	auto start_index = block_ptr->get_offset();
 	auto stop_index = start_index + block_size;
-		
-	member_size_list.resize(stop_index);
-	member_index_list.resize(stop_index);
-	member_score_list.resize(stop_index);
+
+	if (stop_index >= member_index_list.size())
+	{
+		member_index_list.resize(stop_index);
+		member_score_list.resize(stop_index);
+		member_size_list.resize(stop_index);
+	}
 	
 	for (auto i = start_index; i < stop_index; ++i)
 	{

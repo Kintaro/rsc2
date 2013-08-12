@@ -184,6 +184,9 @@ MemberBlock<ScoreType>::MemberBlock(boost::shared_ptr<MemberBlock<ScoreType>>& b
 		else
 			this->member_size_list[i] = block->member_size_list[i];
 
+		if (this->member_size_list[i] == 0)
+			Daemon::error("member_size_list[%i] == 0", i);
+
 		auto number_of_members = this->member_size_list[i];
 
 		auto mb_score_list = block->member_score_llist[i];
@@ -417,8 +420,10 @@ void MemberBlock<ScoreType>::clip_members(const size_t clip_size)
 template<typename ScoreType>
 const std::vector<ScoreType> MemberBlock<ScoreType>::extract_member_scores(const unsigned int item_index)
 {	
-	std::vector<ScoreType> result = this->member_score_llist[item_index - *this->global_offset];
-	this->member_score_llist[item_index - *this->global_offset].clear();
+	if (item_index - *this->global_offset >= *this->number_of_items || this->member_size_list[item_index - *this->global_offset] == 0u)
+		return std::vector<ScoreType>(0);
+	std::vector<ScoreType> result = std::vector<ScoreType>(this->member_score_llist[item_index - *this->global_offset]);
+	this->member_score_llist[item_index - *this->global_offset] = std::vector<ScoreType>();
 	return result;
 }
 /*-----------------------------------------------------------------------------------------------*/

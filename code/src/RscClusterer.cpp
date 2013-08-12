@@ -235,8 +235,11 @@ void RscClusterer::generate_patterns_for_sample(const int sample_id, const Trans
 
 	if (transmission_mode == TransmissionMode::TransmissionSend && sender)
 	{
-		for (auto chunk = 0u; chunk < static_cast<unsigned int>(Daemon::comm().size()); ++chunk)
-			this->generate_patterns_for_sample_send(chunk, sample_id, sender);
+		// for (auto chunk = 0u; chunk < static_cast<unsigned int>(Daemon::comm().size()); ++chunk)
+		{
+			this->generate_patterns_for_sample_send(0, sample_id, sender);
+			Daemon::error("Chunk %i done");
+		}
 	}
 	else if (transmission_mode == TransmissionMode::TransmissionReceive && sender)
 		this->generate_patterns_for_sample_receive(sample_id, sender);
@@ -257,6 +260,7 @@ void RscClusterer::generate_patterns_for_sample(const int sample_id, const Trans
 			pattern_rank_to_index_list[item] = item;
 		}
 
+		Daemon::error("%i %i %i", squared_significance_list.size(), pattern_rank_to_index_list.size(), number_of_items - 1);
 		Sort::sort(squared_significance_list, pattern_rank_to_index_list, 0, number_of_items - 1);
 
 		for (auto item = 0u; item < number_of_items; ++item)
@@ -299,18 +303,18 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 	for (auto &x : this->count_list)
 		x = 0u;
 
-	if (chunk > 0u)
-	{
-		Daemon::comm().send(chunk, 0, member_index_list);
-		Daemon::comm().send(chunk, 0, member_size_list);
-		Daemon::comm().send(chunk, 0, number_of_items);
-		Daemon::comm().recv(chunk, 0, member_index_list);
-		Daemon::comm().recv(chunk, 0, member_size_list);
-		Daemon::comm().recv(chunk, 0, number_of_items);
-		Daemon::comm().recv(chunk, 0, start);
-		Daemon::comm().recv(chunk, 0, finish);
-	}
-	else
+	// if (chunk > 0u)
+	// {
+	// 	Daemon::comm().send(chunk, 0, member_index_list);
+	// 	Daemon::comm().send(chunk, 0, member_size_list);
+	// 	Daemon::comm().send(chunk, 0, number_of_items);
+	// 	Daemon::comm().recv(chunk, 0, member_index_list);
+	// 	Daemon::comm().recv(chunk, 0, member_size_list);
+	// 	Daemon::comm().recv(chunk, 0, number_of_items);
+	// 	Daemon::comm().recv(chunk, 0, start);
+	// 	Daemon::comm().recv(chunk, 0, finish);
+	// }
+	// else
 	{
 		this->trim_manager->extract_members(this->member_index_list, this->member_size_list, sample_id);
 		start = this->trim_manager->get_offset();
@@ -339,6 +343,7 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 			// the inverted neighbourhood lists.
 			if (target_processor == 0u)
 			{
+				Daemon::error("Loading locally [chunk = %i]", chunk);
 				alt_start = this->trim_manager->get_block_offset(block);
 				alt_finish = alt_start - 1u + this->trim_manager->get_number_of_items_in_block(block);
 
@@ -352,6 +357,7 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 			}
 			else
 			{
+				Daemon::error("Loading remotely");
 				Daemon::comm().recv(target_processor, 0, &alt_start, 1);
 				Daemon::comm().recv(target_processor, 0, &alt_finish, 1);
 
@@ -361,9 +367,9 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 				Daemon::comm().send(target_processor, 0, member_size_list);
 				Daemon::comm().send(target_processor, 0, inverted_member_size_list);
 				Daemon::comm().send(target_processor, 0, number_of_items);
-				Daemon::comm().send(target_processor, 0, chunk);
+				// Daemon::comm().send(target_processor, 0, chunk);
 
-				if (target_processor != chunk)
+				// if (target_processor != chunk)
 					Daemon::comm().recv(target_processor, 0, member_index_list);
 
 				Daemon::comm().recv(target_processor, 0, inverted_member_index_list);
@@ -380,7 +386,6 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 			// for the item.
 			for (auto alt_item = alt_start; alt_item <= alt_finish; ++alt_item)
 			{
-				Daemon::error("accessing [%i, %i] %i / %i", alt_start, alt_finish, alt_item, inverted_member_size_list[alt_item]);
 				auto list_size = inverted_member_size_list[alt_item];
 				const auto& alt_inverted_member_index_list = inverted_member_index_list[alt_item];
 				const auto& alt_inverted_member_rank_list = inverted_member_rank_list[alt_item];
@@ -440,11 +445,32 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 	auto sample_size = this->trim_manager->get_sample_size(sample_id);
 	boost::mpi::all_reduce(Daemon::comm(), sample_size, sample_size, std::plus<unsigned int>());
 
+	// At this point, we have accumulated all the intersection information
+	// for the neighbourhoods of this chunk's items.
+
+	// Convert intersection frequency scores into Z-scores (all-to-one).
+	// Adjust cluster candidate sizes via Z-score maximization.
 	for (auto item = start; item <= finish; ++item)
 	{
-		std::vector<RscAccuracyType>& local_squared_significance_accumulation_list = squared_significance_accumulation_list[item - start];
-		std::vector<unsigned int>& local_intersection_accumulation_list = intersection_accumulation_list[item - start];
+		auto& local_squared_significance_accumulation_list = squared_significance_accumulation_list[item - start];
+		auto& local_intersection_accumulation_list = intersection_accumulation_list[item - start];
 
+		// If no accumulator lists are present for this item, then
+		// there is no pattern for this item.
+		if (local_squared_significance_accumulation_list.empty() || local_intersection_accumulation_list.empty())
+		{
+			this->pattern_size_list[item] = 0u;
+			this->pattern_squared_significance_list[item] = -1.0;
+			this->pattern_sconfidence_list[item] = -1.0;
+			continue;
+		}
+
+		// There is a pattern for this item.
+		// How long the member lists are depends on the sample.
+		// The two special mini-cluster and micro-cluster levels
+		// have shorter lists than the others.
+		// The start point for the best candidate search is also different
+		// for the two special mini-cluster and micro-cluster levels.
 		auto list_size = sample_id == -1 ? maximum_minilist_range_limit : (sample_id == -2 ? maximum_microlist_range_limit : maximum_list_range_limit);
 		auto scan_start = sample_id == -1 ? minimum_minilist_range_limit : (sample_id == -2 ? minimum_microlist_range_limit : minimum_list_range_limit);
 		auto scan_finish = 0u;
@@ -456,6 +482,9 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 			local_squared_significance_accumulation_list[i] = squared_significance * squared_significance * k;
 		}
 
+		maximum_squared_significance = local_squared_significance_accumulation_list[scan_start - 1];
+		maximum_squared_significance_location = scan_start - 1;
+
 		for (auto i = scan_start; i < list_size; ++i)
 		{
 			const RscAccuracyType squared_significance = local_squared_significance_accumulation_list[i];
@@ -466,6 +495,11 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 				maximum_squared_significance_location = i;
 			}
 		}
+
+		// If the candidate pattern for this base item has size outside
+		// the acceptance range, then cause it to be rejected
+		// (by setting its Z-score and self-confidence values).
+		this->pattern_size_list[item] = maximum_squared_significance_location + 1;
 
 		if (sample_id == -1)
 		{
@@ -495,29 +529,32 @@ void RscClusterer::generate_patterns_for_sample_send(const unsigned int chunk, c
 			pattern_squared_significance_list[item] = -1.0;
 			pattern_sconfidence_list[item] = -1.0;
 		}
+
+		this->intersection_accumulation_list[item - start].clear();
+		this->squared_significance_accumulation_list[item - start].clear();
 	}
 }
 /*-----------------------------------------------------------------------------------------------*/
 void RscClusterer::generate_patterns_for_sample_receive(const int sample_id, const boost::optional<unsigned int>& sender)
 {
 	auto timer = create_timer();
-	for (auto target_processor = 0u; target_processor < static_cast<unsigned int>(Daemon::comm().size()); ++target_processor)
+	// for (auto target_processor = 0u; target_processor < static_cast<unsigned int>(Daemon::comm().size()); ++target_processor)
 	{
-		auto start = this->trim_manager->get_offset();
-		auto finish = start - 1 + this->trim_manager->get_number_of_items();
+		// auto start = this->trim_manager->get_offset();
+		// auto finish = start - 1 + this->trim_manager->get_number_of_items();
 
-		if (target_processor == static_cast<unsigned int>(Daemon::comm().rank()))
-		{
-			Daemon::comm().recv(0, 0, member_index_list);
-			Daemon::comm().recv(0, 0, member_size_list);
-			Daemon::comm().recv(0, 0, number_of_items);
-			this->trim_manager->extract_members(member_index_list, member_size_list, sample_id);
-			Daemon::comm().send(0, 0, member_index_list);
-			Daemon::comm().send(0, 0, member_size_list);
-			Daemon::comm().send(0, 0, number_of_items);
-			Daemon::comm().send(0, 0, start);
-			Daemon::comm().send(0, 0, finish);
-		}
+		// if (target_processor == static_cast<unsigned int>(Daemon::comm().rank()))
+		// {
+		// 	Daemon::comm().recv(0, 0, member_index_list);
+		// 	Daemon::comm().recv(0, 0, member_size_list);
+		// 	Daemon::comm().recv(0, 0, number_of_items);
+		// 	this->trim_manager->extract_members(member_index_list, member_size_list, sample_id);
+		// 	Daemon::comm().send(0, 0, member_index_list);
+		// 	Daemon::comm().send(0, 0, member_size_list);
+		// 	Daemon::comm().send(0, 0, number_of_items);
+		// 	Daemon::comm().send(0, 0, start);
+		// 	Daemon::comm().send(0, 0, finish);
+		// }
 
 		auto number_of_blocks_in_chunk = this->trim_manager->get_number_of_blocks();
 		Daemon::comm().send(0, 0, number_of_blocks_in_chunk);
@@ -528,7 +565,7 @@ void RscClusterer::generate_patterns_for_sample_receive(const int sample_id, con
 			const auto alt_finish = alt_start - 1 + this->trim_manager->get_number_of_items_in_block(alt_block);
 
 			// Identify the block items for which adjacent neighborhood
-			//  lists and inverted neighborhood lists will be loaded.
+			// lists and inverted neighborhood lists will be loaded.
 			Daemon::comm().send(*sender, 0, &alt_start, 1);
 			Daemon::comm().send(*sender, 0, &alt_finish, 1);
 
@@ -541,10 +578,10 @@ void RscClusterer::generate_patterns_for_sample_receive(const int sample_id, con
 
 			// Fetch (where necessary) the block neighborhood lists and
 			// the inverted neighborhood lists.
-			unsigned int chunk_id;
-			Daemon::comm().recv(*sender, 0, chunk_id);
+			// unsigned int chunk_id;
+			// Daemon::comm().recv(*sender, 0, chunk_id);
 
-			if (chunk_id != static_cast<unsigned int>(Daemon::comm().rank()))
+			// if (chunk_id != static_cast<unsigned int>(Daemon::comm().rank()))
 			{
 				this->trim_manager->extract_members_from_block(member_index_list, member_size_list, number_of_items, sample_id, alt_block);
 
@@ -556,7 +593,8 @@ void RscClusterer::generate_patterns_for_sample_receive(const int sample_id, con
 																	this->inverted_member_size_list,
 																	this->number_of_items,
 																	sample_id,
-																	target_processor,
+																	Daemon::comm().rank(),
+																	// target_processor,
 																	alt_block);
 
 			Daemon::comm().send(*sender, 0, inverted_member_index_list);

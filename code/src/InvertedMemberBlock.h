@@ -207,9 +207,13 @@ void InvertedMemberBlock<ScoreType>::clear_inverted_members()
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
 const std::vector<unsigned int> InvertedMemberBlock<ScoreType>::extract_inverted_member_ranks(const unsigned int item_index)
-{	
-	std::vector<unsigned int> result = this->inverted_member_rank_list[item_index - *this->global_offset];
-	this->inverted_member_rank_list[item_index - *this->global_offset].clear();
+{
+if (item_index - *this->global_offset >= *this->number_of_items || this->inverted_member_size_list[item_index - *this->global_offset] == 0u)
+		return std::vector<unsigned int>();	
+	std::vector<unsigned int> result = std::vector<unsigned int>(this->inverted_member_rank_list[item_index - *this->global_offset]);
+	this->inverted_member_rank_list[item_index - *this->global_offset] = std::vector<unsigned int>();
+
+	this->is_finalized = false;
 	return result;
 }
 /*-----------------------------------------------------------------------------------------------*/
@@ -220,6 +224,8 @@ const std::vector<unsigned int> InvertedMemberBlock<ScoreType>::extract_inverted
 		return std::vector<unsigned int>();
 	std::vector<unsigned int> result = std::vector<unsigned int>(this->inverted_member_index_list[item_index - *this->global_offset]);
 	this->inverted_member_index_list[item_index - *this->global_offset] = std::vector<unsigned int>();
+
+	this->is_finalized = false;
 	return result;
 }
 /*-----------------------------------------------------------------------------------------------*/
