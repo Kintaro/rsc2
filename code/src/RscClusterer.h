@@ -162,7 +162,7 @@ public:
      * @param sample_id The indicated sample level
      * @param transmission_mode 
      */
-	void generate_patterns_for_sample(const int sample_id, const TransmissionMode& transmission_mode, const boost::optional<unsigned int>& sender);
+	void generate_patterns_for_sample(const int sample_id, const TransmissionMode& transmission_mode);
 
 	void setup_cluster_storage();
 	void clear_cluster_storage();
@@ -176,8 +176,8 @@ public:
 	void finalize_clusters_for_sample(const int sample_id);
 	void finalize_clusters_and_build_graph();
 private:
-	void generate_patterns_for_sample_send(const unsigned int chunk, const int sample_id, const boost::optional<unsigned int>& sender);
-	void generate_patterns_for_sample_receive(const int sample_id, const boost::optional<unsigned int>& sender);
+	void generate_patterns_for_sample_send(const unsigned int chunk, const int sample_id);
+	void generate_patterns_for_sample_receive(const unsigned int chunk, const int sample_id);
 
 	void select_trim_patterns_for_sample_send(const int sample_id, const unsigned int sample_size);
 	void select_trim_patterns_for_sample_receive(const int sample_id, const unsigned int sample_size);

@@ -470,11 +470,11 @@ unsigned int SetManager<DataBlock, ScoreType>::internal_extract_members_from_blo
 	auto stop_index = start_index + block_size;
 
 	if (stop_index >= member_index_list.size())
-	{
 		member_index_list.resize(stop_index);
+	if (stop_index >= member_score_list.size())
 		member_score_list.resize(stop_index);
+	if (stop_index >= member_size_list.size())
 		member_size_list.resize(stop_index);
-	}
 	
 	for (auto i = start_index; i < stop_index; ++i)
 	{
