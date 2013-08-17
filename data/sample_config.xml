@@ -7,6 +7,7 @@
 
 	<!-- Use binary format for file handling (to save disk space) -->
 	<use-binary-files>false</use-binary-files>
+	<use-binary-data-files>false</use-binary-data-files>
 
 	<!-- Use a fixed random seed -->
 	<random-seed>421337</random-seed>
