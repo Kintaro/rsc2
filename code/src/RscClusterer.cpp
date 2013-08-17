@@ -1503,7 +1503,7 @@ void RscClusterer::setup_adjacency_lists(const MethodFlag method_flag, const int
 
 		// Determine the number of disk read/write phases within which
 		// neighborhood pairs are to be gathered.
-		auto number_of_phases = method_flag == MethodFlag::SelectFinalPatternsForSampleA ? sample_id == 0 ? 4u : sample_id == 1 ? 2u : 1u : 1u;
+		auto number_of_phases = method_flag == MethodFlag::SelectFinalPatternsForSampleA ? (sample_id == 0 ? 4u : (sample_id == 1 ? 2u : 1u) : 1u);
 
 		// Search for adjacencies in phases.
 		// In each phase, only index within a valid range for the phase
@@ -1793,8 +1793,8 @@ void RscClusterer::purge_adjacency_lists(const unsigned int chunk, const unsigne
 
 	// Delete scratch file from disk if it exists
 	auto filename = Options::get_option("temporary_directory_path") + Options::get_option("cluster_prefix") + "_scratch.txt";
-	if (remove(filename.c_str()))
-		throw new std::exception();
+	remove(filename.c_str());
+		;//throw new std::exception();
 
 	// Iterate through the specified lists, deleting them from
 	//   main memory as we go.

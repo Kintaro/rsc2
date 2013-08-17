@@ -54,7 +54,7 @@ private:
 	{
 		static bool sort(const std::pair<K, V>& a, const std::pair<K, V>& b)  
 		{
-			return a.first <= b.first;
+			return a.first < b.first;
 		}
 	};
 public:
