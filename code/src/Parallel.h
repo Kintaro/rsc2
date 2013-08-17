@@ -38,55 +38,34 @@
 // Contact e-mail address: meh@nii.ac.jp, meh@acm.org
 //                         mail.wollwage@gmail.com
 
-#ifndef __VEC_DATABLOCK_H__
-#define __VEC_DATABLOCK_H__
+#ifndef __PARALLEL_H__
+#define __PARALLEL_H__
 
-#include <stdlib.h>
-#include <boost/serialization/utility.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/optional.hpp>
-#include <boost/serialization/shared_ptr.hpp>
-#include <boost/serialization/export.hpp>
-#include <memory>
-#include "DistanceData.h"
+#include <vector>
+#include <thread>
 
-class VecDataBlock
+class Parallel 
 {
-protected:
-	std::vector<boost::shared_ptr<DistanceData>> data;
-	unsigned int number_of_items;
-	unsigned int global_offset;
-	boost::optional<unsigned int> block_id;
 public:
-	VecDataBlock() {}
-	VecDataBlock(const unsigned int block_id);
-	VecDataBlock(const boost::shared_ptr<VecDataBlock>& data_block) {};
-	VecDataBlock(VecDataBlock& data_block) {}
-	const boost::shared_ptr<DistanceData> access_item_by_block_offset(const unsigned int index) const;
-	unsigned int get_offset() const;
-	void set_offset(const size_t offset);
-	size_t get_number_of_items() const;
-	const std::string get_filename_prefix() const;
-	size_t load_data();
-	bool is_valid();
-	bool verify_savefile();
-
-	void clear_data();
-	
-	void extract_all_items(std::vector<boost::shared_ptr<DistanceData>>& item_list, const unsigned int start_index);
-private:
-	friend class boost::serialization::access;
-
-	template<class Archive>
-	void serialize(Archive &ar, const unsigned int version)
+	/*-----------------------------------------------------------------------------------------------*/
+	static void parallel_for(const unsigned int start, const unsigned int stop, std::function<void(const unsigned int)> func) 
 	{
-		ar &number_of_items;
-		ar &global_offset;
-		ar &data;
-		ar &block_id;
+		const auto number_of_threads = std::thread::hardware_concurrency();
+		std::vector <std::thread> threads;
+
+		for (auto thread_id = start; thread_id < number_of_threads; ++thread_id) 
+		{
+			auto threadFunc = [=, &threads]() 
+			{
+				for (auto i = thread_id; i < stop; i += number_of_threads) 
+					func(i);
+			};
+			threads.push_back(std::thread(threadFunc));
+		}
+		for (auto & t : threads) 
+			t.join();
 	}
-	size_t internal_load_block(std::ifstream& file);
-	DistanceData internal_load_item(std::ifstream& file);
+	/*-----------------------------------------------------------------------------------------------*/
 };
 
 #endif

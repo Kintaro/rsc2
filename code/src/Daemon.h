@@ -42,7 +42,10 @@
 #define __LOGGER_H__
 
 #include <string>
+#include <fstream>
 #include <boost/mpi/communicator.hpp>
+
+typedef float RscAccuracyType;
 
 class Daemon
 {
@@ -58,14 +61,16 @@ public:
 	static void log(const char* s, ...);
 	static void info(const char* s, ...);
 	static void debug(const char* s, ...);
+	static void time(const char* s, ...);
 	static void send_stop();
 
 	static const boost::mpi::communicator& world() { return *world_communicator; }
 	static const boost::mpi::communicator& comm() { return *communicator; }
 
-	static const void set_world(boost::mpi::communicator* w) { world_communicator = w; }
-	static const void set_communicator(boost::mpi::communicator* c) { communicator = c; }
+	static void set_world(boost::mpi::communicator* w) { world_communicator = w; }
+	static void set_communicator(boost::mpi::communicator* c) { communicator = c; }
 private:
+	std::ofstream log_file;
 	bool running;
 	static boost::mpi::communicator* world_communicator;
 	static boost::mpi::communicator* communicator;

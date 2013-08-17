@@ -94,9 +94,9 @@ std::string Options::get_option(const std::string& name)
 	return value;
 }
 /*-----------------------------------------------------------------------------------------------*/
-const bool Options::is_option_set(const std::string& name)
+bool Options::is_option_set(const std::string& name)
 {
-	return values.find(name) != values.end();
+	return static_cast<const bool>(values.find(name) != values.end());
 }
 /*-----------------------------------------------------------------------------------------------*/
 bool Options::internal_parse_option(const std::string& option)
@@ -154,6 +154,7 @@ bool Options::internal_parse_options_from_xml(const std::string& filename)
 	for (auto &v : pt.get_child("options") ) {
 		internal_set_option(v.first, v.second.get_value<std::string>());
 	}
+	stream.close();
 
 	return true;
 }

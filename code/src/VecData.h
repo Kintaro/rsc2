@@ -38,55 +38,59 @@
 // Contact e-mail address: meh@nii.ac.jp, meh@acm.org
 //                         mail.wollwage@gmail.com
 
-#ifndef __VEC_DATABLOCK_H__
-#define __VEC_DATABLOCK_H__
+#ifndef __VEC_DATA_H__
+#define __VEC_DATA_H__
 
-#include <stdlib.h>
-#include <boost/serialization/utility.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/optional.hpp>
-#include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/export.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 #include <memory>
 #include "DistanceData.h"
+#include "Daemon.h"
 
-class VecDataBlock
+class VecData : public DistanceData
 {
-protected:
-	std::vector<boost::shared_ptr<DistanceData>> data;
-	unsigned int number_of_items;
-	unsigned int global_offset;
-	boost::optional<unsigned int> block_id;
+private:
+	std::vector<RscAccuracyType> data;
 public:
-	VecDataBlock() {}
-	VecDataBlock(const unsigned int block_id);
-	VecDataBlock(const boost::shared_ptr<VecDataBlock>& data_block) {};
-	VecDataBlock(VecDataBlock& data_block) {}
-	const boost::shared_ptr<DistanceData> access_item_by_block_offset(const unsigned int index) const;
-	unsigned int get_offset() const;
-	void set_offset(const size_t offset);
-	size_t get_number_of_items() const;
-	const std::string get_filename_prefix() const;
-	size_t load_data();
-	bool is_valid();
-	bool verify_savefile();
+	VecData() {}
+	VecData(const VecData& vec) : DistanceData(vec)
+	{
+		this->data = vec.data;
+	}
 
-	void clear_data();
+	VecData(VecData& vec) : DistanceData(vec)
+	{
+		this->data = vec.data;
+	}
+
+	VecData(const std::vector<RscAccuracyType>& data)
+	{
+		this->data = data;
+	}
 	
-	void extract_all_items(std::vector<boost::shared_ptr<DistanceData>>& item_list, const unsigned int start_index);
+	virtual RscAccuracyType distance_to(const boost::shared_ptr<DistanceData>& to) 
+	{
+		auto other = boost::static_pointer_cast<VecData>(to);
+		auto sum = 0.0;
+
+		for (auto i = 0u; i < this->data.size(); ++i)
+			sum += (this->data[i] - other->data[i]) * (this->data[i] - other->data[i]);
+
+		return sqrt(sum);
+	};
+	
 private:
 	friend class boost::serialization::access;
 
 	template<class Archive>
 	void serialize(Archive &ar, const unsigned int version)
 	{
-		ar &number_of_items;
-		ar &global_offset;
+		ar.template register_type<DistanceData>();
+		//ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(DistanceData);
+		ar & boost::serialization::base_object<DistanceData>(*this);
 		ar &data;
-		ar &block_id;
 	}
-	size_t internal_load_block(std::ifstream& file);
-	DistanceData internal_load_item(std::ifstream& file);
 };
 
 #endif

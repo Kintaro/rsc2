@@ -38,55 +38,35 @@
 // Contact e-mail address: meh@nii.ac.jp, meh@acm.org
 //                         mail.wollwage@gmail.com
 
-#ifndef __VEC_DATABLOCK_H__
-#define __VEC_DATABLOCK_H__
+#ifndef __ENUM_PARSER_H__
+#define __ENUM_PARSER_H__
 
-#include <stdlib.h>
-#include <boost/serialization/utility.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/optional.hpp>
-#include <boost/serialization/shared_ptr.hpp>
-#include <boost/serialization/export.hpp>
-#include <memory>
-#include "DistanceData.h"
+#include <string>
+#include <map>
 
-class VecDataBlock
-{
-protected:
-	std::vector<boost::shared_ptr<DistanceData>> data;
-	unsigned int number_of_items;
-	unsigned int global_offset;
-	boost::optional<unsigned int> block_id;
+template<typename T>
+class EnumParser {
 public:
-	VecDataBlock() {}
-	VecDataBlock(const unsigned int block_id);
-	VecDataBlock(const boost::shared_ptr<VecDataBlock>& data_block) {};
-	VecDataBlock(VecDataBlock& data_block) {}
-	const boost::shared_ptr<DistanceData> access_item_by_block_offset(const unsigned int index) const;
-	unsigned int get_offset() const;
-	void set_offset(const size_t offset);
-	size_t get_number_of_items() const;
-	const std::string get_filename_prefix() const;
-	size_t load_data();
-	bool is_valid();
-	bool verify_savefile();
-
-	void clear_data();
-	
-	void extract_all_items(std::vector<boost::shared_ptr<DistanceData>>& item_list, const unsigned int start_index);
+	static void add_value(const std::string& name, const T& value);
+	static const T get_value(const std::string& name);
+	//static const T get_name(const T& value);
 private:
-	friend class boost::serialization::access;
-
-	template<class Archive>
-	void serialize(Archive &ar, const unsigned int version)
-	{
-		ar &number_of_items;
-		ar &global_offset;
-		ar &data;
-		ar &block_id;
-	}
-	size_t internal_load_block(std::ifstream& file);
-	DistanceData internal_load_item(std::ifstream& file);
+	static std::map<std::string, T> mapping;
 };
+/*-----------------------------------------------------------------------------------------------*/
+template<typename T>
+void EnumParser<T>::add_value(const std::string& name, const T& value)
+{
+	mapping[name] = value;
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename T>
+const T EnumParser<T>::get_value(const std::string& name) 
+{
+	return mapping[name];
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename T> std::map<std::string, T> EnumParser<T>::mapping;
+/*-----------------------------------------------------------------------------------------------*/
 
 #endif

@@ -8,7 +8,7 @@ include_directories(../../)
 set(CMAKE_CXX_COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_COMPILE_FLAGS})
 set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${CMAKE_CXX_LINK_FLAGS})
 
-add_definitions(-std=c++0x -g -Wall -rdynamic -fPIC -Wno-attributes)
+add_definitions(-std=c++0x -g -Wall -fPIC -Wno-attributes)
 add_library(sash SHARED Sash.cpp)
 
 # link with mpi

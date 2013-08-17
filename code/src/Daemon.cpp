@@ -63,6 +63,10 @@ void Daemon::run()
 	boost::mpi::communicator world;
 	this->running = true;
 	info("daemon started and running on node %i", world.rank());
+
+	if (Options::get_option_as<bool>("log"))
+		this->log_file.open(Options::get_option_as<std::string>("logfile"), std::ios::out);
+
 	while (running)
 		this->listen_for_next_message();
 }
@@ -84,19 +88,25 @@ void Daemon::process_message(const int command, const int from)
 		std::string message;
 		world.recv(from, boost::mpi::any_tag, message);		
 		std::cout << message << std::endl;
+
+		if (this->log_file.is_open())
+			this->log_file << message << std::endl;
 	}
 	// temporary log
-	else if (command == 1)
-	{
-		std::string message;
-		world.recv(from, boost::mpi::any_tag, message);		
-		std::cout << message;
+	// else if (command == 1)
+	// {
+	// 	std::string message;
+	// 	world.recv(from, boost::mpi::any_tag, message);		
+	// 	std::cout << message;
 
-		// wait for further messages
-		int next_command;
-		world.recv(from, boost::mpi::any_tag, &next_command, 1);
-		this->process_message(next_command, from);
-	}
+	// 	if (this->log_file.is_open())
+	// 		this->log_file << message << std::endl;
+
+	// 	// wait for further messages
+	// 	int next_command;
+	// 	world.recv(from, boost::mpi::any_tag, &next_command, 1);
+	// 	this->process_message(next_command, from);
+	// }
 	// get option
 	else if (command == 2)
 	{
@@ -125,6 +135,8 @@ void Daemon::process_message(const int command, const int from)
 /*-----------------------------------------------------------------------------------------------*/
 void Daemon::stop()
 {
+	if (this->log_file.is_open())
+		this->log_file.close();
 	this->running = false;
 }
 /*-----------------------------------------------------------------------------------------------*/
@@ -133,7 +145,7 @@ void Daemon::internal_log(const std::string& level, const int rank, const std::s
 	boost::mpi::communicator world;
 
 	std::ostringstream buffer;
-	buffer << "[" << rank << " :: " << level << "] " << message;
+	buffer << "\33[0;3" << std::to_string(rank + 1) << "m" << rank << " :: " << level << "] " << message << "\33[0m";
 	std::string formatted_string = buffer.str();
 
 	world.send(0, 0, 0);
@@ -196,6 +208,22 @@ void Daemon::debug(const char* s, ...)
 
 	boost::mpi::communicator world;
 	internal_log("debug", world.rank(), buffer);
+}
+/*-----------------------------------------------------------------------------------------------*/
+void Daemon::time(const char* s, ...)
+{
+	if (!Options::get_option_as<bool>("time-output"))
+		return;
+
+	va_list va; 
+	va_start(va,s);
+	char buffer[1024];
+	vsprintf(buffer,s,va);
+	va_end(va);
+	std::string result(buffer);
+
+	boost::mpi::communicator world;
+	internal_log(" time", world.rank(), buffer);
 }
 /*-----------------------------------------------------------------------------------------------*/
 void Daemon::send_stop()

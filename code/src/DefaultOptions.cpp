@@ -38,65 +38,51 @@
 // Contact e-mail address: meh@nii.ac.jp, meh@acm.org
 //                         mail.wollwage@gmail.com
 
-#ifndef __FILE_UTIL_H__
-#define __FILE_UTIL_H__
-
-#include <boost/serialization/optional.hpp>
-#include <fstream>
-#include <vector>
+#include "DefaultOptions.h"
 #include "Options.h"
-#include "Daemon.h"
+#include "EnumParser.h"
 
-class FileUtil
-{
-private:
-	static boost::optional<bool> is_binary;
-public:
-	static bool open_read(const std::string& path, std::ifstream& file, const boost::optional<bool>& binary = boost::none);
-	static bool open_write(const std::string& path, std::ofstream& file, const boost::optional<bool>& binary = boost::none);
-	template<typename T> static const T read_from_file(std::ifstream& file);
-	template<typename T> static const std::vector<T> read_vector_from_file(const unsigned int length, std::ifstream& file);
-	template<typename T> static void write_to_file(std::ofstream& file, const T& value, bool text_only = false);
-	static void space(std::ofstream& file);
-	static void newline(std::ofstream& file);
-};
+#include "ListStyle.h"
+
 /*-----------------------------------------------------------------------------------------------*/
-template<typename T>
-inline const T FileUtil::read_from_file(std::ifstream& file)
+void DefaultOptions::set_default_options()
 {
-	T result;
+	Options::set_option("use-binary-files", "false");
+	Options::set_option("use-binary-data-files", "false");
+	Options::set_option("info-output", "true");
+	Options::set_option("debug-output", "false");
+	Options::set_option("time-output", "true");
+	Options::set_option("log", "false");
+	Options::set_option("logfile", "");
 	
-	if (!is_binary)
-		is_binary = Options::get_option_as<bool>("use-binary-files");
+	Options::set_option("vecdata-filename-extension", "dvf");
 
-	if (*is_binary)
-		file.read((char*)&result, sizeof(T));
-	else
-		file >> result;
+	// RscClusterer defaults
+	Options::set_option("number-of-tiny-samples", "2");
+	Options::set_option("rsc-list-style", "1");
+	Options::set_option("maximum-list-range-limit", "60");
+	Options::set_option("minimum-list-range-limit", "7");
+	Options::set_option("maximum-mini-list-range-limit", "20");
+	Options::set_option("minimum-mini-list-range-limit", "2");
+	Options::set_option("maximum-micro-list-range-limit", "20");
+	Options::set_option("minimum-micro-list-range-limit", "2");
 
-	return result;
+	Options::set_option("maximum-list-accept-limit", "50");
+	Options::set_option("minimum-list-accept-limit", "13");
+	Options::set_option("maximum-mini-list-accept-limit", "13");
+	Options::set_option("minimum-mini-list-accept-limit", "3");
+	Options::set_option("maximum-micro-list-accept-limit", "13");
+	Options::set_option("minimum-micro-list-accept-limit", "3");
+
+	Options::set_option("list-style", "medium");
+
+	Options::set_option("rsc-small-buffsize", "4");
 }
 /*-----------------------------------------------------------------------------------------------*/
-template<typename T>
-inline void FileUtil::write_to_file(std::ofstream& file, const T& value, bool text_only)
+void DefaultOptions::initialize_enums()
 {
-	if (!is_binary)
-		is_binary = Options::get_option_as<bool>("use-binary-files");
-	
-	if (*is_binary && !text_only)
-		file.write((const char*)&value, sizeof(T));
-	else if (!Options::get_option_as<bool>("use-binary-files"))
-		file << value;
+	EnumParser<ListStyle>::add_value("small", ListStyle::Small);
+	EnumParser<ListStyle>::add_value("medium", ListStyle::Medium);
+	EnumParser<ListStyle>::add_value("large", ListStyle::Large);
 }
 /*-----------------------------------------------------------------------------------------------*/
-template<typename T>
-const std::vector<T> FileUtil::read_vector_from_file(const unsigned int length, std::ifstream& file)
-{
-	std::istream_iterator<T> start(file);
-	std::istream_iterator<T> end = start + length;
-	
-	return std::vector<T>(start, end);
-}
-/*-----------------------------------------------------------------------------------------------*/
-
-#endif

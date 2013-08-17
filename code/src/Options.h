@@ -43,7 +43,9 @@
 
 #include <map>
 #include <string>
+#include <type_traits>
 #include <boost/lexical_cast.hpp>
+#include "EnumParser.h"
 
 class Options
 {
@@ -54,19 +56,50 @@ public:
 	static std::string internal_get_option(const std::string& name);
 	static void set_option(const std::string& name, const std::string& value);
 	static std::string get_option(const std::string& name);
-	template<typename T> static const T get_option_as(const std::string& name);
+	template<typename T> static const typename std::enable_if<!std::is_enum<T>::value, T>::type get_option_as(const std::string& name);
+	template<typename T> static const typename std::enable_if<std::is_enum<T>::value, T>::type get_option_as(const std::string& name);
+	template<typename T> static const typename std::enable_if<!std::is_enum<T>::value, T>::type get_option_as(const std::string& name, const T default_value);
+	template<typename T> static const typename std::enable_if<std::is_enum<T>::value, T>::type get_option_as(const std::string& name, const T default_value);
 	static bool internal_parse_option(const std::string& option);
 	static bool internal_parse_command_line_options(int argc, char** argv);
 	static bool internal_parse_options_from_xml(const std::string& filename);
-	static const bool is_option_set(const std::string& name);
+	static bool is_option_set(const std::string& name);
 	static std::map<std::string, std::string>& get_values() { return values; }
 };
 
 /*-----------------------------------------------------------------------------------------------*/
 template<typename T>
-const T Options::get_option_as(const std::string& name)
+const typename std::enable_if<!std::is_enum<T>::value, T>::type 
+Options::get_option_as(const std::string& name)
 {
 	return boost::lexical_cast<T>(get_option(name));
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename T>
+const typename std::enable_if<std::is_enum<T>::value, T>::type 
+Options::get_option_as(const std::string& name)
+{
+	return EnumParser<T>::get_value(get_option(name));
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename T>
+const typename std::enable_if<!std::is_enum<T>::value, T>::type 
+Options::get_option_as(const std::string& name, const T default_value)
+{
+	if (!is_option_set(name))
+		return default_value;
+
+	return boost::lexical_cast<T>(get_option(name));
+}
+/*-----------------------------------------------------------------------------------------------*/
+template<typename T>
+const typename std::enable_if<std::is_enum<T>::value, T>::type 
+Options::get_option_as(const std::string& name, const T default_value)
+{
+	if (!is_option_set(name))
+		return default_value;
+
+	return EnumParser<T>::get_value(get_option(name));
 }
 /*-----------------------------------------------------------------------------------------------*/
 

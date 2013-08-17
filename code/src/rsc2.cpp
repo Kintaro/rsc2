@@ -41,6 +41,7 @@
 #include <boost/mpi/environment.hpp>
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/group.hpp>
+#include <boost/serialization/export.hpp>
 #include <string>
 #include <list>
 #include <iostream>
@@ -48,15 +49,14 @@
 #include "Options.h"
 #include "MemberBlock.h"
 #include "IndexStructure.h"
+#include "RscClusterer.h"
+#include "DefaultOptions.h"
+#include "SetManager.h"
+#include "VecData.h"
 
 #include <fstream>
 
-void set_default_options()
-{
-	Options::set_option("use-binary-files", "false");
-	Options::set_option("info-output", "true");
-	Options::set_option("debug-output", "false");
-}
+BOOST_CLASS_EXPORT_GUID(VecData, "VecData")
 
 void print_options()
 {
@@ -69,7 +69,7 @@ void parse_options_and_start_daemon(int argc, char** argv)
 	boost::mpi::communicator world;
 	if (world.rank() == 0)
 	{
-		set_default_options();
+		DefaultOptions::set_default_options();
 		Options::internal_parse_command_line_options(argc, argv);
 		if (Options::is_option_set("options"))
 			Options::internal_parse_options_from_xml(Options::get_option_as<std::string>("options"));
@@ -82,62 +82,58 @@ void parse_options_and_start_daemon(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
+	// Used as a performance boost for file I/O
+	std::ios_base::sync_with_stdio(false);
+
+	// Create the MPI environment and communicators
 	boost::mpi::environment env(argc, argv);
 	boost::mpi::communicator world;
 	boost::mpi::group world_group = world.group();
 
+	// Create separate communicators for only the processing nodes (comm) and
+	// the processing nodes + master node (world)
 	std::list<int> excluded_ranks;
 	excluded_ranks.push_back(0);
 
 	boost::mpi::group computing_group = world_group.exclude(excluded_ranks.begin(), excluded_ranks.end());
 	boost::mpi::communicator *computing_communicator = new boost::mpi::communicator(world, computing_group);
 
+	// Tell the daemon which communicators to use
 	Daemon::set_world(&world);
 	Daemon::set_communicator(computing_communicator);
 
+	// Load options and run master daemon
 	parse_options_and_start_daemon(argc, argv);
 
-	VecDataBlock db;
-	MemberBlock<float> b(db, 10);
-	MemberBlock<float> b2(db, 10);
-
-	if (world.rank() == 1)
-	{
-		std::fstream f("../../data/sample_data.mem", std::ios_base::in);
-		b.internal_load_members(f);
-		f.close();
-
-		b.set_global_offset((size_t)17);
-		Daemon::comm().recv(1, 0, b2);
-		b.merge_members(b2, 0);
-		Daemon::comm().barrier();
-	}
-	else if (world.rank() == 2)
-	{
-		std::fstream f2("../../data/sample_data.mem", std::ios_base::in);
-		b2.internal_load_members(f2);
-		f2.close();
-
-		Daemon::comm().send(0, 0, b2);
-		Daemon::comm().barrier();
-
-		std::fstream f3;
-		FileUtil::open_write("foo.mem", f3, true);
-		b2.set_id(boost::optional<std::string>("baz"), 23);
-		Options::set_option("use-binary-files", "true");
-		b2.internal_save_members(f3);
-		f3.close();
+	if (world.rank() != 0) {
+		SetManager<VecDataBlock, RscAccuracyType> set;
+		set.set_list_hierarchy_parameters(ListStyle::Medium, 7, 60, 20, 20);
+		set.setup_samples();
+		RscClusterer* rsc = new RscClusterer(boost::shared_ptr<SetManager<VecDataBlock, RscAccuracyType>>(&set));
+		rsc->cluster_soft_rsc();
+		//ChunkManager<VecDataBlock, RscAccuracyType> chunk;
+		//chunk.load_chunk_data();
+		//chunk.setup_samples(7, 100);
+		
+		//if (computing_communicator->rank() == 0)
+			//chunk.build_approximate_neighborhoods(4, 1.0, false, true, TransmissionMode::TransmissionSend, computing_communicator->rank());
+		//else
+			//chunk.build_approximate_neighborhoods(4, 1.0, false, true, TransmissionMode::TransmissionReceive, computing_communicator->rank());
 	}
 
+	// Wait for all nodes except master to finish work
 	if (world.rank() != 0)
 		computing_communicator->barrier();
 
+	// Node 1 tells the daemon to stop
 	if (world.rank() == 1)
 		Daemon::send_stop();
 
+	// Synchronize all nodes
 	if (world.rank() != 0)
 		computing_communicator->barrier();
 
+	// Clean up
 	MPI::Finalize();
 	delete computing_communicator;
 

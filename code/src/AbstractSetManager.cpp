@@ -38,79 +38,68 @@
 // Contact e-mail address: meh@nii.ac.jp, meh@acm.org
 //                         mail.wollwage@gmail.com
 
-#ifndef __CHUNK_H__
-#define __CHUNK_H__
+#include <boost/mpi/communicator.hpp>
+#include <boost/mpi/collectives.hpp>
+#include "Daemon.h"
+#include "AbstractSetManager.h"
 
-#include <vector>
-#include "MemberBlock.h"
+/*-----------------------------------------------------------------------------------------------*/
+void AbstractSetManager::exchange_information()
+{
+	Daemon::debug("exchanging information");
+	auto chunk_size = this->get_number_of_items();
+	auto blocks = this->get_number_of_blocks();
+	auto offset = this->get_offset();
+	
+	Daemon::debug(" [-] chunk size: %i", chunk_size);
+	Daemon::debug(" [-] blocks:     %i", blocks);
+	Daemon::debug(" [-] offset:     %i", offset);
 
-template<typename ScoreType>
-class Chunk
-{
-private:
-	size_t global_offset;
-	std::vector<MemberBlock> member_blocks;
-public:
-	const size_t get_number_of_items() const;
-	const size_t get_number_of_blocks() const;
-	const size_t get_global_offset() const;
-	const void set_global_offset(const size_t offset);
-	const bool build_inverted_members(const bool active);
-	const bool setup_samples(const size_t sample_limit, const size_t max_num_members, const size_t max_num_mini_members = 0);
-private:
-	const bool internal_setup_samples(const size_t sample_limit);
-private:
-	friend class boost::serialization::access;
-
-	template<class Archive>
-	void serialize(Archive &ar, const unsigned int version)
-	{
-		ar &global_offset;
-		ar &member_blocks;
-	}
-};
-/*-----------------------------------------------------------------------------------------------*/
-template<typename ScoreType>
-const size_t Chunk::get_number_of_items() const
-{
-	return 0;
+	std::vector<unsigned int> block_offsets;
+	for (auto i = 0u; i < blocks; ++i)
+		block_offsets.push_back(this->get_block_offset(i));
+	
+	std::vector<unsigned int> block_items;
+	for (auto i = 0u; i < blocks; ++i)
+		block_items.push_back(this->get_number_of_items_in_block(i));
+	
+	boost::mpi::all_gather(Daemon::comm(), chunk_size, this->chunk_sizes);
+	boost::mpi::all_gather(Daemon::comm(), blocks, this->blocks_in_chunk);
+	boost::mpi::all_gather(Daemon::comm(), offset, this->chunk_offsets);
+	boost::mpi::all_gather(Daemon::comm(), block_offsets, this->block_offsets_in_chunk);
+	boost::mpi::all_gather(Daemon::comm(), block_items, this->items_in_block_of_chunk);
+	Daemon::debug("exchanging information [DONE]");
 }
 /*-----------------------------------------------------------------------------------------------*/
-template<typename ScoreType>
-const size_t Chunk::get_number_of_blocks() const 
+unsigned int AbstractSetManager::get_number_of_items_in_chunk(const unsigned int chunk)
 {
-	return member_blocks.size();
+	return this->chunk_sizes[chunk];
 }
 /*-----------------------------------------------------------------------------------------------*/
-template<typename ScoreType>
-const size_t Chunk::get_global_offset() const
+unsigned int AbstractSetManager::get_chunk_offset(const unsigned int chunk)
 {
-	return global_offset;
+	return this->chunk_offsets[chunk];
 }
 /*-----------------------------------------------------------------------------------------------*/
-template<typename ScoreType>
-const void Chunk::set_global_offset(const size_t offset)
+unsigned int AbstractSetManager::get_number_of_blocks_in_chunk(const unsigned int chunk)
 {
-	if (offset >= 0)
-		global_offset = offset;
+	return this->blocks_in_chunk[chunk];
+}	
+/*-----------------------------------------------------------------------------------------------*/
+unsigned int AbstractSetManager::get_block_offset_in_chunk(const unsigned int chunk, const unsigned int block)
+{
+	return this->block_offsets_in_chunk[chunk][block];
 }
 /*-----------------------------------------------------------------------------------------------*/
-template<typename ScoreType>
-const bool Chunk::build_inverted_members(const bool active)
+unsigned int AbstractSetManager::get_number_of_items_in_block_of_chunk(const unsigned int chunk, const unsigned int block)
 {
-	return internal_setup_samples(0);
+	return this->items_in_block_of_chunk[chunk][block];
 }
 /*-----------------------------------------------------------------------------------------------*/
-template<typename ScoreType>
-const bool Chunk::setup_samples(const size_t sample_limit, size_t max_num_members, size_t max_num_mini_members = 0)
+unsigned int AbstractSetManager::get_number_of_items_across_processors()
 {
-	return internal_setup_samples(sample_limit);
+	auto number_of_total_items = this->get_number_of_items();
+	boost::mpi::all_reduce(Daemon::comm(), number_of_total_items, number_of_total_items, std::plus<unsigned int>());
+	return number_of_total_items;
 }
 /*-----------------------------------------------------------------------------------------------*/
-template<typename ScoreType>
-const bool Chunk::internal_setup_samples(const size_t sample_limit)
-{
-	return false;
-}
-/*-----------------------------------------------------------------------------------------------*/
-#endif

@@ -44,7 +44,7 @@
 enum class TransmissionMode 
 {
 	TransmissionSend,
-	TransmissionReceive,
+	TransmissionReceive
 };
 
 #endif

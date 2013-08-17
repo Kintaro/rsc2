@@ -2,29 +2,30 @@
 <!-- Configuration options for RSC 2.0 -->
 <options>
 	<!-- Stdout output options -->
-	<info-output>false</info-output>
+	<info-output>true</info-output>
 	<debug-output>true</debug-output>
 
 	<!-- Use binary format for file handling (to save disk space) -->
 	<use-binary-files>false</use-binary-files>
+	<use-binary-data-files>false</use-binary-data-files>
 
 	<!-- Use a fixed random seed -->
 	<random-seed>421337</random-seed>
 
 	<!-- Dataset and directory handling -->
 	<dataset>isolet</dataset>
-	<input-directory>/foo/bar/input</input-directory>
-	<temp-directory>/foo/bar/temp</temp-directory>
-	<cluster-directory>/foo/bar/clusters</cluster-directory>
+	<input-directory>/home/wollwage/isolet/input_2_chunks/</input-directory>
+	<temp-directory>/home/wollwage/temp/</temp-directory>
+	<cluster-directory>/tardis/temp/isolet-clusters/</cluster-directory>
 
 	<!-- Clustering options -->
-	<maximum-cluster-size>23</maximum-cluster-size>
-	<maximum-number-of-clusters>7</maximum-number-of-clusters>
+	<maximum-cluster-size>100</maximum-cluster-size>
+	<maximum-number-of-clusters>1000</maximum-number-of-clusters>
 
 	<!-- Clustering result options -->
 	<cluster-style>soft+rsc</cluster-style>
 
 	<!-- Index structure options -->
-	<index-structure>sash</index-structure>
 	<sash-degree>4</sash-degree>
+	<speed-accuracy>1.0</speed-accuracy>
 </options>
