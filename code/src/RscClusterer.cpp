@@ -1503,7 +1503,7 @@ void RscClusterer::setup_adjacency_lists(const MethodFlag method_flag, const int
 
 		// Determine the number of disk read/write phases within which
 		// neighborhood pairs are to be gathered.
-		auto number_of_phases = method_flag == MethodFlag::SelectFinalPatternsForSampleA ? (sample_id == 0 ? 4u : (sample_id == 1 ? 2u : 1u) : 1u);
+		auto number_of_phases = method_flag == MethodFlag::SelectFinalPatternsForSampleA ? (sample_id == 0 ? 4u : (sample_id == 1 ? 2u : 1u)) : 1u;
 
 		// Search for adjacencies in phases.
 		// In each phase, only index within a valid range for the phase

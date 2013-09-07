@@ -46,6 +46,8 @@
 #include <iostream>
 #include <stdarg.h>
 #include <string>
+#include <chrono>
+#include <iomanip>
 #include <stdlib.h>
 #include "Daemon.h"
 #include "Options.h"
@@ -76,17 +78,17 @@ void Daemon::listen_for_next_message()
 	int command;
 	boost::mpi::communicator world;
 	boost::mpi::status status = world.recv(boost::mpi::any_source, boost::mpi::any_tag, &command, 1);
-	this->process_message(command, status.source());
+	this->process_message(command, status.source(), status.tag());
 }
 /*-----------------------------------------------------------------------------------------------*/
-void Daemon::process_message(const int command, const int from)
+void Daemon::process_message(const int command, const int from, const int tag)
 {
 	const boost::mpi::communicator world;
 	// final log
 	if (command == 0)
 	{
 		std::string message;
-		world.recv(from, boost::mpi::any_tag, message);		
+		world.recv(from, tag, message);		
 		std::cout << message << std::endl;
 
 		if (this->log_file.is_open())
@@ -113,7 +115,7 @@ void Daemon::process_message(const int command, const int from)
 		std::string option_name;
 		world.recv(from, boost::mpi::any_tag, option_name);
 		std::string option_value = Options::internal_get_option(option_name);
-		world.send(from, 0, option_value);
+		world.send(from, tag, option_value);
 	}
 	// set option
 	else if (command == 3)
@@ -124,7 +126,7 @@ void Daemon::process_message(const int command, const int from)
 
 		Options::internal_set_option(option_name, option_value);
 
-		world.send(from, 0, 1);
+		world.send(from, tag, 1);
 	}
 	// stop daemon
 	else if (command == 99)
@@ -142,14 +144,20 @@ void Daemon::stop()
 /*-----------------------------------------------------------------------------------------------*/
 void Daemon::internal_log(const std::string& level, const int rank, const std::string& message)
 {
+	auto now = std::chrono::system_clock::now();
+	auto now_c = std::chrono::system_clock::to_time_t(now);
+	char mbstr[100];
+	std::strftime(mbstr, 100, "%F %T", std::localtime(&now_c));
+
+	std::hash<std::string> strhash;
 	boost::mpi::communicator world;
 
 	std::ostringstream buffer;
-	buffer << "\33[0;3" << std::to_string(rank + 1) << "m" << rank << " :: " << level << "] " << message << "\33[0m";
+	buffer << "\33[0;3" << std::to_string(rank + 1) << "m" << rank << " :: " << level << "] " << mbstr << " - " << message << "\33[0m";
 	std::string formatted_string = buffer.str();
 
-	world.send(0, 0, 0);
-	world.send(0, 0, formatted_string);
+	world.send(0, strhash(formatted_string) & 0xFF, 0);
+	world.send(0, strhash(formatted_string) & 0xFF, formatted_string);
 }
 /*-----------------------------------------------------------------------------------------------*/
 void Daemon::error(const char* s, ...)

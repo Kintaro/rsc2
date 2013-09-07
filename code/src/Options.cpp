@@ -72,10 +72,11 @@ void Options::set_option(const std::string& name, const std::string& value)
 	}
 
 	int ok;
-	world.send(0, 0, 3);
-	world.send(0, 0, name);
-	world.send(0, 0, value);
-	world.recv(0, boost::mpi::any_tag, &ok, 1);
+	std::hash<std::string> strhash;
+	world.send(0, strhash(name) & 0xFF, 3);
+	world.send(0, strhash(name) & 0xFF, name);
+	world.send(0, strhash(name) & 0xFF, value);
+	world.recv(0, strhash(name) & 0xFF, &ok, 1);
 }
 /*-----------------------------------------------------------------------------------------------*/
 std::string Options::get_option(const std::string& name)
@@ -87,9 +88,10 @@ std::string Options::get_option(const std::string& name)
 
 	std::string value;
 
-	world.send(0, 0, 2);
-	world.send(0, 0, name);
-	world.recv(0, boost::mpi::any_tag, value);
+	std::hash<std::string> strhash;
+	world.send(0, strhash(name) & 0xFF, 2);
+	world.send(0, strhash(name) & 0xFF, name);
+	world.recv(0, strhash(name) & 0xFF, value);
 
 	return value;
 }

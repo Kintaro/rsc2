@@ -45,7 +45,7 @@
 #include <fstream>
 #include <boost/mpi/communicator.hpp>
 
-typedef float RscAccuracyType;
+typedef double RscAccuracyType;
 
 class Daemon
 {
@@ -53,7 +53,7 @@ public:
 	Daemon();
 	void run();
 	void listen_for_next_message();
-	void process_message(const int command, const int from);
+	void process_message(const int command, const int from, const int tag);
 	void stop();
 
 	static void internal_log(const std::string& level, const int rank, const std::string& message);

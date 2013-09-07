@@ -72,7 +72,7 @@ public:
 
 	static IndexStructure<T>* create_from_plugin(const std::string& plugin_name)
 	{
-		std::string library_path = "lib" + plugin_name + ".extension";
+		std::string library_path = "./lib" + plugin_name + ".extension";
 		boost::extensions::shared_library lib(library_path);
 		if (!lib.open())
 		{

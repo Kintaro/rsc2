@@ -43,6 +43,7 @@
 
 #include <vector>
 #include <memory>
+#include <thread>
 #include <boost/serialization/shared_ptr.hpp>
 
 #include "TransmissionMode.h"
@@ -654,7 +655,7 @@ void ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood_send_stage2
 	
 	for (auto sample = 0u; sample < this->number_of_samples; ++sample)
 	{
-		auto s = sample + this->number_of_tiny_samples;
+		const auto s = sample + this->number_of_tiny_samples;
 		
 		for (auto item = block_offset + number_of_block_items - 1; item >= block_offset; item--)
 		{			
@@ -675,13 +676,13 @@ void ChunkManager<DataBlock, ScoreType>::internal_build_neighborhood_send_stage2
 			if (!pending_sample_list[sample])
 				continue;
 			
-			auto s = sample + this->number_of_tiny_samples;
+			const auto s = sample + this->number_of_tiny_samples;
 			auto member_block = MemberBlock<ScoreType>(this->member_block_list[block][s], 0);
 			
 			Daemon::comm().recv(target_processor, 0, member_block);
 			//member_block.set_sample(sample);
 			member_block.set_id(this->filename_prefix);
-			member_block.save_members();
+			//member_block.save_members();
 			
 			this->member_block_list[block][s]->merge_members(member_block, maximum_number_of_members);
 		}
@@ -933,8 +934,6 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 
 			for (auto blck = 0u; blck < this->number_of_blocks; ++blck)
 			{
-				// this->inverted_member_block_list[blck][s]->load_inverted_members(0u);
-
 				for (auto i = block * Daemon::comm().size(); i < block * Daemon::comm().size() + Daemon::comm().size(); ++i)
 				{
 					if (i == 0)
