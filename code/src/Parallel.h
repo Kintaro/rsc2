@@ -48,22 +48,38 @@ class Parallel
 {
 public:
 	/*-----------------------------------------------------------------------------------------------*/
-	static void parallel_for(const unsigned int start, const unsigned int stop, std::function<void(const unsigned int)> func) 
+	static void parallel_for(const int start, const int stop, std::function<void(const int)> func) 
 	{
-		const auto number_of_threads = std::thread::hardware_concurrency();
-		std::vector <std::thread> threads;
+		std::vector<std::thread> threads;
 
-		for (auto thread_id = start; thread_id < number_of_threads; ++thread_id) 
-		{
-			auto threadFunc = [=, &threads]() 
-			{
-				for (auto i = thread_id; i < stop; i += number_of_threads) 
-					func(i);
-			};
-			threads.push_back(std::thread(threadFunc));
-		}
+		for (auto thread_id = start; thread_id < stop; ++thread_id) 
+			threads.push_back(std::thread(func, thread_id));
 		for (auto & t : threads) 
 			t.join();
+	}
+	/*-----------------------------------------------------------------------------------------------*/
+	static void parallel_for_pooled(const int num, const int start, const int stop, std::function<void(const int)> func) 
+	{
+		std::vector<std::thread> threads;
+		auto amount = stop - start;
+		auto done = 0;
+		Daemon::error("creating %i threads to handle %i requests", num, amount);
+
+		while (amount > 0)
+		{
+			auto n = std::min(amount, num);
+			for (auto thread_id = start + done; thread_id < start + done + n && thread_id < stop; ++thread_id)
+			{
+				Daemon::error("starting thread %i / %i", thread_id, amount) ;
+				threads.push_back(std::thread(func, thread_id));
+			}
+			for (auto & t : threads) 
+				t.join();
+			threads.clear();
+			amount -= n;
+			done += n;
+			Daemon::error("remaining: %i", amount);
+		}
 	}
 	/*-----------------------------------------------------------------------------------------------*/
 };

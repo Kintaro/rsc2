@@ -254,10 +254,9 @@ boost::shared_ptr<AbstractSetManager> SetManager<DataBlock, ScoreType>::build_tr
 	else
 	{
 		for (auto i = 0; i < Daemon::comm().size(); ++i)
-		{	
+		{
 			auto transmission_mode = i == Daemon::comm().rank() ? TransmissionMode::TransmissionSend : TransmissionMode::TransmissionReceive;
 			trim_set_manager->chunk_ptr->build_inverted_members(transmission_mode, i);
-			Daemon::comm().barrier();
 		}
 	}
 
@@ -345,7 +344,7 @@ bool SetManager<DataBlock, ScoreType>::build_inverted_members(const bool can_loa
 		return true;
 	}
 	Daemon::info("inverted member lists not found on disk. building from scratch");
-	
+
 	for (auto i = 0; i < Daemon::comm().size(); ++i)
 	{
 		auto transmission_mode = Daemon::comm().rank() == i ? TransmissionMode::TransmissionSend : TransmissionMode::TransmissionReceive;

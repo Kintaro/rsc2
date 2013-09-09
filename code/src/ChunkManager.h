@@ -50,6 +50,7 @@
 #include "MemberBlock.h"
 #include "InvertedMemberBlock.h"
 #include "Daemon.h"
+#include "Parallel.h"
 
 BOOST_CLASS_EXPORT(VecDataBlock)
 
@@ -860,6 +861,7 @@ bool ChunkManager<DataBlock, ScoreType>::build_inverted_members(const Transmissi
 template<typename DataBlock, class ScoreType>
 bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(const unsigned int sender_id)
 {
+	// Parallel::parallel_for(-static_cast<int>(this->number_of_tiny_samples), static_cast<int>(this->number_of_samples), [this, sender_id](int sample)
 	for (auto sample = -static_cast<int>(this->number_of_tiny_samples); sample < static_cast<int>(this->number_of_samples); ++sample)
 	{
 		const auto s = sample + this->number_of_tiny_samples;
@@ -881,8 +883,8 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 				{
 					const auto block_ptr = this->data_block_list[block];
 					member_block = boost::shared_ptr<MemberBlock<ScoreType>>(new MemberBlock<ScoreType>(block_ptr, Options::get_option_as<unsigned int>("rsc-small-buffsize")));
-					Daemon::comm().recv(target_processor, target_processor, *member_block);
-					Daemon::comm().send(target_processor, target_processor, target_processor);
+					Daemon::comm().recv(target_processor, target_processor * (this->number_of_samples + this->number_of_tiny_samples) + s, *member_block);
+					Daemon::comm().send(target_processor, target_processor * (this->number_of_samples + this->number_of_tiny_samples) + s, target_processor);
 				}
 
 				member_block->load_members();
@@ -896,6 +898,7 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 				// examine each of its elements to see whether it lies in
 				// this chunk.
 				// If so, add an inverted member to the appropriate list.
+				// Parallel::parallel_for(this->number_of_blocks, static_cast<int>(member_offset), static_cast<int>(member_offset + member_block_size), [this, &member_block, s](const unsigned int i)
 				for (auto i = static_cast<int>(member_offset + member_block_size) - 1; i >= static_cast<int>(member_offset); i--)
 				{
 					// Extract a member list list.
@@ -904,35 +907,37 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 
 					// If the lists are complete, then add them to the
 					// inverted member lists.
-					if (member_index_list.empty())
-						continue;
-
-					for (auto j = 0u; j < number_of_members; ++j)
+					if (!member_index_list.empty())
 					{
-						// For each member, find out which of this chunk's
-						// blocks (if any) contain it.
-						const auto member = member_index_list[j];
-						auto found = true;
-						const auto target_block = this->find_block_for_item(member, found);
+						for (auto j = 0u; j < number_of_members; ++j)
+						{
+							// For each member, find out which of this chunk's
+							// blocks (if any) contain it.
+							const auto member = member_index_list[j];
+							auto found = true;
+							const auto target_block = this->find_block_for_item(member, found);
 
-						if (found && target_block < this->number_of_blocks)
-							this->inverted_member_block_list[target_block][s]->add_to_inverted_members(member, i, j);
+							if (found && target_block < this->number_of_blocks)
+								this->inverted_member_block_list[target_block][s]->add_to_inverted_members(member, i, j);
+						}
 					}
 				}
 
 				const auto combo = block * Daemon::comm().size() + target_processor;
 
-				for (auto blck = 0u; blck < this->number_of_blocks; ++blck)
+				Parallel::parallel_for(0u, this->number_of_blocks, [this, combo, s](const unsigned int blck)
+				// for (auto blck = 0u; blck < this->number_of_blocks; ++blck)
 				{
 					this->inverted_member_block_list[blck][s]->finalize_inverted_members();
 					this->inverted_member_block_list[blck][s]->save_inverted_members(combo);
-				}
+				});
 
 				this->clear_inverted_member_blocks();
 				member_block->clear_members();
 			}
 
-			for (auto blck = 0u; blck < this->number_of_blocks; ++blck)
+			Parallel::parallel_for(0u, this->number_of_blocks, [this, block, s](const unsigned int blck)
+			// for (auto blck = 0u; blck < this->number_of_blocks; ++blck)
 			{
 				for (auto i = block * Daemon::comm().size(); i < block * Daemon::comm().size() + Daemon::comm().size(); ++i)
 				{
@@ -954,16 +959,17 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 					inverted_member_block->clear_inverted_members();
 					inverted_member_block->purge_inverted_members_from_disk(i);
 				}
-			}
+			});
 		}
 
-		for (auto blck = 0u; blck < this->number_of_blocks; ++blck)
+		Parallel::parallel_for(0u, this->number_of_blocks, [this, s](const unsigned int blck)
+		// for (auto blck = 0u; blck < this->number_of_blocks; ++blck)
 		{
 			this->inverted_member_block_list[blck][s]->load_inverted_members(0u);
 			this->inverted_member_block_list[blck][s]->finalize_inverted_members();
 			this->inverted_member_block_list[blck][s]->save_inverted_members();
 			this->inverted_member_block_list[blck][s]->purge_inverted_members_from_disk(0u);
-		}
+		});
 	}
 
 	return true;
@@ -972,16 +978,19 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 template<typename DataBlock, class ScoreType>
 bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_receive(const unsigned int sender_id)
 {
+	// Parallel::parallel_for(-static_cast<int>(this->number_of_tiny_samples), static_cast<int>(this->number_of_samples), [this, sender_id](int sample)
 	for (auto sample = -static_cast<int>(this->number_of_tiny_samples); sample < static_cast<int>(this->number_of_samples); ++sample)
 	{
+		const auto s = sample + this->number_of_tiny_samples;
+
 		for (auto block = 0u; block < this->number_of_blocks; ++block)
 		{
 			auto member_block = this->sampling_flag ? this->access_member_block(block, sample) : this->access_member_block(block);
 
 			member_block->load_members();
-			Daemon::comm().send(sender_id, Daemon::comm().rank(), *member_block);
+			Daemon::comm().send(sender_id, Daemon::comm().rank() * (this->number_of_samples + this->number_of_tiny_samples) + s, *member_block);
 			unsigned int tmp;
-			Daemon::comm().recv(sender_id, Daemon::comm().rank(), tmp);
+			Daemon::comm().recv(sender_id, Daemon::comm().rank() * (this->number_of_samples + this->number_of_tiny_samples) + s, tmp);
 			member_block->clear_members();
 		}
 	}
