@@ -907,20 +907,24 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 
 					// If the lists are complete, then add them to the
 					// inverted member lists.
-					if (!member_index_list.empty())
-					{
-						for (auto j = 0u; j < number_of_members; ++j)
-						{
-							// For each member, find out which of this chunk's
-							// blocks (if any) contain it.
-							const auto member = member_index_list[j];
-							auto found = true;
-							const auto target_block = this->find_block_for_item(member, found);
+					if (member_index_list.empty())
+						continue;
 
-							if (found && target_block < this->number_of_blocks)
-								this->inverted_member_block_list[target_block][s]->add_to_inverted_members(member, i, j);
-						}
-					}
+					std::mutex mutex;
+					Parallel::parallel_for_pool(0u, number_of_members, [this, &mutex, &member_index_list, &number_of_members, i, s](const unsigned int j)
+					// for (auto j = 0u; j < number_of_members; ++j)
+					{
+						// For each member, find out which of this chunk's
+						// blocks (if any) contain it.
+						const auto member = member_index_list[j];
+						auto found = true;
+						const auto target_block = this->find_block_for_item(member, found);
+
+						// mutex.lock();
+						if (found && target_block < this->number_of_blocks)
+							this->inverted_member_block_list[target_block][s]->add_to_inverted_members(member, i, j);
+						// mutex.unlock();
+					}, this->number_of_blocks * this->number_of_samples);
 				}
 
 				const auto combo = block * Daemon::comm().size() + target_processor;

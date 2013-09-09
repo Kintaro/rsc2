@@ -58,28 +58,26 @@ public:
 			t.join();
 	}
 	/*-----------------------------------------------------------------------------------------------*/
-	static void parallel_for_pooled(const int num, const int start, const int stop, std::function<void(const int)> func) 
+	static void parallel_for_pool(const int start, const int stop, std::function<void(const int)> func, const int nthreads = 1, const int threshold = 1000)
 	{
-		std::vector<std::thread> threads;
-		auto amount = stop - start;
-		auto done = 0;
-		Daemon::error("creating %i threads to handle %i requests", num, amount);
+	    const auto group = std::max(std::max(1, std::abs(threshold)), (stop - start) / std::abs(nthreads));
+	    std::vector<std::thread> threads;
 
-		while (amount > 0)
-		{
-			auto n = std::min(amount, num);
-			for (auto thread_id = start + done; thread_id < start + done + n && thread_id < stop; ++thread_id)
-			{
-				Daemon::error("starting thread %i / %i", thread_id, amount) ;
-				threads.push_back(std::thread(func, thread_id));
-			}
-			for (auto & t : threads) 
-				t.join();
-			threads.clear();
-			amount -= n;
-			done += n;
-			Daemon::error("remaining: %i", amount);
-		}
+	    int i = start;
+	    for (auto i = start; i < stop - group; i += group) 
+	    {
+	        threads.push_back(std::thread([=]()
+	        	{
+	        		for (int j = i; j < std::min(i + group, stop); ++j)
+	        			func(j);
+	        	}));
+	    }
+
+	    for (int j = i; j < stop; ++j)
+			func(j);
+
+	    for (auto &x : threads)
+	    	x.join();
 	}
 	/*-----------------------------------------------------------------------------------------------*/
 };
