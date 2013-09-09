@@ -38,6 +38,7 @@
 // Contact e-mail address: meh@nii.ac.jp, meh@acm.org
 //                         mail.wollwage@gmail.com
 
+#include <openmpi/mpi.h>
 #include <boost/mpi/environment.hpp>
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/group.hpp>
@@ -67,23 +68,23 @@ void print_options()
 void parse_options_and_start_daemon(int argc, char** argv)
 {
 	boost::mpi::communicator world;
-	if (world.rank() == 0)
-	{
-		DefaultOptions::set_default_options();
-		Options::internal_parse_command_line_options(argc, argv);
-		if (Options::is_option_set("options"))
-			Options::internal_parse_options_from_xml(Options::get_option_as<std::string>("options"));
-		Options::internal_parse_command_line_options(argc, argv);
+	DefaultOptions::set_default_options();
+	Options::internal_parse_command_line_options(argc, argv);
+	if (Options::is_option_set("options"))
+		Options::internal_parse_options_from_xml(Options::get_option_as<std::string>("options"));
+	Options::internal_parse_command_line_options(argc, argv);
+
+	if (world.rank() == 0) 
 		print_options();
-		Daemon daemon;
-		daemon.run();
-	}
 }
 
 int main(int argc, char** argv)
 {
 	// Used as a performance boost for file I/O
 	std::ios_base::sync_with_stdio(false);
+
+	int provided_mpi;
+	MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided_mpi);
 
 	// Create the MPI environment and communicators
 	boost::mpi::environment env(argc, argv);
@@ -122,14 +123,6 @@ int main(int argc, char** argv)
 	}
 
 	// Wait for all nodes except master to finish work
-	if (world.rank() != 0)
-		computing_communicator->barrier();
-
-	// Node 1 tells the daemon to stop
-	if (world.rank() == 1)
-		Daemon::send_stop();
-
-	// Synchronize all nodes
 	if (world.rank() != 0)
 		computing_communicator->barrier();
 

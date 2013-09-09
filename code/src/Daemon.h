@@ -43,6 +43,9 @@
 
 #include <string>
 #include <fstream>
+#include <random>
+#include <thread>
+#include <mutex>
 #include <boost/mpi/communicator.hpp>
 
 typedef double RscAccuracyType;
@@ -51,10 +54,6 @@ class Daemon
 {
 public: 
 	Daemon();
-	void run();
-	void listen_for_next_message();
-	void process_message(const int command, const int from, const int tag);
-	void stop();
 
 	static void internal_log(const std::string& level, const int rank, const std::string& message);
 	static void error(const char* s, ...);
@@ -62,7 +61,6 @@ public:
 	static void info(const char* s, ...);
 	static void debug(const char* s, ...);
 	static void time(const char* s, ...);
-	static void send_stop();
 
 	static const boost::mpi::communicator& world() { return *world_communicator; }
 	static const boost::mpi::communicator& comm() { return *communicator; }
@@ -71,9 +69,10 @@ public:
 	static void set_communicator(boost::mpi::communicator* c) { communicator = c; }
 private:
 	std::ofstream log_file;
-	bool running;
 	static boost::mpi::communicator* world_communicator;
 	static boost::mpi::communicator* communicator;
+	static std::mt19937 rnd;
+	static std::uniform_int_distribution<uint32_t> uint_dist;
 };
 
 #endif

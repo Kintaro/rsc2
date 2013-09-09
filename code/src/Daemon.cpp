@@ -55,91 +55,11 @@
 /*-----------------------------------------------------------------------------------------------*/
 boost::mpi::communicator* Daemon::world_communicator;
 boost::mpi::communicator* Daemon::communicator;
+std::mt19937 Daemon::rnd;
+std::uniform_int_distribution<uint32_t> Daemon::uint_dist;
 /*-----------------------------------------------------------------------------------------------*/
 Daemon::Daemon()
 {
-}
-/*-----------------------------------------------------------------------------------------------*/
-void Daemon::run()
-{
-	boost::mpi::communicator world;
-	this->running = true;
-	info("daemon started and running on node %i", world.rank());
-
-	if (Options::get_option_as<bool>("log"))
-		this->log_file.open(Options::get_option_as<std::string>("logfile"), std::ios::out);
-
-	while (running)
-		this->listen_for_next_message();
-}
-/*-----------------------------------------------------------------------------------------------*/
-void Daemon::listen_for_next_message()
-{
-	int command;
-	boost::mpi::communicator world;
-	boost::mpi::status status = world.recv(boost::mpi::any_source, boost::mpi::any_tag, &command, 1);
-	this->process_message(command, status.source(), status.tag());
-}
-/*-----------------------------------------------------------------------------------------------*/
-void Daemon::process_message(const int command, const int from, const int tag)
-{
-	const boost::mpi::communicator world;
-	// final log
-	if (command == 0)
-	{
-		std::string message;
-		world.recv(from, tag, message);		
-		std::cout << message << std::endl;
-
-		if (this->log_file.is_open())
-			this->log_file << message << std::endl;
-	}
-	// temporary log
-	// else if (command == 1)
-	// {
-	// 	std::string message;
-	// 	world.recv(from, boost::mpi::any_tag, message);		
-	// 	std::cout << message;
-
-	// 	if (this->log_file.is_open())
-	// 		this->log_file << message << std::endl;
-
-	// 	// wait for further messages
-	// 	int next_command;
-	// 	world.recv(from, boost::mpi::any_tag, &next_command, 1);
-	// 	this->process_message(next_command, from);
-	// }
-	// get option
-	else if (command == 2)
-	{
-		std::string option_name;
-		world.recv(from, boost::mpi::any_tag, option_name);
-		std::string option_value = Options::internal_get_option(option_name);
-		world.send(from, tag, option_value);
-	}
-	// set option
-	else if (command == 3)
-	{
-		std::string option_name, option_value;
-		world.recv(from, boost::mpi::any_tag, option_name);
-		world.recv(from, boost::mpi::any_tag, option_value);
-
-		Options::internal_set_option(option_name, option_value);
-
-		world.send(from, tag, 1);
-	}
-	// stop daemon
-	else if (command == 99)
-	{
-		this->stop();
-	}
-}
-/*-----------------------------------------------------------------------------------------------*/
-void Daemon::stop()
-{
-	if (this->log_file.is_open())
-		this->log_file.close();
-	this->running = false;
 }
 /*-----------------------------------------------------------------------------------------------*/
 void Daemon::internal_log(const std::string& level, const int rank, const std::string& message)
@@ -149,15 +69,11 @@ void Daemon::internal_log(const std::string& level, const int rank, const std::s
 	char mbstr[100];
 	std::strftime(mbstr, 100, "%F %T", std::localtime(&now_c));
 
-	std::hash<std::string> strhash;
-	boost::mpi::communicator world;
-
 	std::ostringstream buffer;
 	buffer << "\33[0;3" << std::to_string(rank + 1) << "m" << rank << " :: " << level << "] " << mbstr << " - " << message << "\33[0m";
 	std::string formatted_string = buffer.str();
-
-	world.send(0, strhash(formatted_string) & 0xFF, 0);
-	world.send(0, strhash(formatted_string) & 0xFF, formatted_string);
+	std::cout << formatted_string << std::endl;
+	fflush(NULL);
 }
 /*-----------------------------------------------------------------------------------------------*/
 void Daemon::error(const char* s, ...)
@@ -232,11 +148,5 @@ void Daemon::time(const char* s, ...)
 
 	boost::mpi::communicator world;
 	internal_log(" time", world.rank(), buffer);
-}
-/*-----------------------------------------------------------------------------------------------*/
-void Daemon::send_stop()
-{
-	boost::mpi::communicator world;
-	world.send(0, 0, 99);
 }
 /*-----------------------------------------------------------------------------------------------*/

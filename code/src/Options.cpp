@@ -48,6 +48,8 @@
 
 /*-----------------------------------------------------------------------------------------------*/
 std::map<std::string, std::string> Options::values;
+std::mt19937 Options::rnd;
+std::uniform_int_distribution<uint32_t> Options::uint_dist;
 /*-----------------------------------------------------------------------------------------------*/
 void Options::internal_set_option(const std::string& name, const std::string& value)
 {
@@ -63,37 +65,12 @@ std::string Options::internal_get_option(const std::string& name)
 /*-----------------------------------------------------------------------------------------------*/
 void Options::set_option(const std::string& name, const std::string& value)
 {
-	boost::mpi::communicator world;
-
-	if (world.rank() == 0)
-	{
-		internal_set_option(name, value);
-		return;
-	}
-
-	int ok;
-	std::hash<std::string> strhash;
-	world.send(0, strhash(name) & 0xFF, 3);
-	world.send(0, strhash(name) & 0xFF, name);
-	world.send(0, strhash(name) & 0xFF, value);
-	world.recv(0, strhash(name) & 0xFF, &ok, 1);
+	internal_set_option(name, value);
 }
 /*-----------------------------------------------------------------------------------------------*/
 std::string Options::get_option(const std::string& name)
 {
-	boost::mpi::communicator world;
-
-	if (world.rank() == 0)
-		return values[name];
-
-	std::string value;
-
-	std::hash<std::string> strhash;
-	world.send(0, strhash(name) & 0xFF, 2);
-	world.send(0, strhash(name) & 0xFF, name);
-	world.recv(0, strhash(name) & 0xFF, value);
-
-	return value;
+	return values[name];
 }
 /*-----------------------------------------------------------------------------------------------*/
 bool Options::is_option_set(const std::string& name)

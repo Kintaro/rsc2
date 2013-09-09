@@ -44,6 +44,7 @@
 #include <map>
 #include <string>
 #include <type_traits>
+#include <random>
 #include <boost/lexical_cast.hpp>
 #include "EnumParser.h"
 
@@ -51,6 +52,8 @@ class Options
 {
 private:
 	static std::map<std::string, std::string> values;
+	static std::mt19937 rnd;
+	static std::uniform_int_distribution<uint32_t> uint_dist;
 public:
 	static void internal_set_option(const std::string& name, const std::string& value);
 	static std::string internal_get_option(const std::string& name);
