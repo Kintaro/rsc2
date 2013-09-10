@@ -58,7 +58,7 @@ public:
 			t.join();
 	}
 	/*-----------------------------------------------------------------------------------------------*/
-	static void parallel_for_pool(const int start, const int stop, std::function<void(const int)> func, const int nthreads = 1, const int threshold = 1000)
+	static void parallel_for_pooled(const int start, const int stop, std::function<void(const int)> func, const int nthreads = 1, const int threshold = 1000)
 	{
 	    const auto group = std::max(std::max(1, std::abs(threshold)), (stop - start) / std::abs(nthreads));
 	    std::vector<std::thread> threads;

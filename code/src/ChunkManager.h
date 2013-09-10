@@ -911,7 +911,7 @@ bool ChunkManager<DataBlock, ScoreType>::internal_build_inverted_members_send(co
 						continue;
 
 					std::mutex mutex;
-					Parallel::parallel_for_pool(0u, number_of_members, [this, &mutex, &member_index_list, &number_of_members, i, s](const unsigned int j)
+					Parallel::parallel_for_pooled(0u, number_of_members, [this, &mutex, &member_index_list, &number_of_members, i, s](const unsigned int j)
 					// for (auto j = 0u; j < number_of_members; ++j)
 					{
 						// For each member, find out which of this chunk's

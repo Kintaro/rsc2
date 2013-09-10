@@ -81,7 +81,7 @@ void parse_options_and_start_daemon(int argc, char** argv)
 int main(int argc, char** argv)
 {
 	// Used as a performance boost for file I/O
-	std::ios_base::sync_with_stdio(false);
+	// std::ios_base::sync_with_stdio(false);
 
 	int provided_mpi;
 	MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided_mpi);
