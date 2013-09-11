@@ -228,13 +228,18 @@ unsigned int ChunkManager<DataBlock, ScoreType>::load_chunk_data()
 	
 	auto number_loaded = 0u;
 	this->data_item_list.resize(this->number_of_items);
-	
-	for (auto i = 0u; i < this->data_block_list.size(); ++i)
-	{
-		auto block = this->data_block_list[i];
-		number_loaded += block->load_data();
-		block->extract_all_items(this->data_item_list, this->offset_list[i]);
-	}
+	std::mutex mutex;
+
+	Parallel::parallel_for(0u, this->data_block_list.size(), [this, &number_loaded, &mutex](const int i) {	
+		for (auto i = 0u; i < this->data_block_list.size(); ++i)
+		{
+			auto block = this->data_block_list[i];
+			mutex.lock();
+			number_loaded += block->load_data();
+			mutex.unlock();
+			block->extract_all_items(this->data_item_list, this->offset_list[i]);
+		}
+	});
 	
 	return number_loaded;
 }
