@@ -336,6 +336,7 @@ bool SetManager<DataBlock, ScoreType>::build_members_from_disk()
 template<typename DataBlock, typename ScoreType>
 bool SetManager<DataBlock, ScoreType>::build_inverted_members(const bool can_load_from_disk)
 {
+	auto timer = create_timer();
 	auto result = true;
 	
 	if (this->chunk_ptr->build_inverted_members_from_disk())

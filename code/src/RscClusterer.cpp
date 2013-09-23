@@ -595,7 +595,7 @@ void RscClusterer::select_trim_patterns_for_sample(const int sample_id, const Tr
 	auto sample_size = this->set_manager->get_sample_size(sample_id);
 	boost::mpi::all_reduce(Daemon::comm(), sample_size, sample_size, std::plus<unsigned int>());
 
-	this->number_of_selected_patterns = 0;
+	this->number_of_selected_patterns = 0u;
 
 	// Set up lists of adjacent patterns with respect to the trim data set.
 	if (transmission_mode == TransmissionMode::TransmissionSend)
@@ -719,7 +719,7 @@ void RscClusterer::select_trim_patterns_for_sample_send(const int sample_id, con
 	Daemon::comm().barrier();
 
 	for (auto target_processor = 1; target_processor < Daemon::comm().size(); ++target_processor)
-		Daemon::comm().send(target_processor, 0, 0);
+		Daemon::comm().send(target_processor, 0, 1);
 
 	while (chunk < Daemon::comm().size())
 	{
@@ -790,8 +790,11 @@ void RscClusterer::select_trim_patterns_for_sample_receive(const int sample_id, 
 
 	this->purge_adjacency_lists(Daemon::comm().rank(), offset, amount);
 
+	Daemon::error("  - stage 1");
 	int t;
 	Daemon::comm().recv(0, 0, t);
+
+	Daemon::error("  - stage 2");
 
 	if (t == 0)
 	{
@@ -801,23 +804,29 @@ void RscClusterer::select_trim_patterns_for_sample_receive(const int sample_id, 
 	else if (t == 1)
 		;
 	else if (t == -5)
-		throw new std::exception();
+		throw new std::runtime_error("Received error code");
 	else
 	{
 		Daemon::comm().recv(0, 0, t);
 		if (t == -5)
-			throw new std::exception();
+			throw new std::runtime_error("Received error code 2");
 	}
+
+	Daemon::error("  - stage 3");
 
 	Daemon::comm().barrier();
 
 	Daemon::comm().recv(0, 0, t);
+
+	Daemon::error("  - stage 3.1");
 
 	if (t == 1)
 	{
 		Daemon::comm().send(0, 0, amount);
 		Daemon::comm().send(0, 0, offset);
 	}
+
+	Daemon::error("  - stage 4");
 
 	Daemon::comm().barrier();
 
@@ -1482,11 +1491,15 @@ void RscClusterer::setup_adjacency_lists(const MethodFlag method_flag, const int
 	// a single chunk.
 	for (auto filter_chunk = 0u; filter_chunk < number_of_filter_chunks; ++filter_chunk)
 	{
-		auto filter_amount = soft_rsc_cluster_manager->get_number_of_items();
-		auto filter_offset = soft_rsc_cluster_manager->get_offset();
+		auto filter_amount = 0u;
+		auto filter_offset = 0u;
 
 		switch (method_flag)
 		{
+			case MethodFlag::FinalizeClustersAndBuildGraph:
+			case MethodFlag::FinalizeClustersForSample:
+				filter_amount = soft_rsc_cluster_manager->get_number_of_items();
+				filter_offset = soft_rsc_cluster_manager->get_offset();				
 			case MethodFlag::GenerateClusterMembersForSample:
 				filter_amount = this->set_manager->get_number_of_items_in_chunk(filter_chunk);
 				filter_offset = this->set_manager->get_chunk_offset(filter_chunk);
@@ -1696,7 +1709,7 @@ void RscClusterer::setup_adjacency_lists(const MethodFlag method_flag, const int
 							// equal (rare?), the candidate ranks are used instead.
 							for (auto j = 0u; j < compacted_list_size; ++j)
 							{
-								for (auto k = 0u; k < compacted_list_size; ++k)
+								for (auto k = j + 1; k < compacted_list_size; ++k)
 								{
 									auto smaller = inverted_member_index_list[j];
 									auto larger = inverted_member_index_list[k];
@@ -1792,7 +1805,9 @@ void RscClusterer::purge_adjacency_lists(const unsigned int chunk, const unsigne
 	Daemon::debug("purging up adjacency lists for chunk %i...", chunk);
 
 	// Delete scratch file from disk if it exists
-	auto filename = Options::get_option("temporary_directory_path") + Options::get_option("cluster_prefix") + "_scratch.txt";
+	std::ostringstream filename_builder;
+	filename_builder << Options::get_option("temp-directory") << Options::get_option("cluster_prefix") << "_scratch_c" << chunk << ".txt";
+	auto filename = filename_builder.str();
 	remove(filename.c_str());
 		;//throw new std::exception();
 
@@ -1805,32 +1820,37 @@ void RscClusterer::purge_adjacency_lists(const unsigned int chunk, const unsigne
 		this->pattern_adjacent_int_size_list[i].clear();
 		this->pattern_number_of_adjacencies[i] = 0;
 	}
+	Daemon::debug("purging done");
 }
 /*-----------------------------------------------------------------------------------------------*/
 unsigned int RscClusterer::fetch_adjacency_lists_from_disk(const unsigned int chunk, const unsigned int offset, const unsigned int amount)
 {
 	std::ostringstream filename_builder;
-	filename_builder << Options::get_option_as<std::string>("temporary_directory_path") << "/" << Options::get_option_as<std::string>("cluster_prefix") << "_scratch_c" << chunk << ".txt";
+	filename_builder << Options::get_option("temp-directory") << Options::get_option("cluster_prefix") << "_scratch_c" << chunk << ".txt";
 	auto filename = filename_builder.str();
 	std::ifstream file;
 	FileUtil::open_read(filename, file);
 
 	// Read the number of lists to be loaded, and their offset.
 	// If they do not match expected values, then return.
-	auto offset_read = FileUtil::read_from_file<unsigned int>(file);
-	auto amount_read = FileUtil::read_from_file<unsigned int>(file);
+	const auto offset_read = FileUtil::read_from_file<unsigned int>(file);
+	const auto amount_read = FileUtil::read_from_file<unsigned int>(file);
+
+	Daemon::error("checking adj values %i / %i / %i / %i", offset, amount, offset_read, amount_read);
 
 	if (offset != offset_read || amount != amount_read)
 		return 0;
 
+	Daemon::error("still here");
+
 	// Iterate through the specified lists, loading them into
 	//   main memory as we go.
-	auto limit = offset + amount;
+	const auto limit = offset + amount;
 
 	for (auto i = offset; i < limit; ++i)
 	{
 		// Reserve storage for the current adjacency lists.
-		auto list_size = FileUtil::read_from_file<unsigned int>(file);
+		const auto list_size = FileUtil::read_from_file<unsigned int>(file);
 
 		this->pattern_adjacent_items_list[i].resize(list_size);
 		this->pattern_adjacent_int_size_list[i].resize(list_size);
@@ -1855,11 +1875,18 @@ unsigned int RscClusterer::fetch_adjacency_lists_from_disk(const unsigned int ch
 bool RscClusterer::move_adjacency_lists_to_disk(const unsigned int chunk, const unsigned int offset, const unsigned int amount)
 {
 	std::ostringstream filename_builder;
-	filename_builder << Options::get_option_as<std::string>("temporary_directory_path") << "/" << Options::get_option_as<std::string>("cluster_prefix") << "_scratch_c" << chunk << ".txt";
+	filename_builder << Options::get_option("temp-directory") << Options::get_option("cluster_prefix") << "_scratch_c" << chunk << ".txt";
 	auto filename = filename_builder.str();
 
 	std::ofstream file;
 	FileUtil::open_write(filename, file);
+
+	Daemon::error("creating adjacency file %s", filename.c_str());
+
+	FileUtil::write_to_file<unsigned int>(file, offset);
+	FileUtil::space(file);
+	FileUtil::write_to_file<unsigned int>(file, amount);
+	FileUtil::newline(file);
 
 	// Iterate through the specified lists, saving them to disk
 	// and freeing main memory as we go.
@@ -1890,11 +1917,11 @@ bool RscClusterer::move_adjacency_lists_to_disk(const unsigned int chunk, const 
 /*-----------------------------------------------------------------------------------------------*/
 void RscClusterer::compact_adjacency_pair_lists(const unsigned int offset, const unsigned int amount, const unsigned int number_of_phases, const unsigned int phase, const unsigned int min_count_limit)
 {
-	for (auto item = offset + amount - 1; item >= offset; --item)
+	for (auto item = static_cast<int>(offset + amount - 1); item >= static_cast<int>(offset); --item)
 	{
-		auto list_size = this->pattern_number_of_adjacencies[item];
+		const auto list_size = this->pattern_number_of_adjacencies[item];
 
-		if (list_size == 0 || item % number_of_phases != phase)
+		if (list_size == 0u || item % number_of_phases != phase)
 			continue;
 
 		auto &adjacent_items_list = this->pattern_adjacent_items_list[item];
@@ -1940,16 +1967,16 @@ void RscClusterer::add_int_pair_to_adjacency_lists(const unsigned int from_item,
 		this->pattern_adjacent_items_list[from_item].resize(Options::get_option_as<unsigned int>("rsc-small-buffsize"));
 		this->pattern_adjacent_items_list[from_item][0] = to_item;
 		this->pattern_adjacent_int_size_list[from_item].resize(Options::get_option_as<unsigned int>("rsc-small-buffsize"));
-		this->pattern_adjacent_int_size_list[from_item][0] = 1;
-		this->pattern_number_of_adjacencies[from_item] = 1;
+		this->pattern_adjacent_int_size_list[from_item][0] = 1u;
+		this->pattern_number_of_adjacencies[from_item] = 1u;
 		return;
 	}
 
-	auto adj_item_list = this->pattern_adjacent_items_list[from_item];
-	auto adj_int_size_list = this->pattern_adjacent_int_size_list[from_item];
+	auto& adj_item_list = this->pattern_adjacent_items_list[from_item];
+	auto& adj_int_size_list = this->pattern_adjacent_int_size_list[from_item];
 
-	auto low = 0u;
-	auto high = list_size - 1u;
+	auto low = static_cast<int>(0);
+	auto high = static_cast<int>(list_size - 1);
 	auto location = 0u;
 
 	while (low <= high) 
@@ -1993,7 +2020,7 @@ void RscClusterer::add_int_pair_to_adjacency_lists(const unsigned int from_item,
 	// Add an entry for the new pair.
 	// To maintain the sortedness of the list, we first need to shuffle
 	//   items to create a space for the new entry.
-	for (auto i = list_size; i > low; i--)
+	for (auto i = static_cast<int>(list_size); i > low; i--)
 	{
 		adj_item_list[i] = adj_item_list[i - 1];
 		adj_int_size_list[i] = adj_int_size_list[i - 1];
