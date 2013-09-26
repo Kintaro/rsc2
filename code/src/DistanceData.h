@@ -47,47 +47,14 @@
 
 class DistanceData
 {
-private:
-	std::vector<RscAccuracyType> data;
 public:
-	DistanceData() {}
-	DistanceData(const DistanceData& vec)
-	{
-		this->data = vec.data;
-	}
-
-	DistanceData(DistanceData& vec)
-	{
-		this->data = vec.data;
-	}
-
-	DistanceData(const std::vector<RscAccuracyType>& data)
-	{
-		this->data = data;
-	}
-	
-	virtual RscAccuracyType distance_to(const boost::shared_ptr<DistanceData>& to) 
-	{
-		auto sum = 0.0;
-
-		auto a = &this->data[0];
-		auto b = &to->data[0];
-
-		auto size = std::min(this->data.size(), to->data.size());
-
-		for (auto i = 0u; i < size; ++i)
-			sum += (a[i] - b[i]) * (a[i] - b[i]);
-
-		return sqrt(sum);
-	};
-	
+	virtual RscAccuracyType distance_to(const boost::shared_ptr<DistanceData>& to) = 0;
 private:
 	friend class boost::serialization::access;
 
 	template<class Archive>
 	void serialize(Archive &ar, const unsigned int version)
 	{
-		ar &data;
 	}
 };
 

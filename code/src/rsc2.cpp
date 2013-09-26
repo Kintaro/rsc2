@@ -54,6 +54,7 @@
 #include "DefaultOptions.h"
 #include "SetManager.h"
 #include "VecData.h"
+#include "DenseVecDataBlock.h"
 
 #include <fstream>
 
@@ -107,10 +108,10 @@ int main(int argc, char** argv)
 	parse_options_and_start_daemon(argc, argv);
 
 	if (world.rank() != 0) {
-		SetManager<VecDataBlock, RscAccuracyType> set;
+		SetManager<DenseVecDataBlock, RscAccuracyType> set;
 		set.set_list_hierarchy_parameters(ListStyle::Medium, 7, 60, 20, 20);
 		set.setup_samples();
-		RscClusterer* rsc = new RscClusterer(boost::shared_ptr<SetManager<VecDataBlock, RscAccuracyType>>(&set));
+		RscClusterer* rsc = new RscClusterer(boost::shared_ptr<SetManager<DenseVecDataBlock, RscAccuracyType>>(&set));
 		rsc->cluster_soft_rsc();
 		//ChunkManager<VecDataBlock, RscAccuracyType> chunk;
 		//chunk.load_chunk_data();

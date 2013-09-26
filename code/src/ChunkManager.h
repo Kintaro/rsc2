@@ -76,7 +76,7 @@ private:
 	unsigned int number_of_blocks;
 	std::vector<unsigned int> sample_size_list;
 	boost::shared_ptr<IndexStructure<DistanceData>> index_structure;
-	std::vector<boost::shared_ptr<DataBlock>> data_block_list;
+	std::vector<boost::shared_ptr<VecDataBlock>> data_block_list;
 	std::vector<std::vector<boost::shared_ptr<MemberBlock<ScoreType>>>> member_block_list;
 	std::vector<std::vector<boost::shared_ptr<InvertedMemberBlock<ScoreType>>>> inverted_member_block_list;
 	std::vector<unsigned int> offset_list;
@@ -344,7 +344,7 @@ unsigned int ChunkManager<DataBlock, ScoreType>::get_sample_size(const int sampl
 template<typename DataBlock, class ScoreType>
 const boost::shared_ptr<DataBlock> ChunkManager<DataBlock, ScoreType>::access_data_block(const unsigned int index)
 {
-	return this->data_block_list[index];
+	return boost::dynamic_pointer_cast<DataBlock>(this->data_block_list[index]);
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename DataBlock, class ScoreType>

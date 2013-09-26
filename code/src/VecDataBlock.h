@@ -61,7 +61,7 @@ public:
 	VecDataBlock() {}
 	VecDataBlock(const unsigned int block_id);
 	VecDataBlock(const boost::shared_ptr<VecDataBlock>& data_block) {};
-	VecDataBlock(VecDataBlock& data_block) {}
+
 	const boost::shared_ptr<DistanceData> access_item_by_block_offset(const unsigned int index) const;
 	unsigned int get_offset() const;
 	void set_offset(const size_t offset);
@@ -74,7 +74,7 @@ public:
 	void clear_data();
 	
 	void extract_all_items(std::vector<boost::shared_ptr<DistanceData>>& item_list, const unsigned int start_index);
-private:
+protected:
 	friend class boost::serialization::access;
 
 	template<class Archive>
@@ -85,8 +85,8 @@ private:
 		ar &data;
 		ar &block_id;
 	}
-	size_t internal_load_block(std::ifstream& file);
-	DistanceData internal_load_item(std::ifstream& file);
+	virtual size_t internal_load_block(std::ifstream& file) = 0;
+	virtual boost::shared_ptr<DistanceData> internal_load_item(std::ifstream& file) = 0;
 };
 
 #endif

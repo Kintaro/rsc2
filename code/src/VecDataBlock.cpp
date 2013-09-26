@@ -87,35 +87,6 @@ size_t VecDataBlock::load_data()
 	return num_loaded;
 }
 /*-----------------------------------------------------------------------------------------------*/
-size_t VecDataBlock::internal_load_block(std::ifstream& file)
-{
-	Daemon::debug("internal load block %i", *this->block_id);
-	auto number_of_items = FileUtil::read_from_file<unsigned int>(file);
-	this->data.resize(number_of_items);
-	
-	for (auto i = 0u; i < number_of_items; ++i)
-	{
-		auto vec_data = this->internal_load_item(file);
-		auto vec_ptr = new DistanceData(vec_data);
-		this->data[i] = boost::shared_ptr<DistanceData>(vec_ptr);
-	}
-	
-	this->number_of_items = number_of_items;
-	
-	return number_of_items;
-}
-/*-----------------------------------------------------------------------------------------------*/
-DistanceData VecDataBlock::internal_load_item(std::ifstream& file)
-{
-	auto length = FileUtil::read_from_file<unsigned int>(file);
-	
-	auto vector_data = std::vector<RscAccuracyType>(length, 0.0);
-	for (auto &x : vector_data)
-		x = FileUtil::read_from_file<RscAccuracyType>(file);
-	
-	return DistanceData(vector_data);
-}
-/*-----------------------------------------------------------------------------------------------*/
 bool VecDataBlock::is_valid()
 {
 	if (!this->block_id || this->number_of_items == 0u)
@@ -150,7 +121,7 @@ void VecDataBlock::extract_all_items(std::vector<boost::shared_ptr<DistanceData>
 /*-----------------------------------------------------------------------------------------------*/
 const boost::shared_ptr<DistanceData> VecDataBlock::access_item_by_block_offset(const unsigned int index) const
 {
-	return boost::shared_ptr<DistanceData>(this->data[index]);
+	return boost ::shared_ptr<DistanceData>(this->data[index]);
 	//return boost::shared_ptr<DistanceData>(const_cast<VecData*>(&(*(this->data.begin() + index))));
 }
 /*-----------------------------------------------------------------------------------------------*/
