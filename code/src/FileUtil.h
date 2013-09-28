@@ -62,9 +62,9 @@ public:
 };
 /*-----------------------------------------------------------------------------------------------*/
 template<typename T>
-inline const T FileUtil::read_from_file(std::ifstream& file)
+const T FileUtil::read_from_file(std::ifstream& file)
 {
-	T result;
+	T result = {};
 	
 	if (!is_binary)
 		is_binary = Options::get_option_as<bool>("use-binary-files");
@@ -78,7 +78,7 @@ inline const T FileUtil::read_from_file(std::ifstream& file)
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename T>
-inline void FileUtil::write_to_file(std::ofstream& file, const T& value, bool text_only)
+void FileUtil::write_to_file(std::ofstream& file, const T& value, bool text_only)
 {
 	if (!is_binary)
 		is_binary = Options::get_option_as<bool>("use-binary-files");

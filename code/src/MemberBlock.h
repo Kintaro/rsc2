@@ -50,7 +50,7 @@
 #include <boost/serialization/optional.hpp>
 #include "FileUtil.h"
 #include "VecDataBlock.h"
-#include "DistanceData.h"
+#include "VecData.h"
 #include "IndexStructure.h"
 #include "Daemon.h"
 
@@ -101,8 +101,8 @@ public:
 	const std::vector<unsigned int> extract_member_indices(const unsigned int item_index);
 	unsigned int get_number_of_members(const unsigned int item_index) const;
 
-	int build_approximate_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const RscAccuracyType scale_factor, const size_t item_index);
-	int build_exact_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const size_t item_index);
+	int build_approximate_neighbourhood(IndexStructure<VecData>& data_index, const size_t offset, const RscAccuracyType scale_factor, const size_t item_index);
+	int build_exact_neighbourhood(IndexStructure<VecData>& data_index, const size_t offset, const size_t item_index);
 
 	int merge_members(const MemberBlock<ScoreType>& block, const int max_list_size);
 	bool limit_to_sample(const boost::shared_ptr<InvertedMemberBlock<ScoreType>>& inverted_member_block);
@@ -111,9 +111,9 @@ public:
 
 	void shrink_to_fit();
 private:
-	int internal_build_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const RscAccuracyType scale_factor, const size_t item_index);
-	int internal_build_neighbourhood_compute_query(IndexStructure<DistanceData>& data_index, const int offset, const RscAccuracyType scale_factor, const int item_index);
-	int internal_build_neighbourhood_store(IndexStructure<DistanceData>& data_index, const int offset, const RscAccuracyType scale_factor, const int item_index, int num_members);
+	int internal_build_neighbourhood(IndexStructure<VecData>& data_index, const size_t offset, const RscAccuracyType scale_factor, const size_t item_index);
+	int internal_build_neighbourhood_compute_query(IndexStructure<VecData>& data_index, const int offset, const RscAccuracyType scale_factor, const int item_index);
+	int internal_build_neighbourhood_store(IndexStructure<VecData>& data_index, const int offset, const RscAccuracyType scale_factor, const int item_index, int num_members);
 	bool identify_save_file(std::ofstream& file) const;
 private:
 	friend class boost::serialization::access;
@@ -444,26 +444,26 @@ unsigned int MemberBlock<ScoreType>::get_number_of_members(const unsigned int it
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-int MemberBlock<ScoreType>::build_approximate_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const RscAccuracyType scale_factor, const size_t item_index)
+int MemberBlock<ScoreType>::build_approximate_neighbourhood(IndexStructure<VecData>& data_index, const size_t offset, const RscAccuracyType scale_factor, const size_t item_index)
 {
 	return internal_build_neighbourhood(data_index, offset, scale_factor, item_index);
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-int MemberBlock<ScoreType>::build_exact_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const size_t item_index)
+int MemberBlock<ScoreType>::build_exact_neighbourhood(IndexStructure<VecData>& data_index, const size_t offset, const size_t item_index)
 {
 	return internal_build_neighbourhood(data_index, offset, 0.0, item_index);
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-int MemberBlock<ScoreType>::internal_build_neighbourhood(IndexStructure<DistanceData>& data_index, const size_t offset, const RscAccuracyType scale_factor, const size_t item_index)
+int MemberBlock<ScoreType>::internal_build_neighbourhood(IndexStructure<VecData>& data_index, const size_t offset, const RscAccuracyType scale_factor, const size_t item_index)
 {
 	const int num_members = internal_build_neighbourhood_compute_query(data_index, offset, scale_factor, item_index);	
 	return internal_build_neighbourhood_store(data_index, offset, scale_factor, item_index, num_members);	
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-int MemberBlock<ScoreType>::internal_build_neighbourhood_compute_query(IndexStructure<DistanceData>& data_index, const int offset, const RscAccuracyType scale_factor, const int item_index)
+int MemberBlock<ScoreType>::internal_build_neighbourhood_compute_query(IndexStructure<VecData>& data_index, const int offset, const RscAccuracyType scale_factor, const int item_index)
 {
 	const int adjusted_item_index = item_index - *this->global_offset;
 	const int effective_sample_level = sample_level && *this->sample_level > 0 ? *this->sample_level : 0;
@@ -524,7 +524,7 @@ int MemberBlock<ScoreType>::internal_build_neighbourhood_compute_query(IndexStru
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename ScoreType>
-int MemberBlock<ScoreType>::internal_build_neighbourhood_store(IndexStructure<DistanceData>& data_index, const int offset, const RscAccuracyType scale_factor, 
+int MemberBlock<ScoreType>::internal_build_neighbourhood_store(IndexStructure<VecData>& data_index, const int offset, const RscAccuracyType scale_factor, 
 		const int item_index, const int num_members)
 {
 	const auto result_distance_comparisons = data_index.get_result_distance_comparisons();

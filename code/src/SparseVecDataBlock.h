@@ -49,7 +49,7 @@
 #include <boost/serialization/export.hpp>
 #include <memory>
 #include "VecDataBlock.h"
-#include "DistanceData.h"
+#include "VecData.h"
 
 class SparseVecDataBlock : public VecDataBlock
 {
@@ -58,18 +58,8 @@ public:
 	SparseVecDataBlock(const unsigned int block_id);
 	SparseVecDataBlock(const boost::shared_ptr<VecDataBlock>& data_block) {};
 	
-	friend class boost::serialization::access;
-
-	template<class Archive>
-	void serialize(Archive &ar, const unsigned int version)
-	{
-		// ar &number_of_items;
-		// ar &global_offset;
-		// ar &data;
-		// ar &block_id;
-	}
 	virtual size_t internal_load_block(std::ifstream& file);
-	virtual boost::shared_ptr<DistanceData> internal_load_item(std::ifstream& file);
+	virtual boost::shared_ptr<VecData> internal_load_item(std::ifstream& file);
 };
 
 #endif

@@ -38,7 +38,6 @@
 // Contact e-mail address: meh@nii.ac.jp, meh@acm.org
 //                         mail.wollwage@gmail.com
 
-#include <mpi.h>
 #include <boost/mpi/environment.hpp>
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/group.hpp>
@@ -55,10 +54,16 @@
 #include "SetManager.h"
 #include "VecData.h"
 #include "DenseVecDataBlock.h"
+#include "SparseVecDataBlock.h"
+#include "DenseVecData.h"
+#include "SparseVecData.h"
 
 #include <fstream>
 
 BOOST_CLASS_EXPORT_GUID(VecData, "VecData")
+BOOST_CLASS_EXPORT_GUID(DenseVecData, "DenseVecData")
+BOOST_CLASS_EXPORT_GUID(VecDataBlock, "VecDataBlock")
+BOOST_CLASS_EXPORT_GUID(DenseVecDataBlock, "DenseVecDataBlock")
 
 void print_options()
 {
@@ -108,19 +113,11 @@ int main(int argc, char** argv)
 	parse_options_and_start_daemon(argc, argv);
 
 	if (world.rank() != 0) {
-		SetManager<DenseVecDataBlock, RscAccuracyType> set;
+		SetManager<VecDataBlock, RscAccuracyType> set;
 		set.set_list_hierarchy_parameters(ListStyle::Medium, 7, 60, 20, 20);
 		set.setup_samples();
-		RscClusterer* rsc = new RscClusterer(boost::shared_ptr<SetManager<DenseVecDataBlock, RscAccuracyType>>(&set));
+		RscClusterer* rsc = new RscClusterer(boost::shared_ptr<SetManager<VecDataBlock, RscAccuracyType>>(&set));
 		rsc->cluster_soft_rsc();
-		//ChunkManager<VecDataBlock, RscAccuracyType> chunk;
-		//chunk.load_chunk_data();
-		//chunk.setup_samples(7, 100);
-		
-		//if (computing_communicator->rank() == 0)
-			//chunk.build_approximate_neighborhoods(4, 1.0, false, true, TransmissionMode::TransmissionSend, computing_communicator->rank());
-		//else
-			//chunk.build_approximate_neighborhoods(4, 1.0, false, true, TransmissionMode::TransmissionReceive, computing_communicator->rank());
 	}
 
 	// Wait for all nodes except master to finish work

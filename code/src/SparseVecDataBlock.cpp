@@ -45,16 +45,14 @@
 #include "Daemon.h"
 
 /*-----------------------------------------------------------------------------------------------*/
-SparseVecDataBlock::SparseVecDataBlock(const unsigned int block_id)
+SparseVecDataBlock::SparseVecDataBlock(const unsigned int block_id) : VecDataBlock(block_id)
 {
-	this->block_id = block_id;
-	this->global_offset = 0u;	
 }
 /*-----------------------------------------------------------------------------------------------*/
 size_t SparseVecDataBlock::internal_load_block(std::ifstream& file)
 {
 	Daemon::debug("internal load block %i", *this->block_id);
-	auto number_of_items = FileUtil::read_from_file<unsigned int>(file);
+	const auto number_of_items = FileUtil::read_from_file<unsigned int>(file);
 	this->data.resize(number_of_items);
 	
 	for (auto i = 0u; i < number_of_items; ++i)
@@ -65,10 +63,14 @@ size_t SparseVecDataBlock::internal_load_block(std::ifstream& file)
 	return number_of_items;
 }
 /*-----------------------------------------------------------------------------------------------*/
-boost::shared_ptr<DistanceData> SparseVecDataBlock::internal_load_item(std::ifstream& file)
+boost::shared_ptr<VecData> SparseVecDataBlock::internal_load_item(std::ifstream& file)
 {
-	auto length = FileUtil::read_from_file<unsigned int>(file);
-	
+	const auto index = FileUtil::read_from_file<unsigned int>(file);
+	const auto length = FileUtil::read_from_file<unsigned int>(file);
+
+	if (0u == length)
+		return boost::shared_ptr<VecData>(new SparseVecData(index, std::vector<unsigned int>(), std::vector<RscAccuracyType>()));
+
 	auto vector_data = std::vector<RscAccuracyType>(length, 0.0);
 	auto pos_data = std::vector<unsigned int>(length, 0);
 	for (auto i = 0u; i < length; ++i)
@@ -77,6 +79,6 @@ boost::shared_ptr<DistanceData> SparseVecDataBlock::internal_load_item(std::ifst
 		vector_data[i] = FileUtil::read_from_file<RscAccuracyType>(file);
 	}
 	
-	return boost::shared_ptr<DistanceData>(new SparseVecData(pos_data, vector_data));
+	return boost::shared_ptr<VecData>(dynamic_cast<VecData*>(new SparseVecData(index, pos_data, vector_data)));
 }
 /*-----------------------------------------------------------------------------------------------*/

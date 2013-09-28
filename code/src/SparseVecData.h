@@ -51,6 +51,7 @@
 class SparseVecData : public VecData
 {
 private:
+	unsigned int index;
 	std::vector<RscAccuracyType> data;
 	std::vector<unsigned int> pos;
 public:
@@ -67,41 +68,54 @@ public:
 		this->pos = vec.pos;
 	}
 
-	SparseVecData(const std::vector<unsigned int>& pos, const std::vector<RscAccuracyType>& data)
+	SparseVecData(const unsigned int index, const std::vector<unsigned int>& pos, const std::vector<RscAccuracyType>& data)
 	{
+		this->index = index;
+		this->pos = pos;
 		this->data = data;
 	}
 	
-	virtual RscAccuracyType distance_to(const boost::shared_ptr<DistanceData>& to) 
+	virtual RscAccuracyType distance_to(const boost::shared_ptr<VecData>& to) 
 	{
+		Daemon::debug(" [before: %i]", (bool)to);
 		auto other = boost::static_pointer_cast<SparseVecData>(to);
-		
-		auto this_norm = this->norm();
-		auto other_norm = other->norm();
+		Daemon::debug(" [after: %i]", (bool)other);
 
-		auto i = 0u, j = 0u;
-		auto cosine = 0.0;
-
-		while (i < this->data.size() && j < other->data.size())
-		{
-			if (this->pos[i] < other->pos[j])
-				++i;
-			else if (this->pos[i] > other->pos[j])
-				++j;
-			else
-			{
-				cosine += (this->data[i] / this_norm) * (other->data[j] / other_norm);
-				++i; ++j;
-			}
-		}
-
-		if (cosine >= 1.0)
+		if (this->index == other->index)
 			return 0.0;
-		if (cosine <= -1.0)
-			return acos(-1.0);
-		return acos(cosine);
+
+		for (auto i = 0u; i < this->data.size(); ++i)
+			if (this->pos[i] == other->index)
+				return this->data[i];
+
+		return 100 + Daemon::random(0.01);
+		// auto other = boost::static_pointer_cast<SparseVecData>(to);
+		
+		// auto this_norm = this->norm();
+		// auto other_norm = other->norm();
+
+		// auto i = 0u, j = 0u;
+		// auto cosine = 0.0;
+
+		// while (i < this->data.size() && j < other->data.size())
+		// {
+		// 	if (this->pos[i] < other->pos[j])
+		// 		++i;
+		// 	else if (this->pos[i] > other->pos[j])
+		// 		++j;
+		// 	else
+		// 	{
+		// 		cosine += (this->data[i] / this_norm) * (other->data[j] / other_norm);
+		// 		++i; ++j;
+		// 	}
+		// }
+
+		// if (cosine >= 1.0)
+		// 	return 0.0;
+		// if (cosine <= -1.0)
+		// 	return acos(-1.0);
+		// return acos(cosine);
 	};
-	
 private:
 	RscAccuracyType norm() const 
 	{
@@ -110,17 +124,6 @@ private:
 			this_norm += this->data[i] * this->data[i];
 
 		return sqrt(this_norm);
-	}
-
-	friend class boost::serialization::access;
-
-	template<class Archive>
-	void serialize(Archive &ar, const unsigned int version)
-	{
-		ar.template register_type<VecData>();
-		ar & boost::serialization::base_object<VecData>(*this);
-		ar &data;
-		ar &pos;
 	}
 };
 

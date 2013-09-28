@@ -38,8 +38,8 @@
 // Contact e-mail address: meh@nii.ac.jp, meh@acm.org
 //                         mail.wollwage@gmail.com
 
-#ifndef __LOGGER_H__
-#define __LOGGER_H__
+#ifndef __DAEMON_H__
+#define __DAEMON_H__
 
 #include <string>
 #include <fstream>
@@ -47,8 +47,7 @@
 #include <thread>
 #include <mutex>
 #include <boost/mpi/communicator.hpp>
-
-typedef double RscAccuracyType;
+#include "Types.h"
 
 class Daemon
 {
@@ -67,6 +66,8 @@ public:
 
 	static void set_world(boost::mpi::communicator* w) { world_communicator = w; }
 	static void set_communicator(boost::mpi::communicator* c) { communicator = c; }
+
+	static RscAccuracyType random(const RscAccuracyType limit = 1.0);
 private:
 	std::ofstream log_file;
 	static boost::mpi::communicator* world_communicator;

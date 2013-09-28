@@ -62,11 +62,10 @@ public:
 	template<typename K, typename V>
 	static unsigned int partial_sort(const unsigned int how_many, std::vector<K>& a, std::vector<V>& b, const int from, const int to)
 	{
-		auto begin = make_paired_iterator(a.begin() + from, b.begin() + from);
-		auto middle = make_paired_iterator(a.begin() + from + how_many, b.begin() + from + how_many);
-		auto end = make_paired_iterator(a.begin() + to, b.begin() + to);
+		typedef typename std::vector<K>::iterator IterA;
+		typedef typename std::vector<V>::iterator IterB;
 
-		std::partial_sort(begin, middle, end);
+		JointPartialSort<IterA, IterB>(a.begin() + from, a.begin() + from + how_many, a.begin() + to, b.begin() + from, b.begin() + from + how_many);
 
 		return std::min(how_many, static_cast<unsigned int>(to - from));
 	}
@@ -74,10 +73,10 @@ public:
 	template<typename K, typename V>
 	static unsigned int sort(std::vector<K>& a, std::vector<V>& b, const unsigned int from, const unsigned int to)
 	{
-		auto begin = make_paired_iterator(a.begin() + from, b.begin() + from);
-		auto end = make_paired_iterator(a.begin() + to, b.begin() + to);
+		typedef typename std::vector<K>::iterator IterA;
+		typedef typename std::vector<V>::iterator IterB;
 
-		std::sort(begin, end);
+		JointSort<IterA, IterB>(a.begin() + from, a.begin() + to, b.begin() + from);
 
 		return std::min((int)a.size(), (int)(to - from));
 	}
@@ -85,10 +84,11 @@ public:
 	template<typename K, typename V, typename W>
 	static unsigned int sort(std::vector<K>& a, std::vector<V>& b, std::vector<W>& c, const unsigned int from, const unsigned int to)
 	{
-		auto begin = make_paired_iterator(a.begin() + from, make_paired_iterator(b.begin() + from, c.begin() + from));
-		auto end = make_paired_iterator(a.begin() + to, make_paired_iterator(b.begin() + to, c.begin() + to));
+		// auto d = PairedIterator<std::vector<V>::iterator_type, std::vector<W>::iterator_type>(b.begin(), c.begin());
+		// auto begin = PairedIterator<std::vector<K>::iterator_type, std::vector<V>::iterator_type>(a.begin() + from, d.begin() + from);
+		// auto end = PairedIterator<std::vector<K>::iterator_type, std::vector<V>::iterator_type>(a.begin() + to, d.begin() + to);
 
-		std::sort(begin, end);
+		// std::sort(begin, end);
 
 		return std::min((int)a.size(), (int)(to - from));
 	}

@@ -38,6 +38,9 @@
 // Contact e-mail address: meh@nii.ac.jp, meh@acm.org
 //                         mail.wollwage@gmail.com
 
+#include <boost/serialization/export.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 #include "VecDataBlock.h"
 #include "DenseVecDataBlock.h"
 #include "DenseVecData.h"
@@ -45,10 +48,8 @@
 #include "Daemon.h"
 
 /*-----------------------------------------------------------------------------------------------*/
-DenseVecDataBlock::DenseVecDataBlock(const unsigned int block_id)
+DenseVecDataBlock::DenseVecDataBlock(const unsigned int block_id) : VecDataBlock(block_id)
 {
-	this->block_id = block_id;
-	this->global_offset = 0u;	
 }
 /*-----------------------------------------------------------------------------------------------*/
 size_t DenseVecDataBlock::internal_load_block(std::ifstream& file)
@@ -65,7 +66,7 @@ size_t DenseVecDataBlock::internal_load_block(std::ifstream& file)
 	return number_of_items;
 }
 /*-----------------------------------------------------------------------------------------------*/
-boost::shared_ptr<DistanceData> DenseVecDataBlock::internal_load_item(std::ifstream& file)
+boost::shared_ptr<VecData> DenseVecDataBlock::internal_load_item(std::ifstream& file)
 {
 	auto length = FileUtil::read_from_file<unsigned int>(file);
 	
@@ -73,6 +74,6 @@ boost::shared_ptr<DistanceData> DenseVecDataBlock::internal_load_item(std::ifstr
 	for (auto &x : vector_data)
 		x = FileUtil::read_from_file<RscAccuracyType>(file);
 	
-	return boost::shared_ptr<DistanceData>(new DenseVecData(vector_data));
+	return boost::shared_ptr<VecData>(dynamic_cast<VecData*>(new DenseVecData(vector_data)));
 }
 /*-----------------------------------------------------------------------------------------------*/

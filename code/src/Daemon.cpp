@@ -150,3 +150,9 @@ void Daemon::time(const char* s, ...)
 	internal_log(" time", world.rank(), buffer);
 }
 /*-----------------------------------------------------------------------------------------------*/
+RscAccuracyType Daemon::random(const RscAccuracyType limit)
+{
+	 auto dis = std::uniform_real_distribution<>(0.0, limit);
+	 return dis(rnd);
+}
+/*-----------------------------------------------------------------------------------------------*/

@@ -49,15 +49,14 @@
 #include <cerrno>
 
 #include <iostream>
-#include "DistanceData.h"
 
 template<typename T>
 class IndexStructure
 {
 public:
 	virtual ~IndexStructure() {};
-	virtual int build(std::vector<boost::shared_ptr<DistanceData>>& inputData, const int number_of_items, const boost::optional<int>& numParents = 4) = 0;
-	virtual unsigned int build(const std::string& filename, std::vector<boost::shared_ptr<DistanceData>>& inputData, const int number_of_items) = 0;
+	virtual int build(std::vector<boost::shared_ptr<T>>& inputData, const int number_of_items, const boost::optional<int>& numParents = 4) = 0;
+	virtual unsigned int build(const std::string& filename, std::vector<boost::shared_ptr<T>>& inputData, const int number_of_items) = 0;
 	virtual unsigned int save_to_file(const std::string& fileName) = 0;
 	virtual int get_number_of_items() const = 0;
 	virtual int get_number_of_levels() const = 0;

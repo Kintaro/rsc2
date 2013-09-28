@@ -69,9 +69,9 @@ public:
 		this->data = data;
 	}
 	
-	virtual RscAccuracyType distance_to(const boost::shared_ptr<DistanceData>& to) 
+	virtual RscAccuracyType distance_to(const boost::shared_ptr<VecData>& to) 
 	{
-		auto other = boost::static_pointer_cast<DenseVecData>(to);
+		auto other = boost::dynamic_pointer_cast<DenseVecData>(to);
 		auto sum = 0.0;
 
 		for (auto i = 0u; i < this->data.size(); ++i)

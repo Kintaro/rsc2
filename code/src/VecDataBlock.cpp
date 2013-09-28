@@ -80,6 +80,7 @@ size_t VecDataBlock::load_data()
 	if (!FileUtil::open_read(filename, file, Options::get_option_as<bool>("use-binary-data-files")))
 		Daemon::error("error opening file %s", filename.c_str());
 	
+	Daemon::debug("loading block %s", filename.c_str());
 	auto num_loaded = this->internal_load_block(file);
 	
 	file.close();
@@ -111,18 +112,19 @@ bool VecDataBlock::verify_savefile()
 	return true;
 }
 /*-----------------------------------------------------------------------------------------------*/
-void VecDataBlock::extract_all_items(std::vector<boost::shared_ptr<DistanceData>>& item_list, const unsigned int start_index)
+void VecDataBlock::extract_all_items(std::vector<boost::shared_ptr<VecData>>& item_list, const unsigned int start_index)
 {
-	item_list.resize(start_index + this->number_of_items);
+	if (item_list.size() <= start_index + this->number_of_items)
+		item_list.resize(start_index + this->number_of_items);
 	
 	for (auto i = 0u; i < this->number_of_items; ++i)
-		item_list[i + start_index] = boost::shared_ptr<DistanceData>(this->data[i]);
+		item_list[i + start_index] = boost::shared_ptr<VecData>(this->data[i]);
 }
 /*-----------------------------------------------------------------------------------------------*/
-const boost::shared_ptr<DistanceData> VecDataBlock::access_item_by_block_offset(const unsigned int index) const
+const boost::shared_ptr<VecData> VecDataBlock::access_item_by_block_offset(const unsigned int index) const
 {
-	return boost ::shared_ptr<DistanceData>(this->data[index]);
-	//return boost::shared_ptr<DistanceData>(const_cast<VecData*>(&(*(this->data.begin() + index))));
+	return boost::shared_ptr<VecData>(this->data[index]);
+	//return boost::shared_ptr<VecData>(const_cast<VecData*>(&(*(this->data.begin() + index))));
 }
 /*-----------------------------------------------------------------------------------------------*/
 void VecDataBlock::clear_data()

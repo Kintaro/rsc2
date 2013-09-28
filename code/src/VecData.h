@@ -45,19 +45,19 @@
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 #include <memory>
-#include "DistanceData.h"
 #include "Daemon.h"
+#include "Types.h"
 
-class VecData : public DistanceData
+class VecData
 {
+public:
+	virtual RscAccuracyType distance_to(const boost::shared_ptr<VecData>& to) { return 0.0; }
 private:
 	friend class boost::serialization::access;
 
 	template<class Archive>
 	void serialize(Archive &ar, const unsigned int version)
 	{
-		ar.template register_type<DistanceData>();
-		ar & boost::serialization::base_object<DistanceData>(*this);
 	}
 };
 

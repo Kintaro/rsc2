@@ -49,17 +49,17 @@
 #include <vector>
 #include <math.h>
 #include "../../IndexStructure.h"
-#include "../../DistanceData.h"
+#include "../../VecData.h"
 
 #include <boost/extension/extension.hpp>
 #include <boost/serialization/optional.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 
-class Sash : public IndexStructure<DistanceData> 
+class Sash : public IndexStructure<VecData> 
 {
 public:
 
-    boost::optional<std::vector<boost::shared_ptr<DistanceData>>> data;
+    boost::optional<std::vector<boost::shared_ptr<VecData>>> data;
 
     int size;
 
@@ -100,7 +100,7 @@ public:
     std::vector<int> child_size_list;
 
     /* Storage supporting distance computation. */
-    boost::shared_ptr<DistanceData> query; 
+    boost::shared_ptr<VecData> query; 
     
     /* The distance themselves are stored
        in the array "distFromQueryList". */
@@ -189,7 +189,7 @@ public:
      *   can be obtained via a call to getResultDistComps.
      */
 
-    int build(std::vector<boost::shared_ptr<DistanceData>>& inputData, const int number_of_items, const boost::optional<int>& numParents = 4);
+    int build(std::vector<boost::shared_ptr<VecData>>& inputData, const int number_of_items, const boost::optional<int>& numParents = 4);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -204,7 +204,7 @@ public:
      * If unsuccessful, zero is returned.
      */
 
-    virtual unsigned int build(const std::string& filename, std::vector<boost::shared_ptr<DistanceData>>& inputData, const int number_of_items);
+    virtual unsigned int build(const std::string& filename, std::vector<boost::shared_ptr<VecData>>& inputData, const int number_of_items);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -225,7 +225,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_all_in_range(const boost::shared_ptr<DistanceData> query, const RscAccuracyType limit, const int sample_rate = 0);
+    virtual int find_all_in_range(const boost::shared_ptr<VecData> query, const RscAccuracyType limit, const int sample_rate = 0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -255,7 +255,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_most_in_range(const boost::shared_ptr<DistanceData> query, const RscAccuracyType limit, const boost::optional<int>& sampleRate = 0, const boost::optional<RscAccuracyType>& scaleFactor = 1.0);
+    virtual int find_most_in_range(const boost::shared_ptr<VecData> query, const RscAccuracyType limit, const boost::optional<int>& sampleRate = 0, const boost::optional<RscAccuracyType>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -286,7 +286,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_near(const boost::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<RscAccuracyType>& scaleFactor = 1.0);
+    virtual int find_near(const boost::shared_ptr<VecData> query, const int howMany, const boost::optional<int>& sampleRate = 0, const boost::optional<RscAccuracyType>& scaleFactor = 1.0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -312,7 +312,7 @@ public:
      *   to the query.
      */
 
-    virtual int find_nearest(const boost::shared_ptr<DistanceData> query, const int howMany, const boost::optional<int>& sampleRate = 0);
+    virtual int find_nearest(const boost::shared_ptr<VecData> query, const int howMany, const boost::optional<int>& sampleRate = 0);
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -322,7 +322,7 @@ public:
      * Returns direct access to the SASH input data list.
      */
 
-    std::vector<boost::shared_ptr<DistanceData>>& get_data();
+    std::vector<boost::shared_ptr<VecData>>& get_data();
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -690,7 +690,7 @@ private:
 /*-----------------------------------------------------------------------------------------------*/
 
 
-    void set_new_query(const boost::shared_ptr<DistanceData>& query);
+    void set_new_query(const boost::shared_ptr<VecData>& query);
     //
     // Accepts a new item as the query object for future distance comparisons.
     // Any previously-stored distances are cleared by this operation,
@@ -709,6 +709,6 @@ private:
 
 };
 
-extern "C" IndexStructure<DistanceData>* /*BOOST_EXTENSION_EXPORT_DECL*/ create_index_structure(int x);
+extern "C" IndexStructure<VecData>* /*BOOST_EXTENSION_EXPORT_DECL*/ create_index_structure(int x);
 
 #endif
