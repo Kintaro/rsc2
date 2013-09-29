@@ -73,7 +73,7 @@ void Daemon::internal_log(const std::string& level, const int rank, const std::s
 	buffer << "\33[0;3" << std::to_string(rank + 1) << "m" << rank << " :: " << level << "] " << mbstr << " - " << message << "\33[0m";
 	std::string formatted_string = buffer.str();
 	std::cout << formatted_string << std::endl;
-	// fflush(NULL);
+	fflush(NULL);
 }
 /*-----------------------------------------------------------------------------------------------*/
 void Daemon::error(const char* s, ...)

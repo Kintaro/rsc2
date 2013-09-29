@@ -62,8 +62,10 @@
 
 BOOST_CLASS_EXPORT_GUID(VecData, "VecData")
 BOOST_CLASS_EXPORT_GUID(DenseVecData, "DenseVecData")
+BOOST_CLASS_EXPORT_GUID(SparseVecData, "SparseVecData")
 BOOST_CLASS_EXPORT_GUID(VecDataBlock, "VecDataBlock")
 BOOST_CLASS_EXPORT_GUID(DenseVecDataBlock, "DenseVecDataBlock")
+BOOST_CLASS_EXPORT_GUID(SparseVecDataBlock, "SparseVecDataBlock")
 
 void print_options()
 {

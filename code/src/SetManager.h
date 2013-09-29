@@ -202,8 +202,10 @@ SetManager<DataBlock, ScoreType>::SetManager()
 template<typename DataBlock, typename ScoreType>
 unsigned int SetManager<DataBlock, ScoreType>::setup_samples()
 {
-	auto maximum_number_of_micro_members = boost::optional<unsigned int>(boost::none);
-	auto maximum_number_of_mini_members = boost::optional<unsigned int>(boost::none);
+	auto maximum_number_of_micro_members = boost::optional<unsigned int>(0u);
+	auto maximum_number_of_mini_members = boost::optional<unsigned int>(0u);
+	maximum_number_of_micro_members = boost::none;
+	maximum_number_of_mini_members = boost::none;
 	
 	switch (this->number_of_tiny_samples)
 	{

@@ -1036,7 +1036,6 @@ int Sash::internal_build_recursively(const int number_of_items)
 		if (child % 5000 == 4999)
 			Daemon::debug("Inserting item %d (out of %d)...", child + 1, this->data->size());
 
-        Daemon::error("setting query to item %i", this->intern_to_extern_mapping[child]); fflush(NULL);
 		this->set_new_query((*this->data)[this->intern_to_extern_mapping[child]]);
 		this->internal_find_parents(maxParents);
 

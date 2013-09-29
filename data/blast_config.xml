@@ -13,10 +13,10 @@
 	<random-seed>421337</random-seed>
 
 	<!-- Dataset and directory handling -->
-	<dataset>isolet</dataset>
-	<type>dvf</type>
-	<input-directory>/home/wollwage/isolet/input_2_chunks/</input-directory>
-	<temp-directory>/home/wollwage/temp/</temp-directory>
+	<dataset>blast_filtered</dataset>
+	<type>svf</type>
+	<input-directory>/home/wollwage/data/blast/input/</input-directory>
+	<temp-directory>/home/wollwage/data/blast/temp/</temp-directory>
 	<cluster-directory>/tardis/temp/isolet-clusters/</cluster-directory>
 
 	<!-- Clustering options -->

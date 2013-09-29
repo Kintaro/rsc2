@@ -77,9 +77,7 @@ public:
 	
 	virtual RscAccuracyType distance_to(const boost::shared_ptr<VecData>& to) 
 	{
-		Daemon::debug(" [before: %i]", (bool)to);
 		auto other = boost::static_pointer_cast<SparseVecData>(to);
-		Daemon::debug(" [after: %i]", (bool)other);
 
 		if (this->index == other->index)
 			return 0.0;
@@ -124,6 +122,18 @@ private:
 			this_norm += this->data[i] * this->data[i];
 
 		return sqrt(this_norm);
+	}
+
+	friend class boost::serialization::access;
+
+	template<class Archive>
+	void serialize(Archive &ar, const unsigned int version)
+	{
+		ar.template register_type<VecData>();
+		ar & boost::serialization::base_object<VecData>(*this);
+		ar &index;
+		ar &data;
+		ar &pos;
 	}
 };
 

@@ -60,6 +60,15 @@ public:
 	
 	virtual size_t internal_load_block(std::ifstream& file);
 	virtual boost::shared_ptr<VecData> internal_load_item(std::ifstream& file);
+protected:
+	friend class boost::serialization::access;
+
+	template<class Archive>
+	void serialize(Archive &ar, const unsigned int version)
+	{
+		ar.template register_type<VecDataBlock>();
+		ar & boost::serialization::base_object<VecDataBlock>(*this);
+	}
 };
 
 #endif

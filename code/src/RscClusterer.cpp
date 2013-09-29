@@ -645,18 +645,16 @@ void RscClusterer::select_trim_patterns_for_sample_send(const int sample_id, con
 			// the information
 			else if (chunk >= 0)
 			{
-				// Notify chunk
-				Daemon::comm().send(chunk, 0, 1);
 				// Receive amount and offset
 				Daemon::comm().recv(chunk, 0, amount);
 				Daemon::comm().recv(chunk, 0, offset);
 			}
 
-			if (this->fetch_adjacency_lists_from_disk(chunk, offset, amount) != amount)
-			{
-				for (auto target_processor = 1; target_processor < Daemon::comm().size(); ++target_processor)
-					Daemon::comm().send(target_processor, 0, -5);
-			}
+			// if (this->fetch_adjacency_lists_from_disk(chunk, offset, amount) != amount)
+			// {
+			// 	for (auto target_processor = 1; target_processor < Daemon::comm().size(); ++target_processor)
+			// 		Daemon::comm().send(target_processor, 0, -5);
+			// }
 		}
 
 		auto item = this->pattern_rank_to_index_list[i];
@@ -718,22 +716,6 @@ void RscClusterer::select_trim_patterns_for_sample_send(const int sample_id, con
 
 	Daemon::comm().barrier();
 
-	for (auto target_processor = 1; target_processor < Daemon::comm().size(); ++target_processor)
-		Daemon::comm().send(target_processor, 0, 1);
-
-	while (chunk < Daemon::comm().size())
-	{
-		if (chunk == 0 && ++chunk)
-			continue;
-
-		Daemon::comm().send(chunk, 0, 1);
-		Daemon::comm().recv(chunk, 0, amount);
-		Daemon::comm().recv(chunk, 0, offset);
-		++chunk;
-	}
-
-	Daemon::comm().barrier();
-
 	// The count_list array now indicates the surviving patterns for
 	// this sample level. Copy them into the selected pattern list.
 	for (chunk = 0; chunk < Daemon::comm().size(); ++chunk)
@@ -761,12 +743,32 @@ void RscClusterer::select_trim_patterns_for_sample_send(const int sample_id, con
 			{
 				Daemon::comm().send(chunk, 0, member_index_list);
 				member_index_list.clear();
-
-				Daemon::comm().recv(chunk, 0, offset);
-				Daemon::comm().recv(chunk, 0, amount);
-
 				Daemon::comm().recv(chunk, 0, member_index_list);
 			}
+
+			for (auto i = 0u; i < amount; ++i)
+            {
+                const auto item = i + offset;
+
+                if (this->count_list[item] != 0u)
+                {
+                    const auto list_size = this->pattern_size_list[item];
+                    this->selected_pattern_base_index_list[this->number_of_selected_patterns] = item;
+                    this->selected_pattern_member_index_list[this->number_of_selected_patterns].resize(list_size);
+
+                    for (auto j = 0u; j < list_size; ++j)
+                        this->selected_pattern_member_index_list[this->number_of_selected_patterns][j] = this->member_index_list[item][j];
+
+                    ++this->number_of_selected_patterns;
+                }
+
+                this->count_list[item] = 0u;
+
+                // We are finished with this particular member list.
+                // Delete it from main memory.
+                this->member_index_list[item].clear();
+                this->member_size_list[item] = 0u;
+            }
 		}
 	}
 
@@ -790,43 +792,8 @@ void RscClusterer::select_trim_patterns_for_sample_receive(const int sample_id, 
 
 	this->purge_adjacency_lists(Daemon::comm().rank(), offset, amount);
 
-	Daemon::error("  - stage 1");
-	int t;
-	Daemon::comm().recv(0, 0, t);
-
-	Daemon::error("  - stage 2");
-
-	if (t == 0)
-	{
-		Daemon::comm().send(0, 0, amount);
-		Daemon::comm().send(0, 0, offset);
-	}
-	else if (t == 1)
-		;
-	else if (t == -5)
-		throw new std::runtime_error("Received error code");
-	else
-	{
-		Daemon::comm().recv(0, 0, t);
-		if (t == -5)
-			throw new std::runtime_error("Received error code 2");
-	}
-
-	Daemon::error("  - stage 3");
-
-	Daemon::comm().barrier();
-
-	Daemon::comm().recv(0, 0, t);
-
-	Daemon::error("  - stage 3.1");
-
-	if (t == 1)
-	{
-		Daemon::comm().send(0, 0, amount);
-		Daemon::comm().send(0, 0, offset);
-	}
-
-	Daemon::error("  - stage 4");
+	Daemon::comm().send(0, 0, amount);
+	Daemon::comm().send(0, 0, offset);
 
 	Daemon::comm().barrier();
 
@@ -849,6 +816,8 @@ void RscClusterer::select_trim_patterns_for_sample_receive(const int sample_id, 
 
 		Daemon::comm().send(0, 0, this->member_index_list);
 	}
+
+	Daemon::error("  - stage 5");
 }
 /*-----------------------------------------------------------------------------------------------*/
 void RscClusterer::select_final_patterns_for_sample(const int sample_id, const TransmissionMode& transmission_mode)
