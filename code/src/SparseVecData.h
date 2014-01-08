@@ -52,6 +52,7 @@ class SparseVecData : public VecData
 {
 private:
 	unsigned int index;
+	int length;
 	std::vector<RscAccuracyType> data;
 	std::vector<unsigned int> pos;
 public:
@@ -60,33 +61,41 @@ public:
 	{
 		this->data = vec.data;
 		this->pos = vec.pos;
+		this->index = vec.index;
+		this->length = vec.length;
 	}
 
 	SparseVecData(SparseVecData& vec)
 	{
 		this->data = vec.data;
 		this->pos = vec.pos;
+		this->index = vec.index;
+		this->length = vec.length;
 	}
 
-	SparseVecData(const unsigned int index, const std::vector<unsigned int>& pos, const std::vector<RscAccuracyType>& data)
+	SparseVecData(const unsigned int index, const int length, const std::vector<unsigned int>& pos, const std::vector<RscAccuracyType>& data)
 	{
 		this->index = index;
-		this->pos = pos;
-		this->data = data;
+		this->length = length;
+		this->pos = std::vector<unsigned int>(pos);
+		this->data = std::vector<RscAccuracyType>(data);
 	}
 	
 	virtual RscAccuracyType distance_to(const boost::shared_ptr<VecData>& to) 
 	{
-		auto other = boost::static_pointer_cast<SparseVecData>(to);
+		// auto other = dynamic_cast<SparseVecData*>(to.get());
+		auto other = boost::dynamic_pointer_cast<SparseVecData>(to);
 
 		if (this->index == other->index)
 			return 0.0;
 
-		for (auto i = 0u; i < this->data.size(); ++i)
+		for (auto i = 0; i < this->length; ++i)
 			if (this->pos[i] == other->index)
 				return this->data[i];
 
-		return 100 + Daemon::random(0.01);
+		const auto random_value = Daemon::random(1.0);
+		const auto result = 100.0 + random_value;
+		return result;
 		// auto other = boost::static_pointer_cast<SparseVecData>(to);
 		
 		// auto this_norm = this->norm();
@@ -134,6 +143,7 @@ private:
 		ar &index;
 		ar &data;
 		ar &pos;
+		ar &length;
 	}
 };
 

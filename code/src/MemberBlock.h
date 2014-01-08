@@ -637,6 +637,14 @@ int MemberBlock<ScoreType>::merge_members(const MemberBlock<ScoreType>& block, c
 		}
 	}
 
+	if (*this->global_offset == 0u) {
+		std::stringstream s;
+		for (auto i = 0u; i < this->member_size_list[0]; ++i) {
+			s << this->member_score_llist[0][i] << " ";
+		}
+		Daemon::error("%s", s.str().c_str());
+	}
+
 	return true;
 }
 /*-----------------------------------------------------------------------------------------------*/

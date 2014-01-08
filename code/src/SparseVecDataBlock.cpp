@@ -66,19 +66,17 @@ size_t SparseVecDataBlock::internal_load_block(std::ifstream& file)
 boost::shared_ptr<VecData> SparseVecDataBlock::internal_load_item(std::ifstream& file)
 {
 	const auto index = FileUtil::read_from_file<unsigned int>(file);
-	const auto length = FileUtil::read_from_file<unsigned int>(file);
+	const auto length = FileUtil::read_from_file<int>(file);
 
-	if (0u == length)
-		return boost::shared_ptr<VecData>(new SparseVecData(index, std::vector<unsigned int>(), std::vector<RscAccuracyType>()));
-
-	auto vector_data = std::vector<RscAccuracyType>(length, 0.0);
-	auto pos_data = std::vector<unsigned int>(length, 0);
-	for (auto i = 0u; i < length; ++i)
+	auto vector_data = std::vector<RscAccuracyType>();
+	auto pos_data = std::vector<unsigned int>();
+	for (auto i = 0; i < length; ++i)
 	{
-		pos_data[i] = FileUtil::read_from_file<unsigned int>(file);
-		vector_data[i] = FileUtil::read_from_file<RscAccuracyType>(file);
+		pos_data.push_back(FileUtil::read_from_file<unsigned int>(file));
+		vector_data.push_back(FileUtil::read_from_file<RscAccuracyType>(file));
 	}
 	
-	return boost::shared_ptr<VecData>(dynamic_cast<VecData*>(new SparseVecData(index, pos_data, vector_data)));
+	// return boost::shared_ptr<VecData>(dynamic_cast<VecData*>(new SparseVecData(index, pos_data, vector_data)));
+	return boost::shared_ptr<VecData>(new SparseVecData(index, length, pos_data, vector_data));
 }
 /*-----------------------------------------------------------------------------------------------*/

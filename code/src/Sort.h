@@ -84,11 +84,11 @@ public:
 	template<typename K, typename V, typename W>
 	static unsigned int sort(std::vector<K>& a, std::vector<V>& b, std::vector<W>& c, const unsigned int from, const unsigned int to)
 	{
-		// auto d = PairedIterator<std::vector<V>::iterator_type, std::vector<W>::iterator_type>(b.begin(), c.begin());
-		// auto begin = PairedIterator<std::vector<K>::iterator_type, std::vector<V>::iterator_type>(a.begin() + from, d.begin() + from);
-		// auto end = PairedIterator<std::vector<K>::iterator_type, std::vector<V>::iterator_type>(a.begin() + to, d.begin() + to);
+		typedef typename std::vector<K>::iterator IterA;
+		typedef typename std::vector<V>::iterator IterB;
+		typedef typename std::vector<W>::iterator IterC;
 
-		// std::sort(begin, end);
+		JointSort3<IterA, IterB, IterC>(a.begin() + from, a.begin() + to, b.begin() + from, c.begin() + from);
 
 		return std::min((int)a.size(), (int)(to - from));
 	}

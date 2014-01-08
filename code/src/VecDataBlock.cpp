@@ -74,7 +74,7 @@ const std::string VecDataBlock::get_filename_prefix() const
 /*-----------------------------------------------------------------------------------------------*/
 size_t VecDataBlock::load_data()
 {
-	std::string filename = this->get_filename_prefix() + ".dvf";// + Options::get_option_as<std::string>("vecdata-filename-extension");
+	std::string filename = this->get_filename_prefix() + "." + Options::get_option_as<std::string>("type");// + Options::get_option_as<std::string>("vecdata-filename-extension");
 	std::ifstream file;
 	
 	if (!FileUtil::open_read(filename, file, Options::get_option_as<bool>("use-binary-data-files")))
@@ -84,6 +84,8 @@ size_t VecDataBlock::load_data()
 	auto num_loaded = this->internal_load_block(file);
 	
 	file.close();
+
+	Daemon::debug("finished loading %s", filename.c_str());
 	
 	return num_loaded;
 }
@@ -97,7 +99,7 @@ bool VecDataBlock::is_valid()
 /*-----------------------------------------------------------------------------------------------*/
 bool VecDataBlock::verify_savefile()
 {
-	std::string filename = this->get_filename_prefix() + ".dvf";
+	std::string filename = this->get_filename_prefix() + "." + Options::get_option_as<std::string>("type");
 	std::ifstream file;
 	
 	Daemon::debug("verifying file %s", filename.c_str());

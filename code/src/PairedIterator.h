@@ -206,10 +206,22 @@ template <class KeyIter, class ValueIter, class Less> void JointSort(const KeyIt
   std::sort(full_begin, full_begin + (key_end - key_begin), less_wrap);
 }
 
-
 template <class KeyIter, class ValueIter> void JointSort(const KeyIter &key_begin, const KeyIter &key_end, const ValueIter &value_begin) 
 {
   JointSort(key_begin, key_end, value_begin, std::less<typename std::iterator_traits<KeyIter>::value_type>());
+}
+
+template <class KeyIter, class ValueIter, class ValueIterB, class Less> void JointSort3(const KeyIter &key_begin, const KeyIter &key_end, const ValueIter &value_begin, const ValueIterB &valueB_begin, const Less &less) 
+{
+  ProxyIterator<JointProxy<ValueIter, ValueIterB> > pair_begin(JointProxy<ValueIter, ValueIterB>(value_begin, valueB_begin));
+  ProxyIterator<JointProxy<KeyIter, ProxyIterator<JointProxy<ValueIter, ValueIterB>>>> full_begin(JointProxy<KeyIter, ProxyIterator<JointProxy<ValueIter, ValueIterB> >>(key_begin, pair_begin));
+  LessWrapper<JointProxy<KeyIter, ProxyIterator<JointProxy<ValueIter, ValueIterB> >>, Less> less_wrap(less);
+  std::sort(full_begin, full_begin + (key_end - key_begin), less_wrap);
+}
+
+template <class KeyIter, class ValueIter, class ValueIterB> void JointSort3(const KeyIter &key_begin, const KeyIter &key_end, const ValueIter &value_begin, const ValueIterB &valueB_begin) 
+{
+  JointSort3(key_begin, key_end, value_begin, valueB_begin, std::less<typename std::iterator_traits<KeyIter>::value_type>());
 }
 
 template <class KeyIter, class ValueIter, class Less> void JointPartialSort(const KeyIter &key_begin, const KeyIter &key_middle, const KeyIter &key_end, const ValueIter &value_begin, const ValueIter &value_middle, const Less &less) 
@@ -219,7 +231,6 @@ template <class KeyIter, class ValueIter, class Less> void JointPartialSort(cons
   LessWrapper<JointProxy<KeyIter, ValueIter>, Less> less_wrap(less);
   std::partial_sort(full_begin, full_middle, full_begin + (key_end - key_begin), less_wrap);
 }
-
 
 template <class KeyIter, class ValueIter> void JointPartialSort(const KeyIter &key_begin, const KeyIter &key_end, const ValueIter &value_begin) 
 {

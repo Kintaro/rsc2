@@ -152,7 +152,7 @@ void Daemon::time(const char* s, ...)
 /*-----------------------------------------------------------------------------------------------*/
 RscAccuracyType Daemon::random(const RscAccuracyType limit)
 {
-	 auto dis = std::uniform_real_distribution<>(0.0, limit);
+	 auto dis = std::uniform_real_distribution<RscAccuracyType>(0.0, limit);
 	 return dis(rnd);
 }
 /*-----------------------------------------------------------------------------------------------*/

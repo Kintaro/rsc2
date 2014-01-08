@@ -42,6 +42,7 @@
 #define __FILE_UTIL_H__
 
 #include <boost/serialization/optional.hpp>
+#include <boost/lexical_cast.hpp>
 #include <fstream>
 #include <vector>
 #include "Options.h"
@@ -86,7 +87,7 @@ void FileUtil::write_to_file(std::ofstream& file, const T& value, bool text_only
 	if (*is_binary && !text_only)
 		file.write((const char*)&value, sizeof(T));
 	else if (!Options::get_option_as<bool>("use-binary-files"))
-		file << value;
+		file << boost::lexical_cast<std::string>(value);
 }
 /*-----------------------------------------------------------------------------------------------*/
 template<typename T>
